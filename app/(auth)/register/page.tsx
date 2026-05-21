@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
@@ -13,8 +13,10 @@ import { register, setToken } from '@/lib/auth';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2 } from 'lucide-react';
 
-export default function RegisterPage() {
+function RegisterForm() {
   const router = useRouter();
+  const params = useSearchParams();
+  const redirect = params.get('redirect') ?? '/';
   const { setUser } = useAuth();
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
@@ -35,7 +37,7 @@ export default function RegisterPage() {
       const res = await register(form.name, form.email, form.password, form.password_confirmation);
       setToken(res.data.token);
       setUser(res.data.user);
-      router.push('/');
+      router.push(redirect);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Error al crear la cuenta');
     } finally {
@@ -121,12 +123,23 @@ export default function RegisterPage() {
 
           <p className="text-center text-sm text-slate-400 mt-4">
             ¿Ya tienes cuenta?{' '}
-            <Link href="/login" className="text-emerald-400 hover:text-emerald-300 font-medium">
+            <Link
+              href={`/login${redirect !== '/' ? `?redirect=${encodeURIComponent(redirect)}` : ''}`}
+              className="text-emerald-400 hover:text-emerald-300 font-medium"
+            >
               Iniciar sesión
             </Link>
           </p>
         </CardContent>
       </Card>
     </motion.div>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={null}>
+      <RegisterForm />
+    </Suspense>
   );
 }

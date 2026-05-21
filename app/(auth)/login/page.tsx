@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
@@ -14,8 +14,10 @@ import { login, setToken } from '@/lib/auth';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2 } from 'lucide-react';
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
+  const params = useSearchParams();
+  const redirect = params.get('redirect') ?? '/';
   const { setUser } = useAuth();
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({ email: '', password: '' });
@@ -27,7 +29,7 @@ export default function LoginPage() {
       const res = await login(form.email, form.password);
       setToken(res.data.token);
       setUser(res.data.user);
-      router.push('/');
+      router.push(redirect);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Error al iniciar sesión');
     } finally {
@@ -37,6 +39,7 @@ export default function LoginPage() {
 
   const handleGoogle = async () => {
     try {
+      if (redirect !== '/') localStorage.setItem('pendingRedirect', redirect);
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/auth/google/redirect`,
         { headers: { Accept: 'application/json' } }
@@ -119,12 +122,23 @@ export default function LoginPage() {
 
           <p className="text-center text-sm text-slate-400">
             ¿No tienes cuenta?{' '}
-            <Link href="/register" className="text-emerald-400 hover:text-emerald-300 font-medium">
+            <Link
+              href={`/register${redirect !== '/' ? `?redirect=${encodeURIComponent(redirect)}` : ''}`}
+              className="text-emerald-400 hover:text-emerald-300 font-medium"
+            >
               Regístrate
             </Link>
           </p>
         </CardContent>
       </Card>
     </motion.div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
   );
 }

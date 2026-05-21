@@ -22,9 +22,11 @@ function CallbackHandler() {
 
     if (token) {
       setToken(token);
+      const pendingRedirect = localStorage.getItem('pendingRedirect') ?? '/';
+      localStorage.removeItem('pendingRedirect');
       getCurrentUser().then((user) => {
         if (user) setUser(user);
-        router.push('/');
+        router.push(pendingRedirect);
       });
     } else {
       router.push('/login');
