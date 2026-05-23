@@ -43,19 +43,18 @@ export default function TorneoDetailPage() {
   useEffect(() => {
     if (!slug) return;
 
-    Promise.all([
-      api.get<ApiResponse<Tournament>>(`/tournaments/${slug}`),
-      api.get<ApiResponse<RoundWithMatches[]>>(`/tournaments/${slug}/matches`),
-    ])
-      .then(([tRes, mRes]) => {
-        setTournament(tRes.data);
+    api.get<ApiResponse<Tournament>>(`/tournaments/${slug}`)
+      .then((tRes) => setTournament(tRes.data))
+      .catch(console.error)
+      .finally(() => setLoadingTournament(false));
+
+    api.get<ApiResponse<RoundWithMatches[]>>(`/tournaments/${slug}/matches`)
+      .then((mRes) => {
         setRounds(mRes.data);
-        // Default to first round with matches
         const firstRound = mRes.data.find((r) => r.matches.length > 0);
         if (firstRound) setActiveRoundId(firstRound.round.id);
       })
-      .catch(console.error)
-      .finally(() => setLoadingTournament(false));
+      .catch(console.error);
 
     api
       .get<ApiResponse<GlobalStanding[]>>(`/tournaments/${slug}/global-standings`)
