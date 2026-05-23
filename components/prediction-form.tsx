@@ -84,9 +84,13 @@ export function PredictionForm({ quinielaSlug, rounds, initialPredictions }: Pro
     [predictions]
   );
 
+  if (rounds.length === 0) {
+    return <p className="text-slate-500 text-sm text-center py-12">El calendario de partidos aún no está disponible.</p>;
+  }
+
   return (
     <div className="space-y-4 pb-4">
-      {/* Round selector */}
+      {/* Round selector — only shown when there are multiple rounds */}
       {rounds.length > 1 && (
         <div className="flex gap-2 flex-wrap">
           {rounds.map((r) => {
@@ -117,6 +121,9 @@ export function PredictionForm({ quinielaSlug, rounds, initialPredictions }: Pro
       {/* Matches for selected round */}
       {activeRound ? (
         <div className="space-y-3">
+          {rounds.length === 1 && (
+            <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">{activeRound.round.name}</p>
+          )}
           {activeRound.matches.length === 0 ? (
             <p className="text-slate-500 text-sm text-center py-8">Sin partidos en esta jornada.</p>
           ) : (
