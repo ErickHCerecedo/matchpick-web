@@ -55,18 +55,18 @@ export default function QuinielaPage() {
   useEffect(() => {
     if (!slug) return;
 
-    Promise.all([
-      api.get<ApiResponse<Quiniela>>(`/quinielas/${slug}`),
-      api.get<ApiResponse<Standing[]>>(`/quinielas/${slug}/standings`),
-      api.get<ApiResponse<RoundWithMatches[]>>(`/quinielas/${slug}/matches`),
-    ])
-      .then(([qRes, sRes, mRes]) => {
-        setQuiniela(qRes.data);
-        setStandings(sRes.data);
-        setRounds(mRes.data);
-      })
+    api.get<ApiResponse<Quiniela>>(`/quinielas/${slug}`)
+      .then((res) => setQuiniela(res.data))
       .catch(console.error)
       .finally(() => setLoading(false));
+
+    api.get<ApiResponse<Standing[]>>(`/quinielas/${slug}/standings`)
+      .then((res) => setStandings(res.data))
+      .catch(console.error);
+
+    api.get<ApiResponse<RoundWithMatches[]>>(`/quinielas/${slug}/matches`)
+      .then((res) => setRounds(res.data))
+      .catch(console.error);
   }, [slug]);
 
   if (loading) {

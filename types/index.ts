@@ -41,14 +41,33 @@ export interface Tournament {
   starts_at: string;
   ends_at: string;
   is_active: boolean;
+  is_custom: boolean;
+  creator?: { id: number; name: string } | null;
 }
 
 export interface Round {
   id: number;
   name: string;
-  type: 'group' | 'round_of_32' | 'round_of_16' | 'quarter' | 'semi' | 'third_place' | 'final';
+  type: 'group' | 'round_of_32' | 'round_of_16' | 'quarter' | 'semi' | 'third_place' | 'final' | 'general';
   order: number;
   tournament_id: number;
+  matches_count?: number;
+}
+
+export interface CustomTeam {
+  id: number;
+  name: string;
+  short_name: string;
+  logo_url: string | null;
+}
+
+export interface CustomMatch {
+  id: number;
+  scheduled_at: string;
+  venue: string | null;
+  status: string;
+  home_team: { id: number; name: string; short_name: string };
+  away_team: { id: number; name: string; short_name: string };
 }
 
 export interface MatchResult {

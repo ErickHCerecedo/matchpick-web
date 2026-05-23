@@ -156,7 +156,11 @@ export default function TorneoDetailPage() {
           )}
 
           {/* Matches */}
-          {activeRound ? (
+          {sortedRounds.length === 0 ? (
+            <p className="text-slate-500 text-sm text-center py-8">
+              El calendario aún no está disponible.
+            </p>
+          ) : activeRound ? (
             <div className="space-y-3">
               {activeRound.matches.length === 0 ? (
                 <p className="text-slate-500 text-sm text-center py-8">
