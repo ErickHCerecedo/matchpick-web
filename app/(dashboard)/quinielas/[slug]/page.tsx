@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StandingsTable } from '@/components/standings-table';
 import { PredictionForm } from '@/components/prediction-form';
+import { ParticipantsPredictions } from '@/components/participants-predictions';
 import { api } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import type { ApiResponse, Quiniela, Standing, RoundWithMatches, Prediction } from '@/types';
@@ -68,6 +69,16 @@ export default function QuinielaPage() {
       .then((res) => setRounds(res.data))
       .catch(console.error);
   }, [slug]);
+
+  const refreshRoundsAndStandings = () => {
+    if (!slug) return;
+    api.get<ApiResponse<RoundWithMatches[]>>(`/quinielas/${slug}/matches`)
+      .then((res) => setRounds(res.data))
+      .catch(console.error);
+    api.get<ApiResponse<Standing[]>>(`/quinielas/${slug}/standings`)
+      .then((res) => setStandings(res.data))
+      .catch(console.error);
+  };
 
   if (loading) {
     return (
@@ -131,6 +142,9 @@ export default function QuinielaPage() {
           <TabsTrigger value="predictions" className="data-[state=active]:bg-emerald-500/20 data-[state=active]:text-emerald-400">
             Predicciones
           </TabsTrigger>
+          <TabsTrigger value="transparency" className="data-[state=active]:bg-emerald-500/20 data-[state=active]:text-emerald-400">
+            Tabla de Resultados
+          </TabsTrigger>
           <TabsTrigger value="participants" className="data-[state=active]:bg-emerald-500/20 data-[state=active]:text-emerald-400">
             Participantes
           </TabsTrigger>
@@ -150,6 +164,16 @@ export default function QuinielaPage() {
           ) : (
             <p className="text-center text-slate-400 py-10">Las predicciones están cerradas.</p>
           )}
+        </TabsContent>
+
+        <TabsContent value="transparency">
+          <ParticipantsPredictions
+            quinielaSlug={slug}
+            rounds={rounds}
+            currentUserId={user?.id}
+            isAdmin={quiniela.my_role === 'admin'}
+            onResultUpdated={refreshRoundsAndStandings}
+          />
         </TabsContent>
 
         <TabsContent value="participants">
