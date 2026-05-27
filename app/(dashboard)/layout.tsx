@@ -9,26 +9,20 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Home, Trophy, LogOut } from 'lucide-react';
+import { Home, Trophy, LogOut, Shield } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 
-const NAV_ITEMS = [
+type NavItem = { href: string; label: string; icon: React.ElementType };
+
+const BASE_NAV: NavItem[] = [
   { href: '/', label: 'Mis Quinielas', icon: Home },
   { href: '/torneos', label: 'Torneos', icon: Trophy },
 ];
 
-function NavLink({
-  href,
-  label,
-  icon: Icon,
-}: {
-  href: string;
-  label: string;
-  icon: React.ElementType;
-}) {
+function NavLink({ href, label, icon: Icon }: NavItem) {
   const pathname = usePathname();
-  const active = pathname === href;
+  const active = pathname === href || (href !== '/' && pathname.startsWith(href));
   return (
     <Link
       href={href}
@@ -48,6 +42,11 @@ function NavLink({
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { user, loading, logout } = useAuth();
+
+  const navItems: NavItem[] = [
+    ...BASE_NAV,
+    ...(user?.is_admin ? [{ href: '/admin', label: 'Super Admin', icon: Shield }] : []),
+  ];
 
   useEffect(() => {
     if (!loading && !user) {
@@ -83,7 +82,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
 
         <nav className="flex-1 space-y-1">
-          {NAV_ITEMS.map((item) => (
+          {navItems.map((item) => (
             <NavLink key={item.href} {...item} />
           ))}
         </nav>
@@ -99,6 +98,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </Avatar>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-white truncate">{user.name}</p>
+            {user.is_admin && (
+              <p className="text-[10px] text-emerald-500 font-medium">Super Admin</p>
+            )}
           </div>
           <Button
             variant="ghost"
@@ -118,12 +120,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <h1 className="text-lg font-bold text-white">
             Match<span className="text-emerald-400">Pick</span>
           </h1>
-          <Avatar className="h-8 w-8">
-            <AvatarImage src={user.avatar_url ?? undefined} />
-            <AvatarFallback className="bg-slate-700 text-white text-xs">
-              {user.name.charAt(0).toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
+          <div className="flex items-center gap-2">
+            {user.is_admin && (
+              <Link
+                href="/admin"
+                className="p-1.5 rounded-lg text-emerald-400 hover:bg-emerald-500/10 transition-colors"
+              >
+                <Shield className="h-4 w-4" />
+              </Link>
+            )}
+            <Avatar className="h-8 w-8">
+              <AvatarImage src={user.avatar_url ?? undefined} />
+              <AvatarFallback className="bg-slate-700 text-white text-xs">
+                {user.name.charAt(0).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+          </div>
         </header>
 
         <div className="flex-1 p-4 md:p-6 pb-24 md:pb-6">
@@ -139,17 +151,27 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* Mobile bottom nav */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-slate-900 border-t border-slate-800 flex z-50">
-        {NAV_ITEMS.map(({ href, label, icon: Icon }) => (
-          <Link
-            key={href}
-            href={href}
-            className="flex-1 flex flex-col items-center gap-1 py-3 text-slate-400 hover:text-emerald-400 transition-colors"
-          >
-            <Icon className="h-5 w-5" />
-            <span className="text-xs">{label}</span>
-          </Link>
+        {navItems.map(({ href, label, icon: Icon }) => (
+          <MobileNavLink key={href} href={href} label={label} Icon={Icon} />
         ))}
       </nav>
     </div>
+  );
+}
+
+function MobileNavLink({ href, label, Icon }: { href: string; label: string; Icon: React.ElementType }) {
+  const pathname = usePathname();
+  const active = pathname === href || (href !== '/' && pathname.startsWith(href));
+  return (
+    <Link
+      href={href}
+      className={cn(
+        'flex-1 flex flex-col items-center gap-1 py-3 transition-colors',
+        active ? 'text-emerald-400' : 'text-slate-400 hover:text-emerald-400'
+      )}
+    >
+      <Icon className="h-5 w-5" />
+      <span className="text-[10px]">{label}</span>
+    </Link>
   );
 }

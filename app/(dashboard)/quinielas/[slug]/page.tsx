@@ -13,7 +13,10 @@ import { ParticipantsPredictions } from '@/components/participants-predictions';
 import { api } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import type { ApiResponse, Quiniela, Standing, RoundWithMatches, Prediction } from '@/types';
-import { Lock, Globe, Users, Link2, Copy, Check, Loader2 } from 'lucide-react';
+import {
+  Lock, Globe, Users, Link2, Copy, Check, Loader2,
+  Trophy, Target, BarChart3,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 
@@ -105,7 +108,7 @@ export default function QuinielaPage() {
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
       {/* Header */}
-      <div className="mb-6">
+      <div className="mb-5">
         <div className="flex items-start justify-between gap-3">
           <div>
             <h2 className="text-2xl font-bold text-white">{quiniela.name}</h2>
@@ -135,18 +138,35 @@ export default function QuinielaPage() {
       </div>
 
       <Tabs defaultValue="standings">
-        <TabsList className="bg-slate-800 border-slate-700 mb-6">
-          <TabsTrigger value="standings" className="data-[state=active]:bg-emerald-500/20 data-[state=active]:text-emerald-400">
-            Posiciones
+        {/* Mobile-first: 2×2 grid on small screens, 4-col row on sm+ */}
+        <TabsList className="!grid grid-cols-2 sm:grid-cols-4 w-full h-auto bg-slate-800 border border-slate-700/60 mb-5 p-1 gap-1 rounded-xl">
+          <TabsTrigger
+            value="standings"
+            className="flex flex-col items-center gap-1 py-2.5 h-auto rounded-lg text-slate-400 data-active:bg-emerald-500/20 data-active:text-emerald-400 hover:text-white transition-colors"
+          >
+            <Trophy className="h-4 w-4" />
+            <span className="text-xs font-medium">Posiciones</span>
           </TabsTrigger>
-          <TabsTrigger value="predictions" className="data-[state=active]:bg-emerald-500/20 data-[state=active]:text-emerald-400">
-            Predicciones
+          <TabsTrigger
+            value="predictions"
+            className="flex flex-col items-center gap-1 py-2.5 h-auto rounded-lg text-slate-400 data-active:bg-emerald-500/20 data-active:text-emerald-400 hover:text-white transition-colors"
+          >
+            <Target className="h-4 w-4" />
+            <span className="text-xs font-medium">Predicciones</span>
           </TabsTrigger>
-          <TabsTrigger value="transparency" className="data-[state=active]:bg-emerald-500/20 data-[state=active]:text-emerald-400">
-            Tabla de Resultados
+          <TabsTrigger
+            value="transparency"
+            className="flex flex-col items-center gap-1 py-2.5 h-auto rounded-lg text-slate-400 data-active:bg-emerald-500/20 data-active:text-emerald-400 hover:text-white transition-colors"
+          >
+            <BarChart3 className="h-4 w-4" />
+            <span className="text-xs font-medium">Resultados</span>
           </TabsTrigger>
-          <TabsTrigger value="participants" className="data-[state=active]:bg-emerald-500/20 data-[state=active]:text-emerald-400">
-            Participantes
+          <TabsTrigger
+            value="participants"
+            className="flex flex-col items-center gap-1 py-2.5 h-auto rounded-lg text-slate-400 data-active:bg-emerald-500/20 data-active:text-emerald-400 hover:text-white transition-colors"
+          >
+            <Users className="h-4 w-4" />
+            <span className="text-xs font-medium">Participantes</span>
           </TabsTrigger>
         </TabsList>
 

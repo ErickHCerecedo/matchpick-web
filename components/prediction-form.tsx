@@ -7,8 +7,8 @@ import { MatchCard } from './match-card';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import type { RoundWithMatches, Prediction } from '@/types';
-import { Save, Loader2, CheckCircle2, Circle, ChevronRight } from 'lucide-react';
+import type { Match, RoundWithMatches, Prediction } from '@/types';
+import { Save, Loader2, CheckCircle2, ChevronRight } from 'lucide-react';
 
 interface Props {
   quinielaSlug: string;
@@ -16,55 +16,56 @@ interface Props {
   initialPredictions: Record<number, Prediction>;
 }
 
-// Per-round completion stats
-interface RoundStat {
-  openCount: number;
-  predictedCount: number;
-  isComplete: boolean;
-  isPartial: boolean;
-  hasOpen: boolean;
+// ── helpers ────────────────────────────────────────────────────────────────
+
+type DateEntry = { match: Match; roundName: string };
+
+function groupByDate(rounds: RoundWithMatches[]): Map<string, DateEntry[]> {
+  const byDate = new Map<string, DateEntry[]>();
+  for (const r of rounds) {
+    for (const m of r.matches) {
+      const key = m.scheduled_at?.slice(0, 10) ?? 'sin-fecha';
+      if (!byDate.has(key)) byDate.set(key, []);
+      byDate.get(key)!.push({ match: m, roundName: r.round.name });
+    }
+  }
+  return new Map([...byDate.entries()].sort((a, b) => a[0].localeCompare(b[0])));
 }
 
-function computeRoundStat(
-  round: RoundWithMatches,
-  predictions: Record<number, Prediction>
-): RoundStat {
-  const openMatches = round.matches.filter((m) => m.is_prediction_open);
-  const predictedCount = openMatches.filter(
-    (m) => predictions[m.id]?.home_score !== undefined
-  ).length;
-  const openCount = openMatches.length;
-  return {
-    openCount,
-    predictedCount,
-    hasOpen: openCount > 0,
-    isComplete: openCount > 0 && predictedCount === openCount,
-    isPartial: predictedCount > 0 && predictedCount < openCount,
-  };
+function parseDateKey(dateKey: string): Date {
+  const [y, m, d] = dateKey.split('-').map(Number);
+  return new Date(y, m - 1, d);
 }
+
+function firstOpenDate(rounds: RoundWithMatches[], predictions: Record<number, Prediction>): string | null {
+  // First date that has open, unpredicted matches
+  const byDate = groupByDate(rounds);
+  for (const [dateKey, entries] of byDate) {
+    const hasUnpredicted = entries.some(
+      (e) => e.match.is_prediction_open && predictions[e.match.id]?.home_score === undefined
+    );
+    if (hasUnpredicted) return dateKey;
+  }
+  // Fall back to any date with open matches
+  for (const [dateKey, entries] of byDate) {
+    if (entries.some((e) => e.match.is_prediction_open)) return dateKey;
+  }
+  // Fall back to first date overall
+  return byDate.keys().next().value ?? null;
+}
+
+// ── component ──────────────────────────────────────────────────────────────
 
 export function PredictionForm({ quinielaSlug, rounds, initialPredictions }: Props) {
   const [predictions, setPredictions] =
     useState<Record<number, Prediction>>(initialPredictions);
   const [saving, setSaving] = useState(false);
 
-  // Auto-select first incomplete open round, then any open round, then first round
-  const [activeRoundId, setActiveRoundId] = useState<number | null>(() => {
-    const firstIncomplete = rounds.find((r) => {
-      const open = r.matches.filter((m) => m.is_prediction_open);
-      return open.length > 0 && open.some((m) => !initialPredictions[m.id]);
-    });
-    if (firstIncomplete) return firstIncomplete.round.id;
-    const firstOpen = rounds.find((r) => r.matches.some((m) => m.is_prediction_open));
-    return firstOpen?.round.id ?? rounds[0]?.round.id ?? null;
-  });
+  const matchesByDate = useMemo(() => groupByDate(rounds), [rounds]);
+  const sortedDateKeys = useMemo(() => [...matchesByDate.keys()], [matchesByDate]);
 
-  const roundStats = useMemo(
-    () =>
-      new Map(
-        rounds.map((r) => [r.round.id, computeRoundStat(r, predictions)])
-      ),
-    [rounds, predictions]
+  const [activeDateKey, setActiveDateKey] = useState<string | null>(() =>
+    firstOpenDate(rounds, initialPredictions)
   );
 
   // Global progress
@@ -84,6 +85,23 @@ export function PredictionForm({ quinielaSlug, rounds, initialPredictions }: Pro
 
   const progressPct =
     totalPredictable > 0 ? Math.round((totalPredicted / totalPredictable) * 100) : 0;
+
+  // Per-date stats for the date strip
+  const dateStats = useMemo(() => {
+    const stats = new Map<string, { openCount: number; predictedCount: number }>();
+    for (const [dateKey, entries] of matchesByDate) {
+      let openCount = 0;
+      let predictedCount = 0;
+      for (const { match } of entries) {
+        if (match.is_prediction_open) {
+          openCount++;
+          if (predictions[match.id]?.home_score !== undefined) predictedCount++;
+        }
+      }
+      stats.set(dateKey, { openCount, predictedCount });
+    }
+    return stats;
+  }, [matchesByDate, predictions]);
 
   const handleChange = useCallback(
     (matchId: number, home: number, away: number) => {
@@ -123,10 +141,17 @@ export function PredictionForm({ quinielaSlug, rounds, initialPredictions }: Pro
     }
   };
 
-  const activeRound = useMemo(
-    () => rounds.find((r) => r.round.id === activeRoundId),
-    [rounds, activeRoundId]
-  );
+  // Matches for active date, grouped by round name
+  const activeDateMatchGroups = useMemo(() => {
+    if (!activeDateKey) return [];
+    const entries = matchesByDate.get(activeDateKey) ?? [];
+    const grouped = new Map<string, Match[]>();
+    for (const e of entries) {
+      if (!grouped.has(e.roundName)) grouped.set(e.roundName, []);
+      grouped.get(e.roundName)!.push(e.match);
+    }
+    return [...grouped.entries()];
+  }, [matchesByDate, activeDateKey]);
 
   const pendingCount = useMemo(
     () =>
@@ -135,6 +160,15 @@ export function PredictionForm({ quinielaSlug, rounds, initialPredictions }: Pro
       ).length,
     [predictions]
   );
+
+  // Missing predictions on the active date
+  const missingOnActiveDate = useMemo(() => {
+    if (!activeDateKey) return 0;
+    const entries = matchesByDate.get(activeDateKey) ?? [];
+    return entries.filter(
+      (e) => e.match.is_prediction_open && predictions[e.match.id]?.home_score === undefined
+    ).length;
+  }, [matchesByDate, activeDateKey, predictions]);
 
   if (rounds.length === 0) {
     return (
@@ -146,7 +180,7 @@ export function PredictionForm({ quinielaSlug, rounds, initialPredictions }: Pro
 
   return (
     <div className="space-y-4 pb-4">
-      {/* ── Progress header ─────────────────────────────────────────── */}
+      {/* ── Progress header ────────────────────────────────────────────── */}
       {totalPredictable > 0 && (
         <div className="rounded-xl bg-slate-900 border border-slate-800 p-4">
           <div className="flex items-center justify-between mb-2">
@@ -176,54 +210,51 @@ export function PredictionForm({ quinielaSlug, rounds, initialPredictions }: Pro
         </div>
       )}
 
-      {/* ── Round selector ───────────────────────────────────────────── */}
-      {rounds.length > 1 && (
-        <div className="flex gap-2 flex-wrap">
-          {rounds.map((r) => {
-            const stat = roundStats.get(r.round.id)!;
-            const isActive = activeRoundId === r.round.id;
+      {/* ── Date strip ─────────────────────────────────────────────────── */}
+      {sortedDateKeys.length > 0 && (
+        <div className="flex gap-2 overflow-x-auto scrollbar-none pb-1 -mx-0.5 px-0.5">
+          {sortedDateKeys.map((dateKey) => {
+            const d = parseDateKey(dateKey);
+            const stat = dateStats.get(dateKey)!;
+            const isActive = activeDateKey === dateKey;
+            const isComplete = stat.openCount > 0 && stat.predictedCount === stat.openCount;
+            const isPartial = stat.predictedCount > 0 && stat.predictedCount < stat.openCount;
 
             return (
               <button
-                key={r.round.id}
-                onClick={() => setActiveRoundId(r.round.id)}
+                key={dateKey}
+                onClick={() => setActiveDateKey(dateKey)}
                 className={cn(
-                  'px-3 py-2 rounded-lg text-left text-xs font-medium transition-colors border',
+                  'shrink-0 flex flex-col items-center px-3 py-2.5 rounded-xl border text-center min-w-[62px] transition-all',
                   isActive
                     ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400'
-                    : stat.isComplete
+                    : isComplete
                     ? 'border-emerald-800/60 text-emerald-600 hover:border-emerald-600 hover:text-emerald-400'
-                    : stat.isPartial
-                    ? 'border-amber-800/60 text-amber-600 hover:border-amber-500 hover:text-amber-400'
-                    : stat.hasOpen
-                    ? 'border-slate-700 text-slate-400 hover:border-slate-500 hover:text-white'
-                    : 'border-slate-800 text-slate-600'
+                    : isPartial
+                    ? 'border-amber-800/60 text-amber-500 hover:border-amber-500 hover:text-amber-400'
+                    : 'border-slate-700 text-slate-400 hover:border-slate-500 hover:text-white'
                 )}
               >
-                <div>{r.round.name}</div>
-                {stat.hasOpen && (
-                  <div
+                <span className="text-[10px] uppercase tracking-wide leading-none mb-1">
+                  {d.toLocaleDateString('es-MX', { weekday: 'short' })}
+                </span>
+                <span className="text-xl font-bold leading-none">{d.getDate()}</span>
+                <span className="text-[10px] uppercase tracking-wide leading-none mt-1">
+                  {d.toLocaleDateString('es-MX', { month: 'short' })}
+                </span>
+                {stat.openCount > 0 && (
+                  <span
                     className={cn(
-                      'flex items-center gap-1 mt-0.5 text-[10px]',
-                      stat.isComplete
+                      'text-[9px] font-semibold mt-1.5 leading-none',
+                      isComplete
                         ? 'text-emerald-500'
-                        : stat.isPartial
+                        : isPartial
                         ? 'text-amber-500'
                         : 'text-slate-600'
                     )}
                   >
-                    {stat.isComplete ? (
-                      <>
-                        <CheckCircle2 className="h-2.5 w-2.5" />
-                        Completada
-                      </>
-                    ) : (
-                      <>
-                        <Circle className="h-2.5 w-2.5" />
-                        {stat.predictedCount}/{stat.openCount} pronósticos
-                      </>
-                    )}
-                  </div>
+                    {isComplete ? '✓' : `${stat.predictedCount}/${stat.openCount}`}
+                  </span>
                 )}
               </button>
             );
@@ -231,49 +262,42 @@ export function PredictionForm({ quinielaSlug, rounds, initialPredictions }: Pro
         </div>
       )}
 
-      {/* ── Active round — inline label when only one round ─────────── */}
-      {activeRound ? (
-        <div className="space-y-3">
-          {rounds.length === 1 && (
-            <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">
-              {activeRound.round.name}
-            </p>
-          )}
-
-          {/* Round completion summary */}
-          {(() => {
-            const stat = roundStats.get(activeRound.round.id)!;
-            if (!stat.hasOpen) return null;
-            const missing = stat.openCount - stat.predictedCount;
-            if (missing === 0) return null;
-            return (
-              <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-500/5 border border-amber-500/20 text-xs text-amber-400">
-                <ChevronRight className="h-3.5 w-3.5 shrink-0" />
-                Te faltan {missing} partido{missing !== 1 ? 's' : ''} por pronosticar en esta jornada.
-              </div>
-            );
-          })()}
-
-          {activeRound.matches.length === 0 ? (
-            <p className="text-slate-500 text-sm text-center py-8">
-              Sin partidos en esta jornada.
-            </p>
-          ) : (
-            activeRound.matches.map((match) => (
-              <MatchCard
-                key={match.id}
-                match={match}
-                prediction={predictions[match.id] ?? null}
-                onChange={handleChange}
-              />
-            ))
-          )}
+      {/* ── Missing predictions hint ───────────────────────────────────── */}
+      {missingOnActiveDate > 0 && (
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-500/5 border border-amber-500/20 text-xs text-amber-400">
+          <ChevronRight className="h-3.5 w-3.5 shrink-0" />
+          Te faltan {missingOnActiveDate} partido{missingOnActiveDate !== 1 ? 's' : ''} por pronosticar en este día.
         </div>
-      ) : (
-        <p className="text-slate-500 text-sm text-center py-8">Selecciona una jornada.</p>
       )}
 
-      {/* ── Sticky save button ───────────────────────────────────────── */}
+      {/* ── Matches for active date ────────────────────────────────────── */}
+      {activeDateMatchGroups.length === 0 ? (
+        <p className="text-slate-500 text-sm text-center py-8">Selecciona una fecha.</p>
+      ) : (
+        <div className="space-y-5">
+          {activeDateMatchGroups.map(([roundName, matches]) => (
+            <div key={roundName} className="space-y-3">
+              <div className="flex items-center gap-3">
+                <span className="h-px flex-1 bg-slate-800" />
+                <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-widest shrink-0">
+                  {roundName}
+                </span>
+                <span className="h-px flex-1 bg-slate-800" />
+              </div>
+              {matches.map((match) => (
+                <MatchCard
+                  key={match.id}
+                  match={match}
+                  prediction={predictions[match.id] ?? null}
+                  onChange={handleChange}
+                />
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ── Sticky save button ─────────────────────────────────────────── */}
       <div className="sticky bottom-4 md:bottom-6 z-10">
         <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>
           <Button
