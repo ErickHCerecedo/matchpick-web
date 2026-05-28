@@ -139,7 +139,7 @@ export default function QuinielaPage() {
 
       <Tabs defaultValue="standings">
         {/* Mobile-first: 2×2 grid on small screens, 4-col row on sm+ */}
-        <TabsList className="!grid grid-cols-2 sm:grid-cols-4 w-full h-auto bg-slate-800 border border-slate-700/60 mb-5 p-1 gap-1 rounded-xl">
+        <TabsList className="!grid grid-cols-2 sm:grid-cols-4 w-full !h-auto bg-slate-800 border border-slate-700/60 mb-5 p-1 gap-1 rounded-xl">
           <TabsTrigger
             value="standings"
             className="flex flex-col items-center gap-1 py-2.5 h-auto rounded-lg text-slate-400 data-active:bg-emerald-500/20 data-active:text-emerald-400 hover:text-white transition-colors"

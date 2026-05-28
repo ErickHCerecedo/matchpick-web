@@ -27,8 +27,9 @@ function Tabs({
 const tabsListVariants = cva(
   [
     "group/tabs-list inline-flex w-fit items-center justify-center rounded-lg p-[3px] text-muted-foreground",
-    // height variants — must match base-ui's data-orientation attribute
-    "group-data-[orientation=horizontal]/tabs:h-8",
+    // height: use min-h so the list can grow when overridden (plain h-8 wins over
+    // page-level h-auto overrides because of compound-selector specificity in CSS)
+    "group-data-[orientation=horizontal]/tabs:min-h-8",
     "group-data-[orientation=vertical]/tabs:h-fit group-data-[orientation=vertical]/tabs:flex-col",
     "data-[variant=line]:rounded-none",
   ].join(" "),
@@ -65,7 +66,7 @@ function TabsTrigger({ className, ...props }: TabsPrimitive.Tab.Props) {
     <TabsPrimitive.Tab
       data-slot="tabs-trigger"
       className={cn(
-        "relative inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center gap-1.5 rounded-md border border-transparent px-1.5 py-0.5 text-sm font-medium whitespace-nowrap text-foreground/60 transition-all",
+        "relative inline-flex h-auto min-h-[calc(100%-1px)] flex-1 items-center justify-center gap-1.5 rounded-md border border-transparent px-1.5 py-0.5 text-sm font-medium whitespace-nowrap text-foreground/60 transition-all",
         // orientation-dependent layout
         "group-data-[orientation=vertical]/tabs:w-full group-data-[orientation=vertical]/tabs:justify-start",
         // focus / disabled
