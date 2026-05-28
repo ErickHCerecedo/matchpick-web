@@ -77,7 +77,7 @@ export function MatchCard({ match, prediction, onChange, readOnly }: Props) {
               className="w-6 h-4 object-cover rounded-sm shrink-0"
             />
           )}
-          <span className="text-sm font-medium text-white truncate">
+          <span className="min-w-0 text-sm font-medium text-white truncate">
             {match.home_team?.name ?? 'TBD'}
           </span>
         </div>
@@ -128,7 +128,7 @@ export function MatchCard({ match, prediction, onChange, readOnly }: Props) {
 
         {/* Away */}
         <div className="flex-1 flex items-center gap-2 justify-end min-w-0">
-          <span className="text-sm font-medium text-white truncate text-right">
+          <span className="min-w-0 text-sm font-medium text-white truncate text-right">
             {match.away_team?.name ?? 'TBD'}
           </span>
           {match.away_team?.flag_url && (

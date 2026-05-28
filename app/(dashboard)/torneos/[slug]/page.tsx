@@ -195,7 +195,7 @@ export default function TorneoDetailPage() {
 
       <div className="grid lg:grid-cols-3 gap-6">
         {/* Calendar (left/main) */}
-        <div className="lg:col-span-2 space-y-4">
+        <div className="lg:col-span-2 space-y-4 min-w-0">
           <h3 className="text-lg font-semibold text-white">Calendario</h3>
 
           {/* Date strip */}
