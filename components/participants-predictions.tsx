@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -11,7 +11,7 @@ import { cn, formatMatchDate } from '@/lib/utils';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
 import type { RoundWithMatches, Prediction, ApiResponse, Match } from '@/types';
-import { Lock, Eye, ChevronDown, RefreshCw, Pencil, Check } from 'lucide-react';
+import { Lock, Eye, ChevronDown, RefreshCw, Pencil, Check, Layers, Swords } from 'lucide-react';
 
 interface Props {
   quinielaSlug: string;
@@ -404,8 +404,32 @@ export function ParticipantsPredictions({ quinielaSlug, rounds, currentUserId, i
         ?.round.id ?? rounds[0]?.round.id ?? null
   );
   const [syncing, setSyncing] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false);
+      }
+    };
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setDropdownOpen(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEsc);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEsc);
+    };
+  }, []);
 
   const activeRound = rounds.find((r) => r.round.id === activeRoundId);
+  const groupRounds = rounds.filter((r) => r.round.type === 'group');
+  const knockoutRounds = rounds.filter((r) => r.round.type !== 'group');
+  const activeRoundHasStarted = activeRound?.matches.some(
+    (m) => new Date(m.scheduled_at) <= new Date()
+  );
 
   const handleSync = async () => {
     setSyncing(true);
@@ -454,29 +478,126 @@ export function ParticipantsPredictions({ quinielaSlug, rounds, currentUserId, i
         </div>
       )}
 
-      {/* Round selector */}
+      {/* Round selector — dropdown */}
       {rounds.length > 1 && (
-        <div className="flex gap-2 flex-wrap">
-          {rounds.map((r) => {
-            const hasStarted = r.matches.some((m) => new Date(m.scheduled_at) <= new Date());
-            return (
-              <button
-                key={r.round.id}
-                onClick={() => setActiveRoundId(r.round.id)}
-                className={cn(
-                  'px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border relative',
-                  activeRoundId === r.round.id
-                    ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400'
-                    : 'border-slate-700 text-slate-400 hover:border-slate-500 hover:text-white'
-                )}
+        <div className="relative z-10" ref={dropdownRef}>
+          {/* Trigger */}
+          <button
+            onClick={() => setDropdownOpen((v) => !v)}
+            className={cn(
+              'flex items-center justify-between gap-3 w-full px-4 py-3 rounded-xl bg-slate-900 border transition-colors text-left',
+              dropdownOpen
+                ? 'border-emerald-500/50 ring-1 ring-emerald-500/20'
+                : 'border-slate-700 hover:border-slate-600'
+            )}
+          >
+            <div className="flex items-center gap-2.5 min-w-0">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 shrink-0">
+                Jornada
+              </span>
+              <span className="text-sm font-semibold text-white truncate">
+                {activeRound?.round.name ?? 'Seleccionar'}
+              </span>
+              {activeRoundHasStarted && (
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+              )}
+            </div>
+            <ChevronDown
+              className={cn(
+                'h-4 w-4 text-slate-400 transition-transform duration-200 shrink-0',
+                dropdownOpen && 'rotate-180'
+              )}
+            />
+          </button>
+
+          {/* Panel */}
+          <AnimatePresence>
+            {dropdownOpen && (
+              <motion.div
+                initial={{ opacity: 0, y: -6, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -6, scale: 0.98 }}
+                transition={{ duration: 0.14, ease: 'easeOut' }}
+                className="absolute top-full left-0 right-0 mt-1.5 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl shadow-black/40 overflow-hidden"
               >
-                {r.round.name}
-                {hasStarted && activeRoundId !== r.round.id && (
-                  <span className="ml-1.5 inline-flex items-center justify-center w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                )}
-              </button>
-            );
-          })}
+                <div className="max-h-72 overflow-y-auto py-1">
+                  {groupRounds.length > 0 && (
+                    <>
+                      <div className="flex items-center gap-2 px-4 pt-2.5 pb-1.5">
+                        <Layers className="h-3 w-3 text-slate-600" />
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-slate-600">
+                          Fase de Grupos
+                        </span>
+                      </div>
+                      {groupRounds.map((r) => {
+                        const hasStarted = r.matches.some((m) => new Date(m.scheduled_at) <= new Date());
+                        const isActive = activeRoundId === r.round.id;
+                        return (
+                          <button
+                            key={r.round.id}
+                            onClick={() => { setActiveRoundId(r.round.id); setDropdownOpen(false); }}
+                            className={cn(
+                              'flex items-center justify-between gap-3 w-full px-4 py-2.5 text-sm transition-colors',
+                              isActive
+                                ? 'bg-emerald-500/10 text-emerald-400'
+                                : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                            )}
+                          >
+                            <span className="font-medium">{r.round.name}</span>
+                            <div className="flex items-center gap-2 shrink-0">
+                              {hasStarted && !isActive && (
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                              )}
+                              {isActive && <Check className="h-3.5 w-3.5" />}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </>
+                  )}
+
+                  {groupRounds.length > 0 && knockoutRounds.length > 0 && (
+                    <div className="mx-3 my-1.5 border-t border-slate-800" />
+                  )}
+
+                  {knockoutRounds.length > 0 && (
+                    <>
+                      <div className="flex items-center gap-2 px-4 pt-2.5 pb-1.5">
+                        <Swords className="h-3 w-3 text-slate-600" />
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-slate-600">
+                          Fase Eliminatoria
+                        </span>
+                      </div>
+                      {knockoutRounds.map((r) => {
+                        const hasStarted = r.matches.some((m) => new Date(m.scheduled_at) <= new Date());
+                        const isActive = activeRoundId === r.round.id;
+                        return (
+                          <button
+                            key={r.round.id}
+                            onClick={() => { setActiveRoundId(r.round.id); setDropdownOpen(false); }}
+                            className={cn(
+                              'flex items-center justify-between gap-3 w-full px-4 py-2.5 text-sm transition-colors',
+                              isActive
+                                ? 'bg-emerald-500/10 text-emerald-400'
+                                : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                            )}
+                          >
+                            <span className="font-medium">{r.round.name}</span>
+                            <div className="flex items-center gap-2 shrink-0">
+                              {hasStarted && !isActive && (
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                              )}
+                              {isActive && <Check className="h-3.5 w-3.5" />}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       )}
 

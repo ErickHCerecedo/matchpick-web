@@ -5,11 +5,11 @@ import { useParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StandingsTable } from '@/components/standings-table';
 import { PredictionForm } from '@/components/prediction-form';
 import { ParticipantsPredictions } from '@/components/participants-predictions';
+import { ParticipantBreakdown } from '@/components/participant-breakdown';
 import { api } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import type { ApiResponse, Quiniela, Standing, RoundWithMatches, Prediction } from '@/types';
@@ -197,64 +197,50 @@ export default function QuinielaPage() {
         </TabsContent>
 
         <TabsContent value="participants">
-          <div className="space-y-4">
-            {/* Admin invite panel */}
-            {quiniela.my_role === 'admin' && (
-              <div className="rounded-xl border border-slate-700 bg-slate-900 p-4 space-y-3">
-                <p className="text-sm font-medium text-white">Invitar participantes</p>
-                {inviteLink ? (
-                  <div className="flex gap-2">
-                    <input
-                      readOnly
-                      value={inviteLink}
-                      className="flex-1 rounded-lg bg-slate-800 border border-slate-700 text-slate-300 text-xs px-3 py-2 truncate focus:outline-none"
-                    />
+          <ParticipantBreakdown
+            quinielaSlug={slug}
+            standings={standings}
+            currentUserId={user?.id}
+            invitePanel={
+              quiniela.my_role === 'admin' ? (
+                <div className="rounded-xl border border-slate-700 bg-slate-900 p-4 space-y-3">
+                  <p className="text-sm font-medium text-white">Invitar participantes</p>
+                  {inviteLink ? (
+                    <div className="flex gap-2">
+                      <input
+                        readOnly
+                        value={inviteLink}
+                        className="flex-1 rounded-lg bg-slate-800 border border-slate-700 text-slate-300 text-xs px-3 py-2 truncate focus:outline-none"
+                      />
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={handleCopyLink}
+                        className="border-slate-600 text-slate-300 hover:text-white shrink-0"
+                      >
+                        {copied ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                  ) : (
                     <Button
                       size="sm"
-                      variant="outline"
-                      onClick={handleCopyLink}
-                      className="border-slate-600 text-slate-300 hover:text-white shrink-0"
+                      onClick={handleGenerateInvite}
+                      disabled={generatingInvite}
+                      className="bg-emerald-500 hover:bg-emerald-600 text-white"
                     >
-                      {copied ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
+                      {generatingInvite ? (
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      ) : (
+                        <Link2 className="h-4 w-4 mr-2" />
+                      )}
+                      Generar enlace de invitación
                     </Button>
-                  </div>
-                ) : (
-                  <Button
-                    size="sm"
-                    onClick={handleGenerateInvite}
-                    disabled={generatingInvite}
-                    className="bg-emerald-500 hover:bg-emerald-600 text-white"
-                  >
-                    {generatingInvite ? (
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    ) : (
-                      <Link2 className="h-4 w-4 mr-2" />
-                    )}
-                    Generar enlace de invitación
-                  </Button>
-                )}
-                <p className="text-xs text-slate-500">El enlace expira en 7 días.</p>
-              </div>
-            )}
-
-            {/* Participant list */}
-            <div className="space-y-2">
-              {standings.map((s) => (
-                <div key={s.user.id} className="flex items-center gap-3 p-3 rounded-xl bg-slate-900 border border-slate-800">
-                  <Avatar className="h-9 w-9">
-                    <AvatarImage src={s.user.avatar_url ?? undefined} />
-                    <AvatarFallback className="bg-slate-700 text-white text-xs">
-                      {s.user.name.charAt(0).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="flex-1 text-sm font-medium text-white">{s.user.name}</span>
-                  {s.user.id === user?.id && (
-                    <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 text-xs">Tú</Badge>
                   )}
+                  <p className="text-xs text-slate-500">El enlace expira en 7 días.</p>
                 </div>
-              ))}
-            </div>
-          </div>
+              ) : undefined
+            }
+          />
         </TabsContent>
       </Tabs>
     </motion.div>

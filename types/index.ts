@@ -138,3 +138,36 @@ export interface RoundWithMatches {
   round: Pick<Round, 'id' | 'name' | 'type' | 'order'>;
   matches: Match[];
 }
+
+export interface BreakdownScore {
+  points: number;
+  breakdown: { result: 0 | 1; exact: 0 | 2 };
+}
+
+export interface BreakdownMatch {
+  id: number;
+  scheduled_at: string;
+  status: 'scheduled' | 'in_progress' | 'finished' | 'cancelled';
+  home_team: Pick<Team, 'id' | 'name' | 'short_name' | 'flag_url'> | null;
+  away_team: Pick<Team, 'id' | 'name' | 'short_name' | 'flag_url'> | null;
+  result: MatchResult | null;
+  prediction: { home_score: number; away_score: number } | null;
+  score: BreakdownScore | null;
+  has_started: boolean;
+}
+
+export interface BreakdownRound {
+  round: Pick<Round, 'id' | 'name' | 'type' | 'order'>;
+  matches: BreakdownMatch[];
+}
+
+export interface ParticipantBreakdownData {
+  user: Pick<User, 'id' | 'name' | 'avatar_url'>;
+  standing: {
+    total_points: number;
+    exact_scores: number;
+    correct_results: number;
+    predictions_made: number;
+  } | null;
+  rounds: BreakdownRound[];
+}
