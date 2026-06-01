@@ -20,9 +20,17 @@ const BASE_NAV: NavItem[] = [
   { href: '/torneos', label: 'Torneos', icon: Trophy },
 ];
 
+function isNavActive(href: string, pathname: string): boolean {
+  // /torneos/[slug]/admin belongs to the /admin section, not /torneos
+  const inAdminSection = pathname === '/admin' || pathname.includes('/admin');
+  if (href === '/admin') return inAdminSection;
+  if (href === '/') return pathname === '/';
+  return pathname.startsWith(href) && !inAdminSection;
+}
+
 function NavLink({ href, label, icon: Icon }: NavItem) {
   const pathname = usePathname();
-  const active = pathname === href || (href !== '/' && pathname.startsWith(href));
+  const active = isNavActive(href, pathname);
   return (
     <Link
       href={href}
@@ -161,7 +169,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
 function MobileNavLink({ href, label, Icon }: { href: string; label: string; Icon: React.ElementType }) {
   const pathname = usePathname();
-  const active = pathname === href || (href !== '/' && pathname.startsWith(href));
+  const active = isNavActive(href, pathname);
   return (
     <Link
       href={href}

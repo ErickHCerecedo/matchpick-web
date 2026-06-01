@@ -733,7 +733,7 @@ export default function TorneoAdminPage() {
                                           </p>
                                         </div>
                                         {tournament.is_custom && (
-                                          <div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                                          <div className="flex items-center gap-0.5 shrink-0 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                                             <button onClick={() => startEditMatch(match)} className="p-1.5 rounded text-slate-500 hover:text-white transition-colors" title="Editar"><Pencil className="h-3.5 w-3.5" /></button>
                                             <button onClick={() => handleRemoveMatch(match.id)} className="p-1.5 rounded text-slate-600 hover:text-red-400 transition-colors" title="Eliminar"><Trash2 className="h-3.5 w-3.5" /></button>
                                           </div>
