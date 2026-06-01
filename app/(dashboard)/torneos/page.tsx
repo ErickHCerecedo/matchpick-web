@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
@@ -98,11 +98,11 @@ export default function TorneosPage() {
     }
   }, [user]);
 
-  const myIds = new Set(myTournaments.map((t) => t.id));
-  const allTournaments = [
+  const myIds = useMemo(() => new Set(myTournaments.map((t) => t.id)), [myTournaments]);
+  const allTournaments = useMemo(() => [
     ...myTournaments,
     ...tournaments.filter((t) => !myIds.has(t.id)),
-  ];
+  ], [myTournaments, tournaments, myIds]);
 
   return (
     <div>

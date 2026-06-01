@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
-import { motion } from 'framer-motion';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { MatchCard } from './match-card';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { groupByDate, parseDateKey, todayKey } from '@/lib/date-utils';
 import type { Match, RoundWithMatches, Prediction } from '@/types';
 import { Save, Loader2, CheckCircle2, ChevronRight } from 'lucide-react';
 
@@ -17,25 +18,6 @@ interface Props {
 }
 
 // ── helpers ────────────────────────────────────────────────────────────────
-
-type DateEntry = { match: Match; roundName: string };
-
-function groupByDate(rounds: RoundWithMatches[]): Map<string, DateEntry[]> {
-  const byDate = new Map<string, DateEntry[]>();
-  for (const r of rounds) {
-    for (const m of r.matches) {
-      const key = m.scheduled_at?.slice(0, 10) ?? 'sin-fecha';
-      if (!byDate.has(key)) byDate.set(key, []);
-      byDate.get(key)!.push({ match: m, roundName: r.round.name });
-    }
-  }
-  return new Map([...byDate.entries()].sort((a, b) => a[0].localeCompare(b[0])));
-}
-
-function parseDateKey(dateKey: string): Date {
-  const [y, m, d] = dateKey.split('-').map(Number);
-  return new Date(y, m - 1, d);
-}
 
 function firstOpenDate(rounds: RoundWithMatches[], predictions: Record<number, Prediction>): string | null {
   // First date that has open, unpredicted matches
@@ -67,6 +49,11 @@ export function PredictionForm({ quinielaSlug, rounds, initialPredictions }: Pro
   const [activeDateKey, setActiveDateKey] = useState<string | null>(() =>
     firstOpenDate(rounds, initialPredictions)
   );
+  const activeDateRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    activeDateRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+  }, [activeDateKey]);
 
   // Global progress
   const { totalPredicted, totalPredictable } = useMemo(() => {
@@ -153,13 +140,15 @@ export function PredictionForm({ quinielaSlug, rounds, initialPredictions }: Pro
     return [...grouped.entries()];
   }, [matchesByDate, activeDateKey]);
 
-  const pendingCount = useMemo(
-    () =>
-      Object.values(predictions).filter(
-        (p) => p.home_score !== undefined && p.away_score !== undefined
-      ).length,
-    [predictions]
-  );
+  // Count only predictions that are new or changed vs what came from the server
+  const pendingCount = useMemo(() => {
+    return Object.entries(predictions).filter(([matchId, p]) => {
+      if (p.home_score === undefined || p.away_score === undefined) return false;
+      const orig = initialPredictions[Number(matchId)];
+      if (!orig || orig.home_score === undefined) return true;
+      return orig.home_score !== p.home_score || orig.away_score !== p.away_score;
+    }).length;
+  }, [predictions, initialPredictions]);
 
   // Missing predictions on the active date
   const missingOnActiveDate = useMemo(() => {
@@ -219,10 +208,12 @@ export function PredictionForm({ quinielaSlug, rounds, initialPredictions }: Pro
             const isActive = activeDateKey === dateKey;
             const isComplete = stat.openCount > 0 && stat.predictedCount === stat.openCount;
             const isPartial = stat.predictedCount > 0 && stat.predictedCount < stat.openCount;
+            const isToday = dateKey === todayKey();
 
             return (
               <button
                 key={dateKey}
+                ref={isActive ? activeDateRef : undefined}
                 onClick={() => setActiveDateKey(dateKey)}
                 className={cn(
                   'shrink-0 flex flex-col items-center px-3 py-2.5 rounded-xl border text-center min-w-[62px] transition-all',
@@ -236,7 +227,7 @@ export function PredictionForm({ quinielaSlug, rounds, initialPredictions }: Pro
                 )}
               >
                 <span className="text-[10px] uppercase tracking-wide leading-none mb-1">
-                  {d.toLocaleDateString('es-MX', { weekday: 'short' })}
+                  {isToday ? 'Hoy' : d.toLocaleDateString('es-MX', { weekday: 'short' })}
                 </span>
                 <span className="text-xl font-bold leading-none">{d.getDate()}</span>
                 <span className="text-[10px] uppercase tracking-wide leading-none mt-1">
@@ -297,26 +288,34 @@ export function PredictionForm({ quinielaSlug, rounds, initialPredictions }: Pro
         </div>
       )}
 
-      {/* ── Sticky save button ─────────────────────────────────────────── */}
-      <div className="sticky bottom-4 md:bottom-6 z-10">
-        <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>
-          <Button
-            onClick={handleSave}
-            disabled={saving || pendingCount === 0}
-            className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-semibold shadow-lg shadow-emerald-500/20 disabled:opacity-40"
-            size="lg"
+      {/* ── Sticky save button — only visible when there are pending changes ── */}
+      <AnimatePresence>
+        {(pendingCount > 0 || saving) && (
+          <motion.div
+            initial={{ y: 40, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 40, opacity: 0 }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
+            className="sticky bottom-4 md:bottom-6 z-10"
           >
-            {saving ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-            ) : (
-              <Save className="h-4 w-4 mr-2" />
-            )}
-            {pendingCount > 0
-              ? `Guardar ${pendingCount} predicción${pendingCount !== 1 ? 'es' : ''}`
-              : 'Guardar predicciones'}
-          </Button>
-        </motion.div>
-      </div>
+            <Button
+              onClick={handleSave}
+              disabled={saving}
+              className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-semibold shadow-lg shadow-emerald-500/20"
+              size="lg"
+            >
+              {saving ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <Save className="h-4 w-4 mr-2" />
+              )}
+              {saving
+                ? 'Guardando…'
+                : `Guardar ${pendingCount} predicción${pendingCount !== 1 ? 'es' : ''}`}
+            </Button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

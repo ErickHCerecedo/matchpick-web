@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
@@ -17,49 +17,15 @@ import type { ApiResponse, Match, Tournament, RoundWithMatches } from '@/types';
 import { ArrowLeft, Calendar, Trophy } from 'lucide-react';
 import { buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-
-// ── helpers ────────────────────────────────────────────────────────────────
-
-type DateEntry = { match: Match; roundName: string };
-
-function groupByDate(rounds: RoundWithMatches[]): Map<string, DateEntry[]> {
-  const byDate = new Map<string, DateEntry[]>();
-  for (const r of rounds) {
-    for (const m of r.matches) {
-      const key = m.scheduled_at?.slice(0, 10) ?? 'sin-fecha';
-      if (!byDate.has(key)) byDate.set(key, []);
-      byDate.get(key)!.push({ match: m, roundName: r.round.name });
-    }
-  }
-  // sort chronologically
-  return new Map([...byDate.entries()].sort((a, b) => a[0].localeCompare(b[0])));
-}
-
-function parseDateKey(dateKey: string): Date {
-  const [y, m, d] = dateKey.split('-').map(Number);
-  return new Date(y, m - 1, d);
-}
-
-function formatDateLabel(dateKey: string) {
-  const d = parseDateKey(dateKey);
-  return {
-    weekday: d.toLocaleDateString('es-MX', { weekday: 'short' }),
-    day: d.getDate(),
-    month: d.toLocaleDateString('es-MX', { month: 'short' }),
-  };
-}
+import { groupByDate, formatDateLabel, todayKey } from '@/lib/date-utils';
 
 // ── component ──────────────────────────────────────────────────────────────
 
 const ROUND_TYPE_ORDER = [
-  'group',
-  'round_of_32',
-  'round_of_16',
-  'quarter',
-  'semi',
-  'third_place',
-  'final',
+  'group', 'round_of_32', 'round_of_16', 'quarter', 'semi', 'third_place', 'final', 'general',
 ] as const;
+
+const ROUND_ORDER_MAP = new Map(ROUND_TYPE_ORDER.map((t, i) => [t, i]));
 
 export default function TorneoDetailPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -71,6 +37,11 @@ export default function TorneoDetailPage() {
   const [loadingTournament, setLoadingTournament] = useState(true);
   const [loadingStandings, setLoadingStandings] = useState(true);
   const [activeDateKey, setActiveDateKey] = useState<string | null>(null);
+  const activeDateRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    activeDateRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+  }, [activeDateKey]);
 
   useEffect(() => {
     if (!slug) return;
@@ -86,18 +57,15 @@ export default function TorneoDetailPage() {
         // Default: first date that has matches (from the first round)
         const sorted = [...mRes.data].sort(
           (a, b) =>
-            ROUND_TYPE_ORDER.indexOf(a.round.type as typeof ROUND_TYPE_ORDER[number]) -
-            ROUND_TYPE_ORDER.indexOf(b.round.type as typeof ROUND_TYPE_ORDER[number])
+            (ROUND_ORDER_MAP.get(a.round.type as typeof ROUND_TYPE_ORDER[number]) ?? 99) -
+            (ROUND_ORDER_MAP.get(b.round.type as typeof ROUND_TYPE_ORDER[number]) ?? 99)
         );
-        const firstRoundWithMatches = sorted.find((r) => r.matches.length > 0);
-        if (firstRoundWithMatches) {
-          const firstMatch = [...firstRoundWithMatches.matches].sort((a, b) =>
-            (a.scheduled_at ?? '').localeCompare(b.scheduled_at ?? '')
-          )[0];
-          if (firstMatch?.scheduled_at) {
-            setActiveDateKey(firstMatch.scheduled_at.slice(0, 10));
-          }
-        }
+        // Default to today if it has matches, otherwise first future date, otherwise first date
+        const today = todayKey();
+        const allMatches = mRes.data.flatMap((r) => r.matches);
+        const allDates = [...new Set(allMatches.map((m) => m.scheduled_at?.slice(0, 10)).filter(Boolean) as string[])].sort();
+        const defaultDate = allDates.find((d) => d >= today) ?? allDates[0];
+        if (defaultDate) setActiveDateKey(defaultDate);
       })
       .catch(console.error);
 
@@ -112,8 +80,8 @@ export default function TorneoDetailPage() {
     () =>
       [...rounds].sort(
         (a, b) =>
-          ROUND_TYPE_ORDER.indexOf(a.round.type as typeof ROUND_TYPE_ORDER[number]) -
-          ROUND_TYPE_ORDER.indexOf(b.round.type as typeof ROUND_TYPE_ORDER[number])
+          (ROUND_ORDER_MAP.get(a.round.type as typeof ROUND_TYPE_ORDER[number]) ?? 99) -
+          (ROUND_ORDER_MAP.get(b.round.type as typeof ROUND_TYPE_ORDER[number]) ?? 99)
       ),
     [rounds]
   );
@@ -205,9 +173,11 @@ export default function TorneoDetailPage() {
                 const { weekday, day, month } = formatDateLabel(dateKey);
                 const isActive = activeDateKey === dateKey;
                 const count = dateGroups.get(dateKey)!.length;
+                const isToday = dateKey === todayKey();
                 return (
                   <button
                     key={dateKey}
+                    ref={isActive ? activeDateRef : undefined}
                     onClick={() => setActiveDateKey(dateKey)}
                     className={cn(
                       'shrink-0 flex flex-col items-center px-3 py-2.5 rounded-xl border text-center min-w-[62px] transition-all',
@@ -217,7 +187,7 @@ export default function TorneoDetailPage() {
                     )}
                   >
                     <span className="text-[10px] uppercase tracking-wide leading-none mb-1">
-                      {weekday}
+                      {isToday ? 'Hoy' : weekday}
                     </span>
                     <span className="text-xl font-bold leading-none">{day}</span>
                     <span className="text-[10px] uppercase tracking-wide leading-none mt-1">

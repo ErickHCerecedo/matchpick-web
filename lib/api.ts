@@ -19,6 +19,14 @@ async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> 
     throw new Error('No se pudo conectar con el servidor. Verifica tu conexión a internet.');
   }
 
+  if (res.status === 401) {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('auth_token');
+      window.location.href = '/login';
+    }
+    throw new Error('Sesión expirada. Por favor inicia sesión de nuevo.');
+  }
+
   if (!res.ok) {
     const error = await res.json().catch(() => ({ message: `Error ${res.status}` }));
     throw new Error((error as { message?: string }).message ?? `HTTP ${res.status}`);

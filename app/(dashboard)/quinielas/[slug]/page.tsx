@@ -6,16 +6,16 @@ import { motion } from 'framer-motion';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { StandingsTable } from '@/components/standings-table';
 import { PredictionForm } from '@/components/prediction-form';
 import { ParticipantsPredictions } from '@/components/participants-predictions';
 import { ParticipantBreakdown } from '@/components/participant-breakdown';
+import { QuinielaDashboard } from '@/components/quiniela-dashboard';
 import { api } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import type { ApiResponse, Quiniela, Standing, RoundWithMatches, Prediction } from '@/types';
 import {
   Lock, Globe, Users, Link2, Copy, Check, Loader2,
-  Trophy, Target, BarChart3,
+  Trophy, Target, Eye, LayoutDashboard,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -28,9 +28,11 @@ export default function QuinielaPage() {
   const [standings, setStandings] = useState<Standing[]>([]);
   const [rounds, setRounds] = useState<RoundWithMatches[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [inviteLink, setInviteLink] = useState<string | null>(null);
   const [generatingInvite, setGeneratingInvite] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [activeTab, setActiveTab] = useState('dashboard');
 
   const handleGenerateInvite = async () => {
     if (!slug) return;
@@ -59,18 +61,21 @@ export default function QuinielaPage() {
   useEffect(() => {
     if (!slug) return;
 
-    api.get<ApiResponse<Quiniela>>(`/quinielas/${slug}`)
-      .then((res) => setQuiniela(res.data))
-      .catch(console.error)
+    Promise.all([
+      api.get<ApiResponse<Quiniela>>(`/quinielas/${slug}`),
+      api.get<ApiResponse<Standing[]>>(`/quinielas/${slug}/standings`),
+      api.get<ApiResponse<RoundWithMatches[]>>(`/quinielas/${slug}/matches`),
+    ])
+      .then(([qRes, sRes, rRes]) => {
+        setQuiniela(qRes.data);
+        setStandings(sRes.data);
+        setRounds(rRes.data);
+      })
+      .catch(() => {
+        setLoadError(true);
+        toast.error('Error al cargar la quiniela. Intenta de nuevo.');
+      })
       .finally(() => setLoading(false));
-
-    api.get<ApiResponse<Standing[]>>(`/quinielas/${slug}/standings`)
-      .then((res) => setStandings(res.data))
-      .catch(console.error);
-
-    api.get<ApiResponse<RoundWithMatches[]>>(`/quinielas/${slug}/matches`)
-      .then((res) => setRounds(res.data))
-      .catch(console.error);
   }, [slug]);
 
   const refreshRoundsAndStandings = () => {
@@ -88,6 +93,20 @@ export default function QuinielaPage() {
       <div className="space-y-4">
         <Skeleton className="h-10 w-64 bg-slate-800" />
         <Skeleton className="h-64 bg-slate-800 rounded-xl" />
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="text-center py-16">
+        <p className="text-slate-400 text-sm">No se pudo cargar la quiniela.</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="mt-3 text-xs text-emerald-400 hover:text-emerald-300 transition-colors"
+        >
+          Reintentar
+        </button>
       </div>
     );
   }
@@ -137,15 +156,15 @@ export default function QuinielaPage() {
         </div>
       </div>
 
-      <Tabs defaultValue="standings">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         {/* Mobile-first: 2×2 grid on small screens, 4-col row on sm+ */}
         <TabsList className="!grid grid-cols-2 sm:grid-cols-4 w-full !h-auto bg-slate-800 border border-slate-700/60 mb-5 p-1 gap-1 rounded-xl">
           <TabsTrigger
-            value="standings"
+            value="dashboard"
             className="flex flex-col items-center gap-1 py-2.5 h-auto rounded-lg text-slate-400 data-active:bg-emerald-500/20 data-active:text-emerald-400 hover:text-white transition-colors"
           >
-            <Trophy className="h-4 w-4" />
-            <span className="text-xs font-medium">Posiciones</span>
+            <LayoutDashboard className="h-4 w-4" />
+            <span className="text-xs font-medium">Dashboard</span>
           </TabsTrigger>
           <TabsTrigger
             value="predictions"
@@ -158,8 +177,8 @@ export default function QuinielaPage() {
             value="transparency"
             className="flex flex-col items-center gap-1 py-2.5 h-auto rounded-lg text-slate-400 data-active:bg-emerald-500/20 data-active:text-emerald-400 hover:text-white transition-colors"
           >
-            <BarChart3 className="h-4 w-4" />
-            <span className="text-xs font-medium">Resultados</span>
+            <Eye className="h-4 w-4" />
+            <span className="text-xs font-medium">Transparencia</span>
           </TabsTrigger>
           <TabsTrigger
             value="participants"
@@ -170,19 +189,28 @@ export default function QuinielaPage() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="standings">
-          <StandingsTable standings={standings} currentUserId={user?.id} />
+        <TabsContent value="dashboard">
+          <QuinielaDashboard
+            standings={standings}
+            rounds={rounds}
+            currentUserId={user?.id}
+            onGoToPredictions={() => setActiveTab('predictions')}
+          />
         </TabsContent>
 
         <TabsContent value="predictions">
           {quiniela.predictions_open ? (
             <PredictionForm
+              key={rounds.length > 0 ? 'loaded' : 'empty'}
               quinielaSlug={slug}
               rounds={rounds}
               initialPredictions={initialPredictions}
             />
           ) : (
-            <p className="text-center text-slate-400 py-10">Las predicciones están cerradas.</p>
+            <div className="text-center py-10 space-y-2">
+              <p className="text-slate-400">Las predicciones están cerradas.</p>
+              <p className="text-slate-600 text-xs">Puedes ver los resultados en el tab Transparencia.</p>
+            </div>
           )}
         </TabsContent>
 
