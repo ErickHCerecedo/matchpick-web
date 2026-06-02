@@ -166,14 +166,8 @@ export default function QuinielaPage() {
 
             {/* Actions menu */}
             <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-slate-400 hover:text-white"
-                >
-                  <MoreVertical className="h-4 w-4" />
-                </Button>
+              <DropdownMenuTrigger className="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-400 hover:text-white hover:bg-slate-800 transition-colors focus:outline-none">
+                <MoreVertical className="h-4 w-4" />
               </DropdownMenuTrigger>
               <DropdownMenuContent
                 align="end"
