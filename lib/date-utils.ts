@@ -2,11 +2,19 @@ import type { RoundWithMatches, Match } from '@/types';
 
 export type DateEntry = { match: Match; roundName: string };
 
+// Converts an ISO datetime string (may carry any UTC offset) to a local YYYY-MM-DD key.
+// Using slice(0,10) on the raw UTC string would shift matches to the wrong day for
+// timezones behind UTC (e.g. Mexico City, UTC-6).
+export function toLocalDateKey(dateStr: string): string {
+  const d = new Date(dateStr);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 export function groupByDate(rounds: RoundWithMatches[]): Map<string, DateEntry[]> {
   const byDate = new Map<string, DateEntry[]>();
   for (const r of rounds) {
     for (const m of r.matches) {
-      const key = m.scheduled_at?.slice(0, 10) ?? 'sin-fecha';
+      const key = m.scheduled_at ? toLocalDateKey(m.scheduled_at) : 'sin-fecha';
       if (!byDate.has(key)) byDate.set(key, []);
       byDate.get(key)!.push({ match: m, roundName: r.round.name });
     }
@@ -31,4 +39,9 @@ export function formatDateLabel(dateKey: string) {
 export function todayKey(): string {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+}
+
+export function formatFullDate(dateKey: string): string {
+  const d = parseDateKey(dateKey);
+  return d.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
 }
