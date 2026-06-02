@@ -7,7 +7,7 @@ import { cn, formatMatchDate } from '@/lib/utils';
 import type { Standing, RoundWithMatches } from '@/types';
 import {
   Trophy, Target, CheckCircle2, Clock, TrendingUp,
-  Crown, Medal, Star, ArrowRight, CalendarCheck,
+  Crown, Medal, Star, ArrowRight, CalendarCheck, Share2,
 } from 'lucide-react';
 
 // ── helpers ────────────────────────────────────────────────────────────────
@@ -471,9 +471,10 @@ interface Props {
   rounds: RoundWithMatches[];
   currentUserId?: number;
   onGoToPredictions: () => void;
+  onShare?: () => void;
 }
 
-export function QuinielaDashboard({ standings, rounds, currentUserId, onGoToPredictions }: Props) {
+export function QuinielaDashboard({ standings, rounds, currentUserId, onGoToPredictions, onShare }: Props) {
   const myStanding = standings.find((s) => s.user.id === currentUserId);
   const leader = standings[0] ?? null;
 
@@ -489,9 +490,20 @@ export function QuinielaDashboard({ standings, rounds, currentUserId, onGoToPred
 
   return (
     <div className="space-y-4">
-      {/* My stats — full width */}
+      {/* My stats — full width, with share shortcut */}
       {myStanding && (
-        <MyStatsCard myStanding={myStanding} leader={leader} />
+        <div className="relative">
+          <MyStatsCard myStanding={myStanding} leader={leader} />
+          {onShare && (
+            <button
+              onClick={onShare}
+              className="absolute top-3 right-3 flex items-center gap-1.5 text-[11px] font-medium text-slate-500 hover:text-emerald-400 transition-colors bg-slate-900/80 px-2 py-1 rounded-lg border border-slate-800 hover:border-emerald-500/30"
+            >
+              <Share2 className="h-3 w-3" />
+              Compartir
+            </button>
+          )}
+        </div>
       )}
 
       {/* Two-column layout on md+ */}

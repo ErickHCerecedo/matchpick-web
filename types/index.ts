@@ -134,6 +134,16 @@ export interface ApiResponse<T> {
   message?: string;
 }
 
+export interface QuinielaDeleteStatus {
+  can_delete_freely: boolean;
+  reason: 'pre_tournament' | 'post_tournament' | 'active';
+  votes_count: number;
+  participants_count: number;
+  my_vote: boolean;
+  admin_voted: boolean;
+  can_delete: boolean;
+}
+
 export interface RoundWithMatches {
   round: Pick<Round, 'id' | 'name' | 'type' | 'order'>;
   matches: Match[];

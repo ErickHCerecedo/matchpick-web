@@ -6,18 +6,28 @@ import { motion } from 'framer-motion';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
 import { PredictionForm } from '@/components/prediction-form';
 import { ParticipantsPredictions } from '@/components/participants-predictions';
 import { ParticipantBreakdown } from '@/components/participant-breakdown';
 import { QuinielaDashboard } from '@/components/quiniela-dashboard';
+import { DeleteQuinielaDialog } from '@/components/delete-quiniela-dialog';
+import { ShareQuinielaDialog } from '@/components/share-quiniela-dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { api } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import type { ApiResponse, Quiniela, Standing, RoundWithMatches, Prediction } from '@/types';
 import {
   Lock, Globe, Users, Link2, Copy, Check, Loader2,
-  Trophy, Target, Eye, LayoutDashboard,
+  Target, Eye, LayoutDashboard,
+  MoreVertical, Trash2, Share2,
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 
 export default function QuinielaPage() {
@@ -33,6 +43,8 @@ export default function QuinielaPage() {
   const [generatingInvite, setGeneratingInvite] = useState(false);
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [showDelete, setShowDelete] = useState(false);
+  const [showShare, setShowShare] = useState(false);
 
   const handleGenerateInvite = async () => {
     if (!slug) return;
@@ -115,6 +127,9 @@ export default function QuinielaPage() {
     return <p className="text-slate-400">Quiniela no encontrada.</p>;
   }
 
+  const isAdmin = quiniela.my_role === 'admin';
+  const myStanding = standings.find((s) => s.user.id === user?.id) ?? null;
+
   const initialPredictions: Record<number, Prediction> = {};
   for (const round of rounds) {
     for (const match of round.matches) {
@@ -129,8 +144,8 @@ export default function QuinielaPage() {
       {/* Header */}
       <div className="mb-5">
         <div className="flex items-start justify-between gap-3">
-          <div>
-            <h2 className="text-2xl font-bold text-white">{quiniela.name}</h2>
+          <div className="flex-1 min-w-0">
+            <h2 className="text-2xl font-bold text-white truncate">{quiniela.name}</h2>
             <p className="text-slate-400 text-sm mt-0.5">{quiniela.tournament.name}</p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -148,6 +163,44 @@ export default function QuinielaPage() {
                 <><Lock className="h-3 w-3 mr-1" />Privada</>
               )}
             </Badge>
+
+            {/* Actions menu */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-slate-400 hover:text-white"
+                >
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="end"
+                className="bg-slate-900 border-slate-800 text-slate-200 min-w-47.5"
+              >
+                <DropdownMenuItem
+                  onClick={() => setShowShare(true)}
+                  className="gap-2 cursor-pointer hover:bg-slate-800 focus:bg-slate-800"
+                >
+                  <Share2 className="h-4 w-4 text-emerald-400" />
+                  Compartir mi posición
+                </DropdownMenuItem>
+
+                {isAdmin && (
+                  <>
+                    <DropdownMenuSeparator className="bg-slate-800" />
+                    <DropdownMenuItem
+                      onClick={() => setShowDelete(true)}
+                      className="gap-2 cursor-pointer text-red-400 hover:bg-red-950/40 focus:bg-red-950/40 hover:text-red-300 focus:text-red-300"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      Eliminar quiniela
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
         <div className="flex items-center gap-1.5 text-slate-500 text-sm mt-2">
@@ -195,6 +248,7 @@ export default function QuinielaPage() {
             rounds={rounds}
             currentUserId={user?.id}
             onGoToPredictions={() => setActiveTab('predictions')}
+            onShare={() => setShowShare(true)}
           />
         </TabsContent>
 
@@ -271,6 +325,20 @@ export default function QuinielaPage() {
           />
         </TabsContent>
       </Tabs>
+
+      {/* Dialogs */}
+      <DeleteQuinielaDialog
+        open={showDelete}
+        onClose={() => setShowDelete(false)}
+        quiniela={quiniela}
+        isAdmin={isAdmin}
+      />
+      <ShareQuinielaDialog
+        open={showShare}
+        onClose={() => setShowShare(false)}
+        quiniela={quiniela}
+        standing={myStanding}
+      />
     </motion.div>
   );
 }
