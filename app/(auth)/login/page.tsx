@@ -28,6 +28,14 @@ function LoginForm() {
     }
   }, [user, authLoading, router, redirect]);
 
+  useEffect(() => {
+    if (params.get('error') === 'google_failed') {
+      toast.error('No se pudo iniciar sesión con Google. Intenta de nuevo.');
+    }
+  // only run once on mount
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -50,8 +58,17 @@ function LoginForm() {
         `${process.env.NEXT_PUBLIC_API_URL}/auth/google/redirect`,
         { headers: { Accept: 'application/json' } }
       );
-      const data = await res.json() as { data: { url: string } };
-      window.location.href = data.data.url;
+      if (!res.ok) {
+        toast.error('Error al conectar con Google');
+        return;
+      }
+      const data = await res.json() as { data?: { url?: string } };
+      const url = data?.data?.url;
+      if (!url) {
+        toast.error('Error al conectar con Google');
+        return;
+      }
+      window.location.href = url;
     } catch {
       toast.error('Error al conectar con Google');
     }

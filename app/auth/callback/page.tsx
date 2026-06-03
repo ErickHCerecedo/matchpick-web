@@ -25,8 +25,12 @@ function CallbackHandler() {
       const pendingRedirect = localStorage.getItem('pendingRedirect') ?? '/';
       localStorage.removeItem('pendingRedirect');
       getCurrentUser().then((user) => {
-        if (user) setUser(user);
-        router.push(pendingRedirect);
+        if (user) {
+          setUser(user);
+          router.push(pendingRedirect);
+        } else {
+          router.push('/login?error=google_failed');
+        }
       });
     } else {
       router.push('/login');

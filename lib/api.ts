@@ -22,8 +22,12 @@ async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> 
   if (res.status === 401) {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('auth_token');
-      const onAuthPage = window.location.pathname.startsWith('/login') ||
-        window.location.pathname.startsWith('/register');
+      const p = window.location.pathname;
+      const onAuthPage =
+        p.startsWith('/login') ||
+        p.startsWith('/register') ||
+        p.startsWith('/auth/') ||
+        p.startsWith('/invitaciones/');
       if (!onAuthPage) {
         window.location.href = '/login';
       }
