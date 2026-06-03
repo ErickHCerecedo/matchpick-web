@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, Suspense } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
@@ -18,9 +18,15 @@ function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
   const redirect = params.get('redirect') ?? '/';
-  const { setUser } = useAuth();
+  const { user, loading: authLoading, setUser } = useAuth();
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({ email: '', password: '' });
+
+  useEffect(() => {
+    if (!authLoading && user) {
+      router.replace(redirect);
+    }
+  }, [user, authLoading, router, redirect]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

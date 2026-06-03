@@ -4,11 +4,17 @@ import { useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
-import { logout as doLogout } from '@/lib/auth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Home, Trophy, LogOut, Shield } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
@@ -63,9 +69,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, [user, loading, router]);
 
   const handleLogout = async () => {
-    await doLogout();
-    logout();
-    router.push('/login');
+    await logout();
+    // useEffect redirects to /login once user becomes null
   };
 
   if (loading) {
@@ -137,12 +142,33 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <Shield className="h-4 w-4" />
               </Link>
             )}
-            <Avatar className="h-8 w-8">
-              <AvatarImage src={user.avatar_url ?? undefined} />
-              <AvatarFallback className="bg-slate-700 text-white text-xs">
-                {user.name.charAt(0).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
+            <DropdownMenu>
+              <DropdownMenuTrigger className="rounded-full focus:outline-none">
+                <Avatar className="h-8 w-8 cursor-pointer">
+                  <AvatarImage src={user.avatar_url ?? undefined} />
+                  <AvatarFallback className="bg-slate-700 text-white text-xs">
+                    {user.name.charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="end"
+                className="bg-slate-900 border-slate-800 text-slate-200 min-w-44"
+              >
+                <div className="px-2 py-1.5">
+                  <p className="text-sm font-medium text-white truncate">{user.name}</p>
+                  <p className="text-xs text-slate-500 truncate">{user.email}</p>
+                </div>
+                <DropdownMenuSeparator className="bg-slate-800" />
+                <DropdownMenuItem
+                  onClick={handleLogout}
+                  className="gap-2 cursor-pointer text-red-400 hover:bg-red-950/40 focus:bg-red-950/40 hover:text-red-300 focus:text-red-300"
+                >
+                  <LogOut className="h-4 w-4" />
+                  Cerrar sesión
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </header>
 
