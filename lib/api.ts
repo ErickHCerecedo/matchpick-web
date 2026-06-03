@@ -22,7 +22,11 @@ async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> 
   if (res.status === 401) {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('auth_token');
-      window.location.href = '/login';
+      const onAuthPage = window.location.pathname.startsWith('/login') ||
+        window.location.pathname.startsWith('/register');
+      if (!onAuthPage) {
+        window.location.href = '/login';
+      }
     }
     throw new Error('Sesión expirada. Por favor inicia sesión de nuevo.');
   }
