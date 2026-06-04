@@ -68,6 +68,7 @@ export interface CustomMatch {
   status: string;
   home_team: { id: number; name: string; short_name: string };
   away_team: { id: number; name: string; short_name: string };
+  result: MatchResult | null;
 }
 
 export interface MatchResult {

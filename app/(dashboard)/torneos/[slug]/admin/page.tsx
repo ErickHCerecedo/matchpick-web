@@ -12,10 +12,11 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { api } from '@/lib/api';
-import type { ApiResponse, Tournament, Round, CustomTeam, CustomMatch } from '@/types';
+import { useAuth } from '@/contexts/AuthContext';
+import type { ApiResponse, Tournament, Round, CustomTeam, CustomMatch, MatchResult } from '@/types';
 import {
   ArrowLeft, Plus, Trash2, Loader2, Users, CalendarDays, Trophy,
-  Pencil, Check, X, Shield, ChevronRight,
+  Pencil, Check, X, Shield, ChevronRight, RefreshCw,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -82,6 +83,7 @@ function MatchTeamFlag({ teamId, teams }: { teamId: number; teams: CustomTeam[] 
 export default function TorneoAdminPage() {
   const { slug } = useParams<{ slug: string }>();
   const router = useRouter();
+  const { user } = useAuth();
 
   const [tournament, setTournament] = useState<Tournament | null>(null);
   const [teams, setTeams] = useState<CustomTeam[]>([]);
@@ -106,6 +108,12 @@ export default function TorneoAdminPage() {
   const [showMatchForm, setShowMatchForm] = useState(false);
   const [editingMatchId, setEditingMatchId] = useState<number | null>(null);
   const [editMatchForm, setEditMatchForm] = useState({ home_team_id: '', away_team_id: '', scheduled_at: '', venue: '' });
+
+  // Result state
+  const [resultMatchId, setResultMatchId] = useState<number | null>(null);
+  const [resultForm, setResultForm] = useState({ home_score: '', away_score: '' });
+  const [savingResult, setSavingResult] = useState(false);
+  const [syncing, setSyncing] = useState(false);
 
   const [saving, setSaving] = useState(false);
 
@@ -368,6 +376,65 @@ export default function TorneoAdminPage() {
     });
   };
 
+  // ── Results ───────────────────────────────────────────────────────────
+
+  const startSetResult = (match: CustomMatch) => {
+    setResultMatchId(match.id);
+    setResultForm({
+      home_score: match.result != null ? String(match.result.home_score) : '',
+      away_score: match.result != null ? String(match.result.away_score) : '',
+    });
+    setEditingMatchId(null);
+    setShowMatchForm(false);
+  };
+
+  const handleSetResult = async (match: CustomMatch) => {
+    if (!expandedRoundId) return;
+    setSavingResult(true);
+    try {
+      const res = await api.post<ApiResponse<MatchResult>>(
+        `/tournaments/${slug}/rounds/${expandedRoundId}/matches/${match.id}/result`,
+        {
+          home_score: Number(resultForm.home_score),
+          away_score: Number(resultForm.away_score),
+        }
+      );
+      setMatchesByRound((prev) => ({
+        ...prev,
+        [expandedRoundId]: (prev[expandedRoundId] ?? []).map((m) =>
+          m.id === match.id ? { ...m, result: res.data, status: 'finished' } : m
+        ),
+      }));
+      setResultMatchId(null);
+      toast.success('Resultado guardado.');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Error al guardar resultado');
+    } finally {
+      setSavingResult(false);
+    }
+  };
+
+  const handleSync = async () => {
+    setSyncing(true);
+    try {
+      const res = await api.post<ApiResponse<{ synced: number }>>(
+        `/admin/tournaments/${slug}/sync-results`,
+        {}
+      );
+      toast.success(res.message ?? `${res.data.synced} resultado(s) sincronizados.`);
+      if (expandedRoundId) {
+        const mRes = await api.get<ApiResponse<CustomMatch[]>>(
+          `/tournaments/${slug}/rounds/${expandedRoundId}/matches`
+        );
+        setMatchesByRound((prev) => ({ ...prev, [expandedRoundId]: mRes.data }));
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Error al sincronizar resultados');
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   // ── Render ─────────────────────────────────────────────────────────────
 
   if (loading) {
@@ -572,6 +639,21 @@ export default function TorneoAdminPage() {
 
         {/* ════════════════════ CALENDARIO ════════════════════ */}
         <TabsContent value="calendar" className="mt-4">
+          {user?.is_admin && (
+            <div className="flex justify-end mb-3">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleSync}
+                disabled={syncing}
+                className="border-slate-600 text-slate-300 hover:text-white text-xs h-8 gap-1.5"
+              >
+                {syncing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                Sincronizar API
+              </Button>
+            </div>
+          )}
+
           {rounds.length === 0 ? (
             /* ── Empty state ── */
             <div className="text-center py-14 rounded-xl border border-dashed border-slate-700">
@@ -680,7 +762,9 @@ export default function TorneoAdminPage() {
                               </div>
                             ) : (
                               <div className="divide-y divide-slate-800/50">
-                                {roundMatches.map((match) => (
+                                {roundMatches.map((match) => {
+                                  const hasStarted = new Date(match.scheduled_at) <= new Date();
+                                  return (
                                   <div key={match.id}>
                                     {editingMatchId === match.id ? (
                                       /* ── Edit match inline ── */
@@ -713,6 +797,45 @@ export default function TorneoAdminPage() {
                                           </button>
                                         </div>
                                       </div>
+                                    ) : resultMatchId === match.id ? (
+                                      /* ── Result entry inline ── */
+                                      <div className="px-4 py-4 space-y-3 bg-slate-900/60">
+                                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                                          {match.result ? 'Editar resultado' : 'Ingresar resultado'}
+                                        </p>
+                                        <div className="flex items-center gap-3">
+                                          <span className="text-sm text-white font-medium flex-1 text-right truncate">{match.home_team.name}</span>
+                                          <div className="flex items-center gap-2 shrink-0">
+                                            <Input
+                                              type="number"
+                                              min={0}
+                                              value={resultForm.home_score}
+                                              onChange={(e) => setResultForm((p) => ({ ...p, home_score: e.target.value }))}
+                                              className="w-14 text-center bg-slate-800 border-slate-600 text-white text-sm h-9"
+                                            />
+                                            <span className="text-slate-500 font-bold">-</span>
+                                            <Input
+                                              type="number"
+                                              min={0}
+                                              value={resultForm.away_score}
+                                              onChange={(e) => setResultForm((p) => ({ ...p, away_score: e.target.value }))}
+                                              className="w-14 text-center bg-slate-800 border-slate-600 text-white text-sm h-9"
+                                            />
+                                          </div>
+                                          <span className="text-sm text-white font-medium flex-1 truncate">{match.away_team.name}</span>
+                                        </div>
+                                        <div className="flex justify-end gap-1">
+                                          <button type="button" onClick={() => setResultMatchId(null)} className="p-1.5 rounded text-slate-500 hover:text-white transition-colors"><X className="h-4 w-4" /></button>
+                                          <button
+                                            type="button"
+                                            onClick={() => handleSetResult(match)}
+                                            disabled={savingResult || resultForm.home_score === '' || resultForm.away_score === ''}
+                                            className="p-1.5 rounded text-emerald-400 hover:text-emerald-300 transition-colors disabled:opacity-40"
+                                          >
+                                            {savingResult ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                                          </button>
+                                        </div>
+                                      </div>
                                     ) : (
                                       /* ── Match row ── */
                                       <div className="flex items-center gap-3 px-4 py-3 group">
@@ -720,7 +843,13 @@ export default function TorneoAdminPage() {
                                           <div className="flex items-center gap-1.5 min-w-0">
                                             <MatchTeamFlag teamId={match.home_team.id} teams={teams} />
                                             <span className="text-sm font-medium text-white truncate">{match.home_team.name}</span>
-                                            <span className="text-slate-600 text-xs shrink-0 font-medium">vs</span>
+                                            {match.result ? (
+                                              <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 shrink-0 tabular-nums">
+                                                {match.result.home_score} - {match.result.away_score}
+                                              </span>
+                                            ) : (
+                                              <span className="text-slate-600 text-xs shrink-0 font-medium">vs</span>
+                                            )}
                                             <span className="text-sm font-medium text-white truncate">{match.away_team.name}</span>
                                             <MatchTeamFlag teamId={match.away_team.id} teams={teams} />
                                           </div>
@@ -732,16 +861,33 @@ export default function TorneoAdminPage() {
                                             {match.venue && <> · <span className="text-slate-600">{match.venue}</span></>}
                                           </p>
                                         </div>
-                                        {tournament.is_custom && (
-                                          <div className="flex items-center gap-0.5 shrink-0 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                                            <button onClick={() => startEditMatch(match)} className="p-1.5 rounded text-slate-500 hover:text-white transition-colors" title="Editar"><Pencil className="h-3.5 w-3.5" /></button>
-                                            <button onClick={() => handleRemoveMatch(match.id)} className="p-1.5 rounded text-slate-600 hover:text-red-400 transition-colors" title="Eliminar"><Trash2 className="h-3.5 w-3.5" /></button>
-                                          </div>
-                                        )}
+                                        <div className="flex items-center gap-0.5 shrink-0">
+                                          {hasStarted && (
+                                            <button
+                                              onClick={() => startSetResult(match)}
+                                              className={cn(
+                                                'p-1.5 rounded transition-colors',
+                                                match.result
+                                                  ? 'text-slate-500 hover:text-emerald-400'
+                                                  : 'text-amber-500 hover:text-amber-400 md:opacity-0 md:group-hover:opacity-100'
+                                              )}
+                                              title={match.result ? 'Editar resultado' : 'Ingresar resultado'}
+                                            >
+                                              <Trophy className="h-3.5 w-3.5" />
+                                            </button>
+                                          )}
+                                          {tournament.is_custom && (
+                                            <div className="flex items-center gap-0.5 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                                              <button onClick={() => startEditMatch(match)} className="p-1.5 rounded text-slate-500 hover:text-white transition-colors" title="Editar"><Pencil className="h-3.5 w-3.5" /></button>
+                                              <button onClick={() => handleRemoveMatch(match.id)} className="p-1.5 rounded text-slate-600 hover:text-red-400 transition-colors" title="Eliminar"><Trash2 className="h-3.5 w-3.5" /></button>
+                                            </div>
+                                          )}
+                                        </div>
                                       </div>
                                     )}
                                   </div>
-                                ))}
+                                  );
+                                })}
                               </div>
                             )}
 
