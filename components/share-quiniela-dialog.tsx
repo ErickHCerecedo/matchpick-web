@@ -32,6 +32,14 @@ function IconFacebook({ className }: { className?: string }) {
   );
 }
 
+function IconInstagram({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+    </svg>
+  );
+}
+
 // ── rank colors ────────────────────────────────────────────────────────────
 
 function getRankStyle(rank: number) {
@@ -250,22 +258,21 @@ function ShareCard({
           display: 'flex', gap: '12px', marginBottom: '0',
         }}>
           {[
-            { value: standing.exact_scores, label: 'exactos', icon: '🎯' },
-            { value: standing.correct_results, label: 'correctos', icon: '✓' },
-            { value: standing.predictions_made, label: 'pronósticos', icon: '📊' },
-          ].map(({ value, label, icon }) => (
+            { value: standing.exact_scores, label: 'exactos', accent: '#34d399', bg: 'rgba(52,211,153,0.12)', border: 'rgba(52,211,153,0.22)' },
+            { value: standing.correct_results, label: 'correctos', accent: '#60a5fa', bg: 'rgba(96,165,250,0.12)', border: 'rgba(96,165,250,0.22)' },
+            { value: standing.predictions_made, label: 'pronósticos', accent: 'rgba(255,255,255,0.6)', bg: 'rgba(255,255,255,0.05)', border: 'rgba(255,255,255,0.10)' },
+          ].map(({ value, label, accent, bg, border }) => (
             <div key={label} style={{
               textAlign: 'center',
-              background: 'rgba(255,255,255,0.05)',
-              border: '1px solid rgba(255,255,255,0.08)',
+              background: bg,
+              border: `1px solid ${border}`,
               borderRadius: '12px', padding: '10px 16px',
               minWidth: '88px',
             }}>
-              <p style={{ fontSize: '11px', marginBottom: '4px' }}>{icon}</p>
-              <p style={{ fontSize: '22px', fontWeight: '800', color: '#ffffff', lineHeight: 1 }}>
+              <p style={{ fontSize: '22px', fontWeight: '800', color: accent, lineHeight: 1 }}>
                 {value}
               </p>
-              <p style={{ fontSize: '10px', color: 'rgba(255,255,255,0.35)', marginTop: '3px' }}>
+              <p style={{ fontSize: '10px', color: 'rgba(255,255,255,0.35)', marginTop: '5px' }}>
                 {label}
               </p>
             </div>
@@ -391,6 +398,16 @@ export function ShareQuinielaDialog({ open, onClose, quiniela, standing }: Props
     }
   };
 
+  const handleInstagramShare = async () => {
+    await handleDownload();
+    const isMobile = typeof navigator !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    if (isMobile) {
+      setTimeout(() => { window.open('instagram://app', '_blank'); }, 800);
+    } else {
+      setTimeout(() => { window.open('https://www.instagram.com/', '_blank'); }, 800);
+    }
+  };
+
   const handleCopyText = async () => {
     await navigator.clipboard.writeText(shareText);
     setCopied(true);
@@ -440,7 +457,7 @@ export function ShareQuinielaDialog({ open, onClose, quiniela, standing }: Props
           </Button>
 
           {/* Platform buttons */}
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 gap-2">
             {PLATFORMS.map(({ key, label, icon: Icon, color, buildUrl }) => (
               <a
                 key={key}
@@ -456,6 +473,14 @@ export function ShareQuinielaDialog({ open, onClose, quiniela, standing }: Props
                 {label}
               </a>
             ))}
+            <button
+              onClick={handleInstagramShare}
+              disabled={downloading}
+              className="flex flex-col items-center gap-1.5 py-2.5 rounded-xl border text-xs font-medium transition-all bg-pink-900/20 border-pink-700/30 text-pink-400 hover:bg-pink-900/30 disabled:opacity-50"
+            >
+              <IconInstagram className="h-4 w-4" />
+              Instagram
+            </button>
           </div>
 
           {/* Secondary: copy text + native share */}
@@ -483,7 +508,7 @@ export function ShareQuinielaDialog({ open, onClose, quiniela, standing }: Props
           </div>
 
           <p className="text-center text-[11px] text-slate-600">
-            Descarga la imagen y publícala directamente en Instagram Stories o Feed
+            Instagram descarga la imagen automáticamente y abre la app para publicarla
           </p>
         </div>
       </DialogContent>

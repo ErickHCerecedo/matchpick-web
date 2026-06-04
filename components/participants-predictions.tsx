@@ -22,9 +22,9 @@ interface Props {
 }
 
 function pointsBadge(points: number | null | undefined) {
-  if (points === 3) return { cls: 'bg-emerald-500/20 text-emerald-400', label: '🎯 +3' };
-  if (points === 1) return { cls: 'bg-blue-500/20 text-blue-400', label: '✓ +1' };
-  if (points === 0) return { cls: 'bg-slate-800 text-slate-500', label: '✗ 0' };
+  if (points === 3) return { cls: 'bg-emerald-500/20 text-emerald-400', label: '+3' };
+  if (points === 1) return { cls: 'bg-blue-500/20 text-blue-400', label: '+1' };
+  if (points === 0) return { cls: 'bg-slate-800 text-slate-600', label: '0' };
   return null;
 }
 

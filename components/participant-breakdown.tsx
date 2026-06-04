@@ -121,7 +121,7 @@ function MatchRow({ match }: { match: BreakdownMatch }) {
           <div className="shrink-0 text-center min-w-[52px]">
             {match.result ? (
               <span className="font-bold text-white text-base font-mono">
-                {match.result.home_score}–{match.result.away_score}
+                {match.result.home_score} – {match.result.away_score}
               </span>
             ) : (
               <span className="text-slate-600 text-xs font-medium">vs</span>
@@ -154,7 +154,7 @@ function MatchRow({ match }: { match: BreakdownMatch }) {
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-slate-500">Pronóstico:</span>
                   <span className="text-xs font-bold font-mono text-slate-300">
-                    {match.prediction.home_score}–{match.prediction.away_score}
+                    {match.prediction.home_score} – {match.prediction.away_score}
                   </span>
                 </div>
                 {match.score && <BreakdownPill score={match.score} />}

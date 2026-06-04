@@ -41,20 +41,20 @@ function RankDisplay({ rank }: { rank: number }) {
 function PointsBadge({ points }: { points: number | null | undefined }) {
   if (points === 3)
     return (
-      <span className="inline-flex items-center text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 shrink-0">
-        🎯 +3
+      <span className="inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 shrink-0">
+        +3 pts
       </span>
     );
   if (points === 1)
     return (
-      <span className="inline-flex items-center text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-blue-500/15 text-blue-400 border border-blue-500/25 shrink-0">
-        ✓ +1
+      <span className="inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-400 border border-blue-500/25 shrink-0">
+        +1 pt
       </span>
     );
   if (points === 0)
     return (
-      <span className="inline-flex items-center text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-slate-800 text-slate-500 border border-slate-700 shrink-0">
-        ✗ 0
+      <span className="inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-800 text-slate-600 border border-slate-700 shrink-0">
+        0 pts
       </span>
     );
   return null;
@@ -65,9 +65,11 @@ function PointsBadge({ points }: { points: number | null | undefined }) {
 function MyStatsCard({
   myStanding,
   leader,
+  onShare,
 }: {
   myStanding: Standing;
   leader: Standing | null;
+  onShare?: () => void;
 }) {
   const gap = leader && leader.user.id !== myStanding.user.id
     ? leader.total_points - myStanding.total_points
@@ -103,35 +105,44 @@ function MyStatsCard({
             {myStanding.rank === 1 ? '🏆 Líder de la quiniela' : `Posición #${myStanding.rank}`}
           </p>
         </div>
-        <div className="text-right shrink-0">
-          <p className="text-2xl font-bold text-white tabular-nums">
-            {myStanding.total_points}
-          </p>
-          <p className="text-[10px] text-slate-500">puntos</p>
+        <div className="shrink-0 flex flex-col items-end gap-1.5">
+          <div className="text-right">
+            <p className="text-2xl font-bold text-white tabular-nums">
+              {myStanding.total_points}
+            </p>
+            <p className="text-[10px] text-slate-500">puntos</p>
+          </div>
+          {onShare && (
+            <button
+              onClick={onShare}
+              className="flex items-center gap-1 text-[10px] font-medium text-slate-500 hover:text-emerald-400 transition-colors"
+            >
+              <Share2 className="h-3 w-3" />
+              Compartir
+            </button>
+          )}
         </div>
       </div>
 
       {/* Stats row */}
       <div className="grid grid-cols-3 gap-2 pt-1 border-t border-slate-800/60">
-        <div className="text-center">
+        <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-2 py-2 text-center">
           <p className="text-base font-bold text-emerald-400 tabular-nums">
             {myStanding.exact_scores}
           </p>
-          <p className="text-[10px] text-slate-500 flex items-center justify-center gap-0.5">
-            🎯 exactos
-          </p>
+          <p className="text-[10px] text-emerald-500/60 mt-0.5">exactos</p>
         </div>
-        <div className="text-center">
+        <div className="rounded-lg bg-blue-500/10 border border-blue-500/20 px-2 py-2 text-center">
           <p className="text-base font-bold text-blue-400 tabular-nums">
             {myStanding.correct_results}
           </p>
-          <p className="text-[10px] text-slate-500">✓ correctos</p>
+          <p className="text-[10px] text-blue-500/60 mt-0.5">correctos</p>
         </div>
-        <div className="text-center">
+        <div className="rounded-lg bg-slate-800/60 border border-slate-700/40 px-2 py-2 text-center">
           <p className="text-base font-bold text-slate-300 tabular-nums">
             {myStanding.predictions_made}
           </p>
-          <p className="text-[10px] text-slate-500">pronósticos</p>
+          <p className="text-[10px] text-slate-500 mt-0.5">pronósticos</p>
         </div>
       </div>
 
@@ -347,7 +358,7 @@ function UpcomingPredictions({
                   </div>
                   {hasPrediction ? (
                     <span className="text-[10px] font-medium text-emerald-500 shrink-0">
-                      {match.my_prediction!.home_score}–{match.my_prediction!.away_score} ✓
+                      {match.my_prediction!.home_score} – {match.my_prediction!.away_score} ✓
                     </span>
                   ) : (
                     <span className="text-[10px] font-medium text-amber-500/80 shrink-0">
@@ -435,7 +446,7 @@ function RecentResults({
                       {match.home_team?.short_name ?? '?'}
                     </span>
                     <span className="text-xs font-bold text-white font-mono px-1">
-                      {res.home_score}–{res.away_score}
+                      {res.home_score} – {res.away_score}
                     </span>
                     <span className="text-xs font-medium text-white">
                       {match.away_team?.short_name ?? '?'}
@@ -448,7 +459,7 @@ function RecentResults({
                   <p className="text-[10px] text-slate-500">
                     Mi pronóstico:{' '}
                     <span className="font-mono text-slate-400">
-                      {pred.home_score}–{pred.away_score}
+                      {pred.home_score} – {pred.away_score}
                     </span>
                     {' · '}
                     {roundName}
@@ -490,20 +501,9 @@ export function QuinielaDashboard({ standings, rounds, currentUserId, onGoToPred
 
   return (
     <div className="space-y-4">
-      {/* My stats — full width, with share shortcut */}
+      {/* My stats — full width */}
       {myStanding && (
-        <div className="relative">
-          <MyStatsCard myStanding={myStanding} leader={leader} />
-          {onShare && (
-            <button
-              onClick={onShare}
-              className="absolute top-3 right-3 flex items-center gap-1.5 text-[11px] font-medium text-slate-500 hover:text-emerald-400 transition-colors bg-slate-900/80 px-2 py-1 rounded-lg border border-slate-800 hover:border-emerald-500/30"
-            >
-              <Share2 className="h-3 w-3" />
-              Compartir
-            </button>
-          )}
-        </div>
+        <MyStatsCard myStanding={myStanding} leader={leader} onShare={onShare} />
       )}
 
       {/* Two-column layout on md+ */}

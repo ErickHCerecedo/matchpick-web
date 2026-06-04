@@ -845,7 +845,7 @@ export default function TorneoAdminPage() {
                                             <span className="text-sm font-medium text-white truncate">{match.home_team.name}</span>
                                             {match.result ? (
                                               <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 shrink-0 tabular-nums">
-                                                {match.result.home_score} - {match.result.away_score}
+                                                {match.result.home_score} – {match.result.away_score}
                                               </span>
                                             ) : (
                                               <span className="text-slate-600 text-xs shrink-0 font-medium">vs</span>

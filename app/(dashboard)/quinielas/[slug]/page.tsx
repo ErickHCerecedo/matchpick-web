@@ -225,7 +225,7 @@ export default function QuinielaPage() {
             className="flex flex-col items-center gap-1 py-2.5 h-auto rounded-lg text-slate-400 data-active:bg-emerald-500/20 data-active:text-emerald-400 hover:text-white transition-colors"
           >
             <Eye className="h-4 w-4" />
-            <span className="text-xs font-medium">Transparencia</span>
+            <span className="text-xs font-medium">Resultados</span>
           </TabsTrigger>
           <TabsTrigger
             value="participants"

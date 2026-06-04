@@ -117,7 +117,7 @@ export function MatchCard({ match, prediction, onChange, readOnly }: Props) {
               <Lock className="h-3 w-3" />
               {prediction ? (
                 <span className="text-xs font-mono">
-                  {prediction.home_score}-{prediction.away_score}
+                  {prediction.home_score} – {prediction.away_score}
                 </span>
               ) : (
                 <span className="text-xs">--</span>
@@ -156,10 +156,10 @@ export function MatchCard({ match, prediction, onChange, readOnly }: Props) {
             )}
           >
             {prediction.points === 3
-              ? '🎯 ¡Marcador exacto! +3 pts'
+              ? '¡Marcador exacto! +3 pts'
               : prediction.points === 1
-              ? '✓ Resultado correcto +1 pt'
-              : '✗ Sin puntos'}
+              ? 'Resultado correcto +1 pt'
+              : 'Sin puntos'}
           </div>
         )}
     </motion.div>
