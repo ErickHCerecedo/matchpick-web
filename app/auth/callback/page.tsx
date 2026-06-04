@@ -2,21 +2,19 @@
 
 import { useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { setToken, getCurrentUser } from '@/lib/auth';
-import { useAuth } from '@/contexts/AuthContext';
+import { setToken } from '@/lib/auth';
 import { Loader2 } from 'lucide-react';
 
 function CallbackHandler() {
   const router = useRouter();
   const params = useSearchParams();
-  const { setUser } = useAuth();
 
   useEffect(() => {
     const token = params.get('token');
     const error = params.get('error');
 
     if (error) {
-      router.push('/login?error=google_failed');
+      router.replace('/login?error=google_failed');
       return;
     }
 
@@ -24,18 +22,12 @@ function CallbackHandler() {
       setToken(token);
       const pendingRedirect = localStorage.getItem('pendingRedirect') ?? '/';
       localStorage.removeItem('pendingRedirect');
-      getCurrentUser().then((user) => {
-        if (user) {
-          setUser(user);
-          router.push(pendingRedirect);
-        } else {
-          router.push('/login?error=google_failed');
-        }
-      });
+      // Hard navigation so AuthContext mounts fresh with the token already in localStorage.
+      window.location.replace(pendingRedirect);
     } else {
-      router.push('/login');
+      router.replace('/login');
     }
-  }, [params, router, setUser]);
+  }, [params, router]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-950">
