@@ -9,10 +9,10 @@ import { Button, buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { api } from '@/lib/api';
+import { api, ApiError } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import type { ApiResponse, Invitation } from '@/types';
-import { Users, Trophy, Loader2, CheckCircle2, XCircle } from 'lucide-react';
+import { Users, Trophy, Loader2, CheckCircle2, XCircle, Clock } from 'lucide-react';
 
 export default function InvitationPage() {
   const { token } = useParams<{ token: string }>();
@@ -24,12 +24,18 @@ export default function InvitationPage() {
   const [joining, setJoining] = useState(false);
   const [rejected, setRejected] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isExpired, setIsExpired] = useState(false);
 
   useEffect(() => {
     api
       .get<ApiResponse<Invitation>>(`/invitations/${token}`)
       .then((res) => setInvitation(res.data))
-      .catch((err) => setError(err instanceof Error ? err.message : 'Invitación inválida'))
+      .catch((err) => {
+        if (err instanceof ApiError && err.status === 410) {
+          setIsExpired(true);
+        }
+        setError(err instanceof Error ? err.message : 'Invitación inválida');
+      })
       .finally(() => setLoading(false));
   }, [token]);
 
@@ -63,11 +69,27 @@ export default function InvitationPage() {
       <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
         <Card className="bg-slate-900 border-slate-700 max-w-md w-full text-center">
           <CardContent className="pt-8 pb-8">
-            <p className="text-4xl mb-4">😕</p>
-            <h3 className="text-white font-semibold mb-2">Invitación inválida</h3>
-            <p className="text-slate-400 text-sm mb-6">
-              {error ?? 'Esta invitación ha expirado o no existe.'}
-            </p>
+            {isExpired ? (
+              <>
+                <div className="flex justify-center mb-4">
+                  <div className="rounded-full bg-amber-500/10 p-4">
+                    <Clock className="h-8 w-8 text-amber-400" />
+                  </div>
+                </div>
+                <h3 className="text-white font-semibold mb-2">Invitación expirada</h3>
+                <p className="text-slate-400 text-sm mb-6">
+                  Este enlace de invitación ya no es válido. Pídele al administrador de la quiniela que genere uno nuevo.
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="text-4xl mb-4">😕</p>
+                <h3 className="text-white font-semibold mb-2">Invitación inválida</h3>
+                <p className="text-slate-400 text-sm mb-6">
+                  {error ?? 'Esta invitación no existe.'}
+                </p>
+              </>
+            )}
             <Link href="/" className={cn(buttonVariants(), 'bg-emerald-500 hover:bg-emerald-600 text-white')}>
               Ir al inicio
             </Link>
