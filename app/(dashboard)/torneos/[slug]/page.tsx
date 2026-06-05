@@ -243,7 +243,7 @@ export default function TorneoDetailPage() {
       <div className="grid lg:grid-cols-3 gap-5 lg:gap-6 items-start">
 
         {/* ── Calendar column ─────────────────────────────────────────── */}
-        <div className={cn('lg:col-span-2 space-y-4', mobileTab !== 'calendar' && 'hidden lg:block')}>
+        <div className={cn('lg:col-span-2 space-y-4 min-w-0', mobileTab !== 'calendar' && 'hidden lg:block')}>
 
           {/* Section header */}
           <div className="flex items-center justify-between">
@@ -266,7 +266,7 @@ export default function TorneoDetailPage() {
 
           {/* Date strip */}
           {sortedDateKeys.length > 0 && (
-            <div className="flex gap-2 overflow-x-auto scrollbar-none pb-1 -mx-0.5 px-0.5">
+            <div className="flex gap-2 overflow-x-auto scrollbar-none pb-1">
               {sortedDateKeys.map((dateKey) => {
                 const { weekday, day, month } = formatDateLabel(dateKey);
                 const isActiveDate = activeDateKey === dateKey;
@@ -348,7 +348,7 @@ export default function TorneoDetailPage() {
         </div>
 
         {/* ── Standings sidebar ────────────────────────────────────────── */}
-        <div className={cn(mobileTab !== 'standings' && 'hidden lg:block')}>
+        <div className={cn('min-w-0', mobileTab !== 'standings' && 'hidden lg:block')}>
           <div className="lg:sticky lg:top-6 bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
             {/* Card header */}
             <div className="flex items-center gap-3 px-4 py-3.5 border-b border-slate-800 bg-slate-800/30">

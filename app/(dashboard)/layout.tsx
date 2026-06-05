@@ -172,7 +172,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
         </header>
 
-        <div className="flex-1 p-4 md:p-6 pb-24 md:pb-6">
+        <div className="flex-1 p-4 md:p-6 pb-24 md:pb-6 overflow-x-hidden">
           <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
