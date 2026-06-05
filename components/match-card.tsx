@@ -6,13 +6,14 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { cn, formatMatchDate } from '@/lib/utils';
 import type { Match, Prediction } from '@/types';
-import { Lock } from 'lucide-react';
+import { Lock, CheckCircle2 } from 'lucide-react';
 
 interface Props {
   match: Match;
   prediction: Prediction | null;
   onChange?: (matchId: number, home: number, away: number) => void;
   readOnly?: boolean;
+  isSaved?: boolean;
 }
 
 const STATUS_LABELS: Record<Match['status'], string> = {
@@ -29,7 +30,7 @@ const STATUS_CLASSES: Record<Match['status'], string> = {
   cancelled: 'border-red-800 text-red-400',
 };
 
-export function MatchCard({ match, prediction, onChange, readOnly }: Props) {
+export function MatchCard({ match, prediction, onChange, readOnly, isSaved }: Props) {
   const [home, setHome] = useState<string>(prediction?.home_score?.toString() ?? '');
   const [away, setAway] = useState<string>(prediction?.away_score?.toString() ?? '');
 
@@ -140,6 +141,14 @@ export function MatchCard({ match, prediction, onChange, readOnly }: Props) {
           )}
         </div>
       </div>
+
+      {/* Saved indicator */}
+      {isOpen && isSaved && (
+        <div className="flex items-center justify-center gap-1 text-[10px] font-medium text-emerald-400">
+          <CheckCircle2 className="h-3 w-3" />
+          Pronóstico guardado
+        </div>
+      )}
 
       {/* Points earned */}
       {prediction?.points !== undefined &&

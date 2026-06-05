@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -89,6 +89,18 @@ export default function QuinielaPage() {
       })
       .finally(() => setLoading(false));
   }, [slug]);
+
+  const handlePredictionsSaved = useCallback((saved: Record<number, Prediction>) => {
+    setRounds(prev =>
+      prev.map(r => ({
+        ...r,
+        matches: r.matches.map(m => {
+          const p = saved[m.id];
+          return p ? { ...m, my_prediction: p } : m;
+        }),
+      }))
+    );
+  }, []);
 
   const refreshRoundsAndStandings = () => {
     if (!slug) return;
@@ -253,6 +265,7 @@ export default function QuinielaPage() {
               quinielaSlug={slug}
               rounds={rounds}
               initialPredictions={initialPredictions}
+              onSaved={handlePredictionsSaved}
             />
           ) : (
             <div className="text-center py-10 space-y-2">

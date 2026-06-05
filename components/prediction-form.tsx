@@ -15,6 +15,7 @@ interface Props {
   quinielaSlug: string;
   rounds: RoundWithMatches[];
   initialPredictions: Record<number, Prediction>;
+  onSaved?: (predictions: Record<number, Prediction>) => void;
 }
 
 // ── helpers ────────────────────────────────────────────────────────────────
@@ -38,8 +39,10 @@ function firstOpenDate(rounds: RoundWithMatches[], predictions: Record<number, P
 
 // ── component ──────────────────────────────────────────────────────────────
 
-export function PredictionForm({ quinielaSlug, rounds, initialPredictions }: Props) {
+export function PredictionForm({ quinielaSlug, rounds, initialPredictions, onSaved }: Props) {
   const [predictions, setPredictions] =
+    useState<Record<number, Prediction>>(initialPredictions);
+  const [savedPredictions, setSavedPredictions] =
     useState<Record<number, Prediction>>(initialPredictions);
   const [saving, setSaving] = useState(false);
 
@@ -121,6 +124,9 @@ export function PredictionForm({ quinielaSlug, rounds, initialPredictions }: Pro
         }
       );
       toast.success(`${res.data.saved} predicciones guardadas`);
+      const snapshot = { ...predictions };
+      setSavedPredictions(snapshot);
+      onSaved?.(snapshot);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Error al guardar');
     } finally {
@@ -139,6 +145,18 @@ export function PredictionForm({ quinielaSlug, rounds, initialPredictions }: Pro
     }
     return [...grouped.entries()];
   }, [matchesByDate, activeDateKey]);
+
+  // Set of match IDs whose prediction is saved and unchanged
+  const savedMatchIds = useMemo(() => {
+    const s = new Set<number>();
+    for (const [id, sv] of Object.entries(savedPredictions)) {
+      const cur = predictions[Number(id)];
+      if (sv.home_score !== undefined && cur?.home_score === sv.home_score && cur.away_score === sv.away_score) {
+        s.add(Number(id));
+      }
+    }
+    return s;
+  }, [savedPredictions, predictions]);
 
   // Count only predictions that are new or changed vs what came from the server
   const pendingCount = useMemo(() => {
@@ -281,6 +299,7 @@ export function PredictionForm({ quinielaSlug, rounds, initialPredictions }: Pro
                   match={match}
                   prediction={predictions[match.id] ?? null}
                   onChange={handleChange}
+                  isSaved={savedMatchIds.has(match.id)}
                 />
               ))}
             </div>
