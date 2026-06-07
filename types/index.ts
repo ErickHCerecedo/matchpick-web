@@ -182,3 +182,27 @@ export interface ParticipantBreakdownData {
   } | null;
   rounds: BreakdownRound[];
 }
+
+export interface TeamStandingRow {
+  id: number;
+  name: string;
+  short_name: string;
+  logo_url: string | null;
+  played: number;
+  won: number;
+  drawn: number;
+  lost: number;
+  goals_for: number;
+  goals_against: number;
+  goal_difference: number;
+  points: number;
+}
+
+export interface GroupStandings {
+  name: string;
+  teams: TeamStandingRow[];
+}
+
+export type TeamStandingsData =
+  | { format: 'groups'; qualification_spots: number; groups: GroupStandings[] }
+  | { format: 'table'; qualification_spots: number; teams: TeamStandingRow[] };

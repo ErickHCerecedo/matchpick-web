@@ -6,14 +6,11 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { MatchCard } from '@/components/match-card';
-import {
-  GlobalStandingsWidget,
-  type GlobalStanding,
-} from '@/components/global-standings-widget';
+import { TeamStandings } from '@/components/team-standings';
 import { api } from '@/lib/api';
-import { useAuth } from '@/contexts/AuthContext';
-import type { ApiResponse, Match, Tournament, RoundWithMatches } from '@/types';
+import type { ApiResponse, Match, Tournament, RoundWithMatches, TeamStandingsData } from '@/types';
 import { ArrowLeft, CalendarDays, Trophy } from 'lucide-react';
 import { buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -33,22 +30,20 @@ const ROUND_TYPE_ORDER = [
 
 const ROUND_ORDER_MAP = new Map(ROUND_TYPE_ORDER.map((t, i) => [t, i]));
 
-type MobileTab = 'calendar' | 'standings';
-
 // ── component ──────────────────────────────────────────────────────────────
 
 export default function TorneoDetailPage() {
   const { slug } = useParams<{ slug: string }>();
-  const { user } = useAuth();
 
   const [tournament, setTournament] = useState<Tournament | null>(null);
   const [rounds, setRounds] = useState<RoundWithMatches[]>([]);
-  const [globalStandings, setGlobalStandings] = useState<GlobalStanding[]>([]);
   const [loadingTournament, setLoadingTournament] = useState(true);
-  const [loadingStandings, setLoadingStandings] = useState(true);
+  const [activeTab, setActiveTab] = useState('calendar');
+  const [teamStandings, setTeamStandings] = useState<TeamStandingsData | null>(null);
+  const [loadingTeamStandings, setLoadingTeamStandings] = useState(false);
   const [activeDateKey, setActiveDateKey] = useState<string | null>(null);
-  const [mobileTab, setMobileTab] = useState<MobileTab>('calendar');
   const activeDateRef = useRef<HTMLButtonElement>(null);
+  const standingsFetched = useRef(false);
 
   useEffect(() => {
     activeDateRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
@@ -78,13 +73,19 @@ export default function TorneoDetailPage() {
         if (defaultDate) setActiveDateKey(defaultDate);
       })
       .catch(console.error);
-
-    api
-      .get<ApiResponse<GlobalStanding[]>>(`/tournaments/${slug}/global-standings`)
-      .then((res) => setGlobalStandings(res.data))
-      .catch(console.error)
-      .finally(() => setLoadingStandings(false));
   }, [slug]);
+
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    if (tab === 'standings' && !standingsFetched.current && slug) {
+      standingsFetched.current = true;
+      setLoadingTeamStandings(true);
+      api.get<ApiResponse<TeamStandingsData>>(`/tournaments/${slug}/team-standings`)
+        .then((res) => setTeamStandings(res.data))
+        .catch(console.error)
+        .finally(() => setLoadingTeamStandings(false));
+    }
+  };
 
   const sortedRounds = useMemo(
     () =>
@@ -211,49 +212,31 @@ export default function TorneoDetailPage() {
         </div>
       </div>
 
-      {/* ── Mobile tab switcher (hidden on lg+) ──────────────────────── */}
-      <div className="flex lg:hidden bg-slate-900 border border-slate-800 rounded-xl p-1 gap-1">
-        <button
-          onClick={() => setMobileTab('calendar')}
-          className={cn(
-            'flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-all duration-150',
-            mobileTab === 'calendar'
-              ? 'bg-emerald-500/15 text-emerald-400'
-              : 'text-slate-400 hover:text-slate-200'
-          )}
-        >
-          <CalendarDays className="h-4 w-4" />
-          Calendario
-        </button>
-        <button
-          onClick={() => setMobileTab('standings')}
-          className={cn(
-            'flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-all duration-150',
-            mobileTab === 'standings'
-              ? 'bg-emerald-500/15 text-emerald-400'
-              : 'text-slate-400 hover:text-slate-200'
-          )}
-        >
-          <Trophy className="h-4 w-4" />
-          Clasificación
-        </button>
-      </div>
+      {/* ── Tabs ─────────────────────────────────────────────────────── */}
+      <Tabs value={activeTab} onValueChange={handleTabChange}>
+        <TabsList className="grid! grid-cols-2 w-full h-auto! bg-slate-800 border border-slate-700/60 p-1 gap-1 rounded-xl">
+          <TabsTrigger
+            value="calendar"
+            className="flex items-center justify-center gap-2 py-2.5 h-auto rounded-lg text-slate-400 data-active:bg-emerald-500/20 data-active:text-emerald-400 hover:text-white transition-colors"
+          >
+            <CalendarDays className="h-4 w-4" />
+            <span className="text-xs font-medium">Calendario</span>
+          </TabsTrigger>
+          <TabsTrigger
+            value="standings"
+            className="flex items-center justify-center gap-2 py-2.5 h-auto rounded-lg text-slate-400 data-active:bg-emerald-500/20 data-active:text-emerald-400 hover:text-white transition-colors"
+          >
+            <Trophy className="h-4 w-4" />
+            <span className="text-xs font-medium">Clasificación</span>
+          </TabsTrigger>
+        </TabsList>
 
-      {/* ── Main two-column layout ────────────────────────────────────── */}
-      <div className="grid lg:grid-cols-3 gap-5 lg:gap-6 items-start">
+        {/* ── Calendar tab ─────────────────────────────────────────── */}
+        <TabsContent value="calendar" className="space-y-4 mt-4">
 
-        {/* ── Calendar column ─────────────────────────────────────────── */}
-        <div className={cn('lg:col-span-2 space-y-4 min-w-0', mobileTab !== 'calendar' && 'hidden lg:block')}>
-
-          {/* Section header */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-slate-800 flex items-center justify-center">
-                <CalendarDays className="h-3.5 w-3.5 text-slate-400" />
-              </div>
-              <h3 className="text-base font-semibold text-white">Calendario</h3>
-            </div>
-            {hasToday && activeDateKey !== today && (
+          {/* "Ir a hoy" shortcut */}
+          {hasToday && activeDateKey !== today && (
+            <div className="flex justify-end">
               <button
                 onClick={() => setActiveDateKey(today)}
                 className="text-xs text-emerald-400 hover:text-emerald-300 font-medium transition-colors flex items-center gap-1"
@@ -261,8 +244,8 @@ export default function TorneoDetailPage() {
                 Ir a hoy
                 <span aria-hidden>→</span>
               </button>
-            )}
-          </div>
+            </div>
+          )}
 
           {/* Date strip */}
           {sortedDateKeys.length > 0 && (
@@ -321,7 +304,6 @@ export default function TorneoDetailPage() {
                 transition={{ duration: 0.18 }}
                 className="space-y-5"
               >
-                {/* Full date heading */}
                 {activeDateKey && (
                   <p className="text-sm text-slate-500 capitalize">
                     {formatFullDate(activeDateKey)}
@@ -345,33 +327,14 @@ export default function TorneoDetailPage() {
               </motion.div>
             )}
           </AnimatePresence>
-        </div>
+        </TabsContent>
 
-        {/* ── Standings sidebar ────────────────────────────────────────── */}
-        <div className={cn('min-w-0', mobileTab !== 'standings' && 'hidden lg:block')}>
-          <div className="lg:sticky lg:top-6 bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
-            {/* Card header */}
-            <div className="flex items-center gap-3 px-4 py-3.5 border-b border-slate-800 bg-slate-800/30">
-              <div className="w-8 h-8 rounded-lg bg-amber-500/15 flex items-center justify-center shrink-0">
-                <Trophy className="h-4 w-4 text-amber-400" />
-              </div>
-              <div>
-                <h3 className="text-sm font-semibold text-white leading-tight">Top 10 Global</h3>
-                <p className="text-[11px] text-slate-500 mt-0.5">Ranking del torneo</p>
-              </div>
-            </div>
-            {/* Card body */}
-            <div className="p-3">
-              <GlobalStandingsWidget
-                standings={globalStandings}
-                loading={loadingStandings}
-                currentUserId={user?.id}
-              />
-            </div>
-          </div>
-        </div>
+        {/* ── Standings tab ────────────────────────────────────────── */}
+        <TabsContent value="standings" className="mt-4">
+          <TeamStandings data={teamStandings} loading={loadingTeamStandings} />
+        </TabsContent>
+      </Tabs>
 
-      </div>
     </motion.div>
   );
 }
