@@ -201,7 +201,10 @@ export default function TorneoAdminPage() {
   const handleUpdateTeam = async (teamId: number) => {
     setSaving(true);
     try {
-      const res = await api.patch<ApiResponse<CustomTeam>>(`/tournaments/${slug}/teams/${teamId}`, {
+      const endpoint = tournament!.is_custom
+        ? `/tournaments/${slug}/teams/${teamId}`
+        : `/admin/teams/${teamId}`;
+      const res = await api.patch<ApiResponse<CustomTeam>>(endpoint, {
         name: editTeamForm.name,
         short_name: editTeamForm.short_name,
         logo_url: editTeamForm.logo_url || null,
@@ -315,15 +318,19 @@ export default function TorneoAdminPage() {
     if (!expandedRoundId) return;
     setSaving(true);
     try {
-      const res = await api.patch<ApiResponse<CustomMatch>>(
-        `/tournaments/${slug}/rounds/${expandedRoundId}/matches/${matchId}`,
-        {
-          home_team_id: Number(editMatchForm.home_team_id),
-          away_team_id: Number(editMatchForm.away_team_id),
-          scheduled_at: editMatchForm.scheduled_at,
-          venue: editMatchForm.venue || null,
-        }
-      );
+      const isCustom = tournament!.is_custom;
+      const endpoint = isCustom
+        ? `/tournaments/${slug}/rounds/${expandedRoundId}/matches/${matchId}`
+        : `/admin/matches/${matchId}`;
+      const payload = isCustom
+        ? {
+            home_team_id: Number(editMatchForm.home_team_id),
+            away_team_id: Number(editMatchForm.away_team_id),
+            scheduled_at: editMatchForm.scheduled_at,
+            venue: editMatchForm.venue || null,
+          }
+        : { scheduled_at: editMatchForm.scheduled_at, venue: editMatchForm.venue || null };
+      const res = await api.patch<ApiResponse<CustomMatch>>(endpoint, payload);
       setMatchesByRound((prev) => ({
         ...prev,
         [expandedRoundId]: (prev[expandedRoundId] ?? []).map((m) =>
@@ -502,10 +509,16 @@ export default function TorneoAdminPage() {
 
         {/* ════════════════════ EQUIPOS ════════════════════ */}
         <TabsContent value="teams" className="mt-4 space-y-3">
-          {!tournament.is_custom && (
+          {!tournament.is_custom && !user?.is_admin && (
             <div className="flex items-center gap-2 rounded-lg border border-slate-700/50 bg-slate-800/40 px-3 py-2.5 text-xs text-slate-400">
               <Shield className="h-3.5 w-3.5 shrink-0 text-slate-500" />
               Los equipos de este torneo se gestionan vía seeder / API externa y son de solo lectura aquí.
+            </div>
+          )}
+          {!tournament.is_custom && user?.is_admin && (
+            <div className="flex items-center gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-3 py-2.5 text-xs text-emerald-400">
+              <Shield className="h-3.5 w-3.5 shrink-0" />
+              Modo Super Admin: puedes editar nombres de equipos.
             </div>
           )}
 
@@ -593,7 +606,7 @@ export default function TorneoAdminPage() {
             <div className="space-y-2">
               {teams.map((team) => (
                 <div key={team.id} className="rounded-xl border border-slate-800 bg-slate-900 overflow-hidden">
-                  {tournament.is_custom && editingTeamId === team.id ? (
+                  {(tournament.is_custom || user?.is_admin) && editingTeamId === team.id ? (
                     <div className="p-4 space-y-3">
                       <div className="grid grid-cols-2 gap-2">
                         <div className="space-y-1">
@@ -623,10 +636,12 @@ export default function TorneoAdminPage() {
                         <p className="text-sm font-medium text-white truncate">{team.name}</p>
                         <p className="text-xs text-slate-500">{team.short_name}</p>
                       </div>
-                      {tournament.is_custom && (
+                      {(tournament.is_custom || user?.is_admin) && (
                         <div className="flex items-center gap-0.5 shrink-0">
                           <button onClick={() => startEditTeam(team)} className="p-1.5 rounded text-slate-500 hover:text-white transition-colors" title="Editar"><Pencil className="h-3.5 w-3.5" /></button>
-                          <button onClick={() => handleRemoveTeam(team.id)} className="p-1.5 rounded text-slate-600 hover:text-red-400 transition-colors" title="Eliminar"><Trash2 className="h-3.5 w-3.5" /></button>
+                          {tournament.is_custom && (
+                            <button onClick={() => handleRemoveTeam(team.id)} className="p-1.5 rounded text-slate-600 hover:text-red-400 transition-colors" title="Eliminar"><Trash2 className="h-3.5 w-3.5" /></button>
+                          )}
                         </div>
                       )}
                     </div>
@@ -770,16 +785,18 @@ export default function TorneoAdminPage() {
                                       /* ── Edit match inline ── */
                                       <div className="px-4 py-4 space-y-3 bg-slate-900/60">
                                         <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Editar partido</p>
-                                        <div className="grid grid-cols-2 gap-2">
-                                          <div className="space-y-1">
-                                            <Label className="text-slate-400 text-xs">Local</Label>
-                                            <TeamSelect value={editMatchForm.home_team_id} onChange={(v) => setEditMatchForm((p) => ({ ...p, home_team_id: v }))} teams={teams} excludeId={Number(editMatchForm.away_team_id)} />
+                                        {tournament.is_custom && (
+                                          <div className="grid grid-cols-2 gap-2">
+                                            <div className="space-y-1">
+                                              <Label className="text-slate-400 text-xs">Local</Label>
+                                              <TeamSelect value={editMatchForm.home_team_id} onChange={(v) => setEditMatchForm((p) => ({ ...p, home_team_id: v }))} teams={teams} excludeId={Number(editMatchForm.away_team_id)} />
+                                            </div>
+                                            <div className="space-y-1">
+                                              <Label className="text-slate-400 text-xs">Visitante</Label>
+                                              <TeamSelect value={editMatchForm.away_team_id} onChange={(v) => setEditMatchForm((p) => ({ ...p, away_team_id: v }))} teams={teams} excludeId={Number(editMatchForm.home_team_id)} />
+                                            </div>
                                           </div>
-                                          <div className="space-y-1">
-                                            <Label className="text-slate-400 text-xs">Visitante</Label>
-                                            <TeamSelect value={editMatchForm.away_team_id} onChange={(v) => setEditMatchForm((p) => ({ ...p, away_team_id: v }))} teams={teams} excludeId={Number(editMatchForm.home_team_id)} />
-                                          </div>
-                                        </div>
+                                        )}
                                         <div className="grid grid-cols-2 gap-2">
                                           <div className="space-y-1">
                                             <Label className="text-slate-400 text-xs">Fecha y hora</Label>
@@ -876,10 +893,12 @@ export default function TorneoAdminPage() {
                                               <Trophy className="h-3.5 w-3.5" />
                                             </button>
                                           )}
-                                          {tournament.is_custom && (
+                                          {(tournament.is_custom || user?.is_admin) && (
                                             <div className="flex items-center gap-0.5 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                                               <button onClick={() => startEditMatch(match)} className="p-1.5 rounded text-slate-500 hover:text-white transition-colors" title="Editar"><Pencil className="h-3.5 w-3.5" /></button>
-                                              <button onClick={() => handleRemoveMatch(match.id)} className="p-1.5 rounded text-slate-600 hover:text-red-400 transition-colors" title="Eliminar"><Trash2 className="h-3.5 w-3.5" /></button>
+                                              {tournament.is_custom && (
+                                                <button onClick={() => handleRemoveMatch(match.id)} className="p-1.5 rounded text-slate-600 hover:text-red-400 transition-colors" title="Eliminar"><Trash2 className="h-3.5 w-3.5" /></button>
+                                              )}
                                             </div>
                                           )}
                                         </div>

@@ -15,7 +15,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Home, Trophy, LogOut, Shield } from 'lucide-react';
+import { Home, Trophy, LogOut, Shield, UserCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 
@@ -115,14 +115,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <p className="text-[10px] text-emerald-500 font-medium">Super Admin</p>
             )}
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleLogout}
-            className="text-slate-400 hover:text-white h-8 w-8"
-          >
-            <LogOut className="h-4 w-4" />
-          </Button>
+          <div className="flex items-center gap-0.5">
+            <Link href="/perfil">
+              <Button variant="ghost" size="icon" className="text-slate-400 hover:text-white h-8 w-8" title="Editar perfil">
+                <UserCircle className="h-4 w-4" />
+              </Button>
+            </Link>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleLogout}
+              className="text-slate-400 hover:text-white h-8 w-8"
+            >
+              <LogOut className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </aside>
 
@@ -159,6 +166,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   <p className="text-sm font-medium text-white truncate">{user.name}</p>
                   <p className="text-xs text-slate-500 truncate">{user.email}</p>
                 </div>
+                <DropdownMenuSeparator className="bg-slate-800" />
+                <DropdownMenuItem asChild className="gap-2 cursor-pointer hover:bg-slate-800 focus:bg-slate-800">
+                  <Link href="/perfil">
+                    <UserCircle className="h-4 w-4 text-slate-400" />
+                    Editar perfil
+                  </Link>
+                </DropdownMenuItem>
                 <DropdownMenuSeparator className="bg-slate-800" />
                 <DropdownMenuItem
                   onClick={handleLogout}

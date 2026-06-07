@@ -63,13 +63,13 @@ export function QuinielaCard({ quiniela, index }: Props) {
             </div>
 
             {standing ? (
-              <div className="flex items-center gap-1.5">
-                <span className={cn('font-bold tabular-nums', rankColor(standing.rank))}>
-                  #{standing.rank}
+              <div className="flex items-center gap-1.5 text-xs">
+                <span className={cn('font-medium tabular-nums', rankColor(standing.rank))}>
+                  Posición {standing.rank}°
                 </span>
-                <span className="text-slate-600">·</span>
-                <span className="text-slate-300 font-semibold tabular-nums">
-                  {standing.total_points} pts
+                <span className="text-slate-600">con</span>
+                <span className={cn('font-bold tabular-nums', rankColor(standing.rank))}>
+                  {standing.total_points} puntos
                 </span>
               </div>
             ) : (

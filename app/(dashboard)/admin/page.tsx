@@ -3,17 +3,19 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { api } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import type { ApiResponse, Tournament } from '@/types';
 import {
   Shield, Settings, ToggleLeft, ToggleRight, Plus, Calendar,
-  Trophy, Users,
+  Trophy, Users, Pencil, X, Check, Loader2,
 } from 'lucide-react';
 
 export default function AdminPage() {
@@ -22,6 +24,11 @@ export default function AdminPage() {
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [toggling, setToggling] = useState<number | null>(null);
+
+  // Inline edit state
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editForm, setEditForm] = useState({ name: '', logo_url: '', description: '' });
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!loading && (!user || !user.is_admin)) {
@@ -47,9 +54,7 @@ export default function AdminPage() {
       setTournaments((prev) =>
         prev.map((t) => (t.id === tournament.id ? res.data : t))
       );
-      toast.success(
-        res.data.is_active ? 'Torneo activado' : 'Torneo desactivado'
-      );
+      toast.success(res.data.is_active ? 'Torneo activado' : 'Torneo desactivado');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Error al actualizar');
     } finally {
@@ -57,9 +62,41 @@ export default function AdminPage() {
     }
   };
 
+  const startEdit = (tournament: Tournament) => {
+    setEditingId(tournament.id);
+    setEditForm({
+      name:        tournament.name,
+      logo_url:    tournament.logo_url ?? '',
+      description: tournament.description ?? '',
+    });
+  };
+
+  const handleSaveEdit = async (tournament: Tournament) => {
+    setSaving(true);
+    try {
+      const res = await api.patch<ApiResponse<Tournament>>(
+        `/admin/tournaments/${tournament.id}`,
+        {
+          name:        editForm.name.trim() || undefined,
+          logo_url:    editForm.logo_url.trim() || null,
+          description: editForm.description.trim() || null,
+        }
+      );
+      setTournaments((prev) =>
+        prev.map((t) => (t.id === tournament.id ? res.data : t))
+      );
+      setEditingId(null);
+      toast.success('Torneo actualizado.');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Error al guardar');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (loading || !user?.is_admin) return null;
 
-  const active = tournaments.filter((t) => t.is_active);
+  const active   = tournaments.filter((t) => t.is_active);
   const inactive = tournaments.filter((t) => !t.is_active);
 
   return (
@@ -120,79 +157,154 @@ export default function AdminPage() {
           [...active, ...inactive].map((tournament) => (
             <div
               key={tournament.id}
-              className={`flex items-center gap-3 p-4 rounded-xl bg-slate-900 border transition-colors ${
+              className={`rounded-xl bg-slate-900 border transition-colors ${
                 tournament.is_active ? 'border-slate-700' : 'border-slate-800/60 opacity-70'
               }`}
             >
-              {/* Left: info */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <p className="text-sm font-semibold text-white truncate">{tournament.name}</p>
-                  <Badge
-                    variant="outline"
-                    className={
-                      tournament.is_active
-                        ? 'border-emerald-500/50 text-emerald-400 text-[10px] h-5'
-                        : 'border-slate-600 text-slate-500 text-[10px] h-5'
-                    }
-                  >
-                    {tournament.is_active ? 'Activo' : 'Inactivo'}
-                  </Badge>
-                  {tournament.is_custom && (
-                    <Badge variant="outline" className="border-blue-500/40 text-blue-400 text-[10px] h-5">
-                      Custom
+              {/* Row */}
+              <div className="flex items-center gap-3 p-4">
+                {/* Left: info */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-sm font-semibold text-white truncate">{tournament.name}</p>
+                    <Badge
+                      variant="outline"
+                      className={
+                        tournament.is_active
+                          ? 'border-emerald-500/50 text-emerald-400 text-[10px] h-5'
+                          : 'border-slate-600 text-slate-500 text-[10px] h-5'
+                      }
+                    >
+                      {tournament.is_active ? 'Activo' : 'Inactivo'}
                     </Badge>
+                    {tournament.is_custom && (
+                      <Badge variant="outline" className="border-blue-500/40 text-blue-400 text-[10px] h-5">
+                        Custom
+                      </Badge>
+                    )}
+                  </div>
+                  {tournament.description && (
+                    <p className="text-xs text-slate-500 mt-0.5 truncate">{tournament.description}</p>
+                  )}
+                  <div className="flex items-center gap-3 mt-1">
+                    <span className="text-xs text-slate-500 flex items-center gap-1">
+                      <Calendar className="h-3 w-3" />
+                      {new Date(tournament.starts_at).toLocaleDateString('es-MX', {
+                        day: 'numeric', month: 'short', year: 'numeric',
+                      })}
+                      {' — '}
+                      {new Date(tournament.ends_at).toLocaleDateString('es-MX', {
+                        day: 'numeric', month: 'short', year: 'numeric',
+                      })}
+                    </span>
+                  </div>
+                  {tournament.creator && (
+                    <p className="text-[10px] text-slate-600 mt-0.5 flex items-center gap-1">
+                      <Users className="h-2.5 w-2.5" />
+                      Creado por {tournament.creator.name}
+                    </p>
                   )}
                 </div>
-                <div className="flex items-center gap-3 mt-1">
-                  <span className="text-xs text-slate-500 flex items-center gap-1">
-                    <Calendar className="h-3 w-3" />
-                    {new Date(tournament.starts_at).toLocaleDateString('es-MX', {
-                      day: 'numeric',
-                      month: 'short',
-                      year: 'numeric',
-                    })}
-                    {' — '}
-                    {new Date(tournament.ends_at).toLocaleDateString('es-MX', {
-                      day: 'numeric',
-                      month: 'short',
-                      year: 'numeric',
-                    })}
-                  </span>
+
+                {/* Right: actions */}
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button
+                    onClick={() => (editingId === tournament.id ? setEditingId(null) : startEdit(tournament))}
+                    className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                    title="Editar torneo"
+                  >
+                    {editingId === tournament.id ? <X className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
+                  </button>
+                  <button
+                    onClick={() => handleToggleActive(tournament)}
+                    disabled={toggling === tournament.id}
+                    className="p-2 rounded-lg text-slate-400 hover:bg-slate-800 transition-colors disabled:opacity-50"
+                    title={tournament.is_active ? 'Desactivar torneo' : 'Activar torneo'}
+                  >
+                    {tournament.is_active ? (
+                      <ToggleRight className="h-5 w-5 text-emerald-400" />
+                    ) : (
+                      <ToggleLeft className="h-5 w-5 text-slate-600" />
+                    )}
+                  </button>
+                  <Link href={`/torneos/${tournament.slug}/admin`}>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="border-slate-700 text-slate-300 hover:text-white hover:border-slate-500 h-8 px-3"
+                    >
+                      <Settings className="h-3.5 w-3.5 mr-1.5" />
+                      Gestionar
+                    </Button>
+                  </Link>
                 </div>
-                {tournament.creator && (
-                  <p className="text-[10px] text-slate-600 mt-0.5 flex items-center gap-1">
-                    <Users className="h-2.5 w-2.5" />
-                    Creado por {tournament.creator.name}
-                  </p>
-                )}
               </div>
 
-              {/* Right: actions */}
-              <div className="flex items-center gap-1.5 shrink-0">
-                <button
-                  onClick={() => handleToggleActive(tournament)}
-                  disabled={toggling === tournament.id}
-                  className="p-2 rounded-lg text-slate-400 hover:bg-slate-800 transition-colors disabled:opacity-50"
-                  title={tournament.is_active ? 'Desactivar torneo' : 'Activar torneo'}
-                >
-                  {tournament.is_active ? (
-                    <ToggleRight className="h-5 w-5 text-emerald-400" />
-                  ) : (
-                    <ToggleLeft className="h-5 w-5 text-slate-600" />
-                  )}
-                </button>
-                <Link href={`/torneos/${tournament.slug}/admin`}>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="border-slate-700 text-slate-300 hover:text-white hover:border-slate-500 h-8 px-3"
+              {/* Inline edit panel */}
+              <AnimatePresence initial={false}>
+                {editingId === tournament.id && (
+                  <motion.div
+                    key={`edit-${tournament.id}`}
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="overflow-hidden"
                   >
-                    <Settings className="h-3.5 w-3.5 mr-1.5" />
-                    Gestionar
-                  </Button>
-                </Link>
-              </div>
+                    <div className="px-4 pb-4 pt-0 border-t border-slate-800 space-y-3">
+                      <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pt-3">Editar torneo</p>
+                      <div className="space-y-1.5">
+                        <Label className="text-slate-400 text-xs">Nombre</Label>
+                        <Input
+                          value={editForm.name}
+                          onChange={(e) => setEditForm((p) => ({ ...p, name: e.target.value }))}
+                          className="bg-slate-950 border-slate-700 text-white placeholder:text-slate-600 text-sm h-9"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-slate-400 text-xs">URL del logo <span className="text-slate-600">(opcional)</span></Label>
+                        <Input
+                          value={editForm.logo_url}
+                          onChange={(e) => setEditForm((p) => ({ ...p, logo_url: e.target.value }))}
+                          placeholder="https://ejemplo.com/logo.png"
+                          className="bg-slate-950 border-slate-700 text-white placeholder:text-slate-600 text-sm h-9"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-slate-400 text-xs">Descripción / subtítulo <span className="text-slate-600">(opcional)</span></Label>
+                        <Input
+                          value={editForm.description}
+                          onChange={(e) => setEditForm((p) => ({ ...p, description: e.target.value }))}
+                          placeholder="Ej: Fase de grupos · 48 selecciones"
+                          className="bg-slate-950 border-slate-700 text-white placeholder:text-slate-600 text-sm h-9"
+                        />
+                      </div>
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setEditingId(null)}
+                          className="text-slate-400 hover:text-white text-xs"
+                        >
+                          Cancelar
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          disabled={saving}
+                          onClick={() => handleSaveEdit(tournament)}
+                          className="bg-emerald-500 hover:bg-emerald-600 text-white text-xs"
+                        >
+                          {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <Check className="h-3.5 w-3.5 mr-1" />}
+                          Guardar
+                        </Button>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           ))
         )}

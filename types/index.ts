@@ -1,6 +1,7 @@
 export interface User {
   id: number;
   name: string;
+  username: string | null;
   email: string;
   avatar_url: string | null;
   is_admin: boolean;
@@ -38,6 +39,7 @@ export interface Tournament {
   type: 'world_cup' | 'league' | 'cup';
   season: string;
   logo_url: string | null;
+  description?: string | null;
   starts_at: string;
   ends_at: string;
   is_active: boolean;
