@@ -167,11 +167,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   <p className="text-xs text-slate-500 truncate">{user.email}</p>
                 </div>
                 <DropdownMenuSeparator className="bg-slate-800" />
-                <DropdownMenuItem asChild className="gap-2 cursor-pointer hover:bg-slate-800 focus:bg-slate-800">
-                  <Link href="/perfil">
-                    <UserCircle className="h-4 w-4 text-slate-400" />
-                    Editar perfil
-                  </Link>
+                <DropdownMenuItem
+                  onClick={() => router.push('/perfil')}
+                  className="gap-2 cursor-pointer hover:bg-slate-800 focus:bg-slate-800"
+                >
+                  <UserCircle className="h-4 w-4 text-slate-400" />
+                  Editar perfil
                 </DropdownMenuItem>
                 <DropdownMenuSeparator className="bg-slate-800" />
                 <DropdownMenuItem
