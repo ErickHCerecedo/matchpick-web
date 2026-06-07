@@ -13,6 +13,7 @@ import { ParticipantBreakdown } from '@/components/participant-breakdown';
 import { QuinielaDashboard } from '@/components/quiniela-dashboard';
 import { DeleteQuinielaDialog } from '@/components/delete-quiniela-dialog';
 import { ShareQuinielaDialog } from '@/components/share-quiniela-dialog';
+import { TournamentLogo } from '@/components/tournament-logo';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -156,9 +157,12 @@ export default function QuinielaPage() {
       {/* Header */}
       <div className="mb-5">
         <div className="flex items-start justify-between gap-3">
-          <div className="flex-1 min-w-0">
-            <h2 className="text-2xl font-bold text-white truncate">{quiniela.name}</h2>
-            <p className="text-slate-400 text-sm mt-0.5">{quiniela.tournament.name}</p>
+          <div className="flex items-start gap-3 flex-1 min-w-0">
+            <TournamentLogo tournament={quiniela.tournament} size="md" className="mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <h2 className="text-2xl font-bold text-white truncate">{quiniela.name}</h2>
+              <p className="text-slate-400 text-sm mt-0.5">{quiniela.tournament.name}</p>
+            </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
             {/* Actions menu */}
