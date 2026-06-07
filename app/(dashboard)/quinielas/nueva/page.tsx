@@ -84,7 +84,7 @@ export default function NuevaQuinielaPage() {
                 placeholder="Ej: La Quiniela de la Oficina"
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className="bg-slate-800 border-slate-600 text-white placeholder:text-slate-500"
+                className="bg-slate-950 border-slate-700 text-white placeholder:text-slate-600"
                 required
               />
             </div>
@@ -94,7 +94,7 @@ export default function NuevaQuinielaPage() {
               <select
                 value={form.tournament_id}
                 onChange={(e) => setForm({ ...form, tournament_id: e.target.value })}
-                className="w-full rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 required
               >
                 {tournaments.map((t) => (
@@ -106,32 +106,12 @@ export default function NuevaQuinielaPage() {
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-slate-300">Tipo</Label>
-              <div className="flex gap-3">
-                {(['private', 'public'] as const).map((type) => (
-                  <button
-                    key={type}
-                    type="button"
-                    onClick={() => setForm({ ...form, type })}
-                    className={`flex-1 py-2 rounded-lg border text-sm font-medium transition-colors ${
-                      form.type === type
-                        ? 'border-emerald-500 bg-emerald-500/10 text-emerald-400'
-                        : 'border-slate-600 text-slate-400 hover:border-slate-500'
-                    }`}
-                  >
-                    {type === 'private' ? '🔒 Privada' : '🌐 Pública'}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
               <Label className="text-slate-300">Descripción (opcional)</Label>
               <Input
                 placeholder="Describe tu quiniela..."
                 value={form.description}
                 onChange={(e) => setForm({ ...form, description: e.target.value })}
-                className="bg-slate-800 border-slate-600 text-white placeholder:text-slate-500"
+                className="bg-slate-950 border-slate-700 text-white placeholder:text-slate-600"
               />
             </div>
 
@@ -143,7 +123,7 @@ export default function NuevaQuinielaPage() {
                 min={2}
                 value={form.max_participants}
                 onChange={(e) => setForm({ ...form, max_participants: e.target.value })}
-                className="bg-slate-800 border-slate-600 text-white placeholder:text-slate-500"
+                className="bg-slate-950 border-slate-700 text-white placeholder:text-slate-600"
               />
             </div>
 

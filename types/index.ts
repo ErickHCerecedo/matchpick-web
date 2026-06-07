@@ -112,6 +112,8 @@ export interface Quiniela {
   my_role: 'admin' | 'participant' | null;
   is_active: boolean;
   predictions_open: boolean;
+  my_standing?: { rank: number; total_points: number } | null;
+  pending_predictions_count?: number;
 }
 
 export interface Standing {

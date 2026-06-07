@@ -72,7 +72,7 @@ export default function NuevoTorneoPage() {
                 placeholder="Ej: Liga Amigos 2026"
                 value={form.name}
                 onChange={set('name')}
-                className="bg-slate-800 border-slate-600 text-white placeholder:text-slate-500"
+                className="bg-slate-950 border-slate-700 text-white placeholder:text-slate-600"
                 required
               />
             </div>
@@ -83,7 +83,7 @@ export default function NuevoTorneoPage() {
                 placeholder="Ej: 2026"
                 value={form.season}
                 onChange={set('season')}
-                className="bg-slate-800 border-slate-600 text-white placeholder:text-slate-500"
+                className="bg-slate-950 border-slate-700 text-white placeholder:text-slate-600"
                 required
                 maxLength={10}
               />
@@ -96,7 +96,7 @@ export default function NuevoTorneoPage() {
                   type="date"
                   value={form.starts_at}
                   onChange={set('starts_at')}
-                  className="bg-slate-800 border-slate-600 text-white"
+                  className="bg-slate-950 border-slate-700 text-white"
                 />
               </div>
               <div className="space-y-1.5">
@@ -105,7 +105,7 @@ export default function NuevoTorneoPage() {
                   type="date"
                   value={form.ends_at}
                   onChange={set('ends_at')}
-                  className="bg-slate-800 border-slate-600 text-white"
+                  className="bg-slate-950 border-slate-700 text-white"
                 />
               </div>
             </div>

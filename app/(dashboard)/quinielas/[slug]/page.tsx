@@ -24,7 +24,7 @@ import { api } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import type { ApiResponse, Quiniela, Standing, RoundWithMatches, Prediction } from '@/types';
 import {
-  Lock, Globe, Users, Link2, Copy, Check, Loader2,
+  Users, Link2, Copy, Check, Loader2,
   Target, Eye, LayoutDashboard,
   MoreVertical, Trash2, Share2,
 } from 'lucide-react';
@@ -161,21 +161,6 @@ export default function QuinielaPage() {
             <p className="text-slate-400 text-sm mt-0.5">{quiniela.tournament.name}</p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <Badge
-              variant="outline"
-              className={
-                quiniela.type === 'public'
-                  ? 'border-emerald-500/50 text-emerald-400'
-                  : 'border-slate-600 text-slate-400'
-              }
-            >
-              {quiniela.type === 'public' ? (
-                <><Globe className="h-3 w-3 mr-1" />Pública</>
-              ) : (
-                <><Lock className="h-3 w-3 mr-1" />Privada</>
-              )}
-            </Badge>
-
             {/* Actions menu */}
             <DropdownMenu>
               <DropdownMenuTrigger className="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-400 hover:text-white hover:bg-slate-800 transition-colors focus:outline-none">
@@ -299,7 +284,7 @@ export default function QuinielaPage() {
                       <input
                         readOnly
                         value={inviteLink}
-                        className="flex-1 rounded-lg bg-slate-800 border border-slate-700 text-slate-300 text-xs px-3 py-2 truncate focus:outline-none"
+                        className="flex-1 rounded-lg bg-slate-950 border border-slate-700 text-slate-300 text-xs px-3 py-2 truncate focus:outline-none"
                       />
                       <Button
                         size="sm"

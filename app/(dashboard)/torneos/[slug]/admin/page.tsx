@@ -53,7 +53,7 @@ function TeamSelect({
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="w-full rounded-lg bg-slate-800 border border-slate-600 text-white text-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+      className="w-full rounded-lg bg-slate-950 border border-slate-700 text-white text-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-emerald-500"
       required
     >
       <option value="">Seleccionar</option>
@@ -542,7 +542,7 @@ export default function TorneoAdminPage() {
                         placeholder="México"
                         value={teamForm.name}
                         onChange={(e) => setTeamForm((p) => ({ ...p, name: e.target.value }))}
-                        className="bg-slate-800 border-slate-600 text-white placeholder:text-slate-500 text-sm"
+                        className="bg-slate-950 border-slate-700 text-white placeholder:text-slate-600 text-sm"
                         required
                       />
                     </div>
@@ -552,7 +552,7 @@ export default function TorneoAdminPage() {
                         placeholder="MEX"
                         value={teamForm.short_name}
                         onChange={(e) => setTeamForm((p) => ({ ...p, short_name: e.target.value }))}
-                        className="bg-slate-800 border-slate-600 text-white placeholder:text-slate-500 text-sm"
+                        className="bg-slate-950 border-slate-700 text-white placeholder:text-slate-600 text-sm"
                         maxLength={10}
                         required
                       />
@@ -566,7 +566,7 @@ export default function TorneoAdminPage() {
                       placeholder="https://ejemplo.com/bandera.png"
                       value={teamForm.logo_url}
                       onChange={(e) => setTeamForm((p) => ({ ...p, logo_url: e.target.value }))}
-                      className="bg-slate-800 border-slate-600 text-white placeholder:text-slate-500 text-sm"
+                      className="bg-slate-950 border-slate-700 text-white placeholder:text-slate-600 text-sm"
                     />
                   </div>
                   <div className="flex justify-end gap-2">
@@ -598,16 +598,16 @@ export default function TorneoAdminPage() {
                       <div className="grid grid-cols-2 gap-2">
                         <div className="space-y-1">
                           <Label className="text-slate-400 text-xs">Nombre</Label>
-                          <Input value={editTeamForm.name} onChange={(e) => setEditTeamForm((p) => ({ ...p, name: e.target.value }))} className="bg-slate-800 border-slate-600 text-white text-sm h-8" />
+                          <Input value={editTeamForm.name} onChange={(e) => setEditTeamForm((p) => ({ ...p, name: e.target.value }))} className="bg-slate-950 border-slate-700 text-white text-sm h-8" />
                         </div>
                         <div className="space-y-1">
                           <Label className="text-slate-400 text-xs">Abreviatura</Label>
-                          <Input value={editTeamForm.short_name} onChange={(e) => setEditTeamForm((p) => ({ ...p, short_name: e.target.value }))} className="bg-slate-800 border-slate-600 text-white text-sm h-8" maxLength={10} />
+                          <Input value={editTeamForm.short_name} onChange={(e) => setEditTeamForm((p) => ({ ...p, short_name: e.target.value }))} className="bg-slate-950 border-slate-700 text-white text-sm h-8" maxLength={10} />
                         </div>
                       </div>
                       <div className="space-y-1">
                         <Label className="text-slate-400 text-xs">URL de imagen</Label>
-                        <Input value={editTeamForm.logo_url} onChange={(e) => setEditTeamForm((p) => ({ ...p, logo_url: e.target.value }))} placeholder="https://..." className="bg-slate-800 border-slate-600 text-white placeholder:text-slate-500 text-sm h-8" />
+                        <Input value={editTeamForm.logo_url} onChange={(e) => setEditTeamForm((p) => ({ ...p, logo_url: e.target.value }))} placeholder="https://..." className="bg-slate-950 border-slate-700 text-white placeholder:text-slate-600 text-sm h-8" />
                       </div>
                       <div className="flex justify-end gap-1">
                         <button type="button" onClick={() => setEditingTeamId(null)} className="p-1.5 rounded text-slate-500 hover:text-white transition-colors"><X className="h-4 w-4" /></button>
@@ -783,11 +783,11 @@ export default function TorneoAdminPage() {
                                         <div className="grid grid-cols-2 gap-2">
                                           <div className="space-y-1">
                                             <Label className="text-slate-400 text-xs">Fecha y hora</Label>
-                                            <Input type="datetime-local" value={editMatchForm.scheduled_at} onChange={(e) => setEditMatchForm((p) => ({ ...p, scheduled_at: e.target.value }))} className="bg-slate-800 border-slate-600 text-white text-sm" />
+                                            <Input type="datetime-local" value={editMatchForm.scheduled_at} onChange={(e) => setEditMatchForm((p) => ({ ...p, scheduled_at: e.target.value }))} className="bg-slate-950 border-slate-700 text-white text-sm" />
                                           </div>
                                           <div className="space-y-1">
                                             <Label className="text-slate-400 text-xs">Sede</Label>
-                                            <Input placeholder="Estadio..." value={editMatchForm.venue} onChange={(e) => setEditMatchForm((p) => ({ ...p, venue: e.target.value }))} className="bg-slate-800 border-slate-600 text-white placeholder:text-slate-500 text-sm" />
+                                            <Input placeholder="Estadio..." value={editMatchForm.venue} onChange={(e) => setEditMatchForm((p) => ({ ...p, venue: e.target.value }))} className="bg-slate-950 border-slate-700 text-white placeholder:text-slate-600 text-sm" />
                                           </div>
                                         </div>
                                         <div className="flex justify-end gap-1">
@@ -811,7 +811,7 @@ export default function TorneoAdminPage() {
                                               min={0}
                                               value={resultForm.home_score}
                                               onChange={(e) => setResultForm((p) => ({ ...p, home_score: e.target.value }))}
-                                              className="w-14 text-center bg-slate-800 border-slate-600 text-white text-sm h-9"
+                                              className="w-14 text-center bg-slate-950 border-slate-700 text-white text-sm h-9"
                                             />
                                             <span className="text-slate-500 font-bold">-</span>
                                             <Input
@@ -819,7 +819,7 @@ export default function TorneoAdminPage() {
                                               min={0}
                                               value={resultForm.away_score}
                                               onChange={(e) => setResultForm((p) => ({ ...p, away_score: e.target.value }))}
-                                              className="w-14 text-center bg-slate-800 border-slate-600 text-white text-sm h-9"
+                                              className="w-14 text-center bg-slate-950 border-slate-700 text-white text-sm h-9"
                                             />
                                           </div>
                                           <span className="text-sm text-white font-medium flex-1 truncate">{match.away_team.name}</span>
@@ -918,11 +918,11 @@ export default function TorneoAdminPage() {
                                     <div className="grid grid-cols-2 gap-2">
                                       <div className="space-y-1">
                                         <Label className="text-slate-400 text-xs">Fecha y hora</Label>
-                                        <Input type="datetime-local" value={matchForm.scheduled_at} onChange={(e) => setMatchForm((p) => ({ ...p, scheduled_at: e.target.value }))} className="bg-slate-800 border-slate-600 text-white text-sm" required />
+                                        <Input type="datetime-local" value={matchForm.scheduled_at} onChange={(e) => setMatchForm((p) => ({ ...p, scheduled_at: e.target.value }))} className="bg-slate-950 border-slate-700 text-white text-sm" required />
                                       </div>
                                       <div className="space-y-1">
                                         <Label className="text-slate-400 text-xs">Sede <span className="text-slate-600">(opcional)</span></Label>
-                                        <Input placeholder="Estadio..." value={matchForm.venue} onChange={(e) => setMatchForm((p) => ({ ...p, venue: e.target.value }))} className="bg-slate-800 border-slate-600 text-white placeholder:text-slate-500 text-sm" />
+                                        <Input placeholder="Estadio..." value={matchForm.venue} onChange={(e) => setMatchForm((p) => ({ ...p, venue: e.target.value }))} className="bg-slate-950 border-slate-700 text-white placeholder:text-slate-600 text-sm" />
                                       </div>
                                     </div>
                                     <div className="flex justify-end gap-2">

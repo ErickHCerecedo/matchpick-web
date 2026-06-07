@@ -4,14 +4,14 @@ import { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
+import { TournamentLogo } from '@/components/tournament-logo';
 import { api } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import type { ApiResponse, Tournament } from '@/types';
-import { Calendar, Trophy, Plus, Settings } from 'lucide-react';
+import { Calendar, Plus, Settings } from 'lucide-react';
 
 function TournamentCard({ tournament, index, isOwner }: { tournament: Tournament; index: number; isOwner: boolean }) {
   const router = useRouter();
@@ -21,59 +21,68 @@ function TournamentCard({ tournament, index, isOwner }: { tournament: Tournament
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, delay: index * 0.08 }}
-      whileHover={{ y: -3, transition: { duration: 0.2 } }}
+      whileHover={{ y: -3, transition: { duration: 0.18 } }}
     >
       <Link href={`/torneos/${tournament.slug}`}>
-        <Card className="bg-slate-900 border-slate-700 hover:border-emerald-500/50 transition-colors cursor-pointer">
-          <CardHeader className="pb-2">
-            <div className="flex items-start justify-between gap-2">
-              <h3 className="font-semibold text-white leading-tight">{tournament.name}</h3>
-              <div className="flex items-center gap-1.5 shrink-0">
-                {isOwner && (
-                  <button
-                    onClick={(e) => { e.preventDefault(); router.push(`/torneos/${tournament.slug}/admin`); }}
-                    className="p-1 rounded text-slate-500 hover:text-emerald-400 transition-colors"
-                    title="Administrar torneo"
+        <div className="h-full rounded-2xl border border-slate-800 bg-slate-900 p-4 flex flex-col gap-3 cursor-pointer transition-all duration-200 hover:border-emerald-500/40 hover:bg-slate-900/90">
+
+          {/* ── Header: logo + name + controls ────────────────── */}
+          <div className="flex items-start gap-3 min-w-0">
+            <TournamentLogo tournament={tournament} size="md" />
+
+            <div className="flex-1 min-w-0">
+              <div className="flex items-start justify-between gap-2">
+                <h3 className="font-semibold text-white leading-snug line-clamp-2 text-sm">
+                  {tournament.name}
+                </h3>
+                <div className="flex items-center gap-1 shrink-0">
+                  {isOwner && (
+                    <button
+                      onClick={(e) => { e.preventDefault(); router.push(`/torneos/${tournament.slug}/admin`); }}
+                      className="p-1 rounded text-slate-500 hover:text-emerald-400 transition-colors"
+                      title="Administrar torneo"
+                    >
+                      <Settings className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                  <Badge
+                    variant="outline"
+                    className={
+                      tournament.is_active
+                        ? 'text-[10px] border-emerald-500/50 text-emerald-400'
+                        : 'text-[10px] border-slate-700 text-slate-500'
+                    }
                   >
-                    <Settings className="h-3.5 w-3.5" />
-                  </button>
+                    {tournament.is_active ? '● Activo' : 'Finalizado'}
+                  </Badge>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1 text-slate-500 text-[11px] mt-1">
+                <span className="capitalize">{tournament.type.replace('_', ' ')}</span>
+                <span>·</span>
+                <span>{tournament.season}</span>
+                {tournament.is_custom && (
+                  <>
+                    <span>·</span>
+                    <span className="text-violet-500">Custom</span>
+                  </>
                 )}
-                <Badge
-                  variant="outline"
-                  className={
-                    tournament.is_active
-                      ? 'border-emerald-500/50 text-emerald-400'
-                      : 'border-slate-600 text-slate-500'
-                  }
-                >
-                  {tournament.is_active ? 'Activo' : 'Finalizado'}
-                </Badge>
               </div>
             </div>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <div className="flex items-center gap-1.5 text-slate-400 text-sm">
-              <Calendar className="h-3.5 w-3.5" />
-              <span>
-                {new Date(tournament.starts_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })}
-                {' — '}
-                {new Date(tournament.ends_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })}
-              </span>
-            </div>
-            <div className="flex items-center gap-1.5 text-slate-500 text-xs">
-              <Trophy className="h-3 w-3" />
-              <span className="capitalize">{tournament.type.replace('_', ' ')}</span>
-              <span>·</span>
-              <span>{tournament.season}</span>
-              {tournament.is_custom && (
-                <>
-                  <span>·</span>
-                  <span className="text-emerald-600">Custom</span>
-                </>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+          </div>
+
+          {/* ── Dates ─────────────────────────────────────────── */}
+          <div className="flex items-center gap-1.5 text-slate-500 text-xs">
+            <Calendar className="h-3 w-3 shrink-0" />
+            <span>
+              {new Date(tournament.starts_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })}
+              {' — '}
+              {new Date(tournament.ends_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })}
+            </span>
+          </div>
+
+        </div>
       </Link>
     </motion.div>
   );
@@ -124,12 +133,14 @@ export default function TorneosPage() {
       {loading ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {[1, 2].map((i) => (
-            <Skeleton key={i} className="h-36 rounded-xl bg-slate-800" />
+            <Skeleton key={i} className="h-36 rounded-2xl bg-slate-800" />
           ))}
         </div>
       ) : allTournaments.length === 0 ? (
         <div className="text-center py-20">
-          <Trophy className="h-12 w-12 text-slate-600 mx-auto mb-4" />
+          <div className="h-12 w-12 rounded-2xl bg-slate-800 mx-auto mb-4 flex items-center justify-center">
+            <Calendar className="h-6 w-6 text-slate-600" />
+          </div>
           <p className="text-slate-400">No hay torneos disponibles.</p>
         </div>
       ) : (

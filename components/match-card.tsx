@@ -99,7 +99,7 @@ export function MatchCard({ match, prediction, onChange, readOnly, isSaved }: Pr
                 max="99"
                 value={home}
                 onChange={(e) => handleChange('home', e.target.value)}
-                className="w-12 text-center bg-slate-800 border-slate-600 text-white p-1 h-9"
+                className="w-12 text-center bg-slate-950 border-slate-700 text-white p-1 h-9"
                 placeholder="0"
               />
               <span className="text-slate-500 font-bold">-</span>
@@ -109,7 +109,7 @@ export function MatchCard({ match, prediction, onChange, readOnly, isSaved }: Pr
                 max="99"
                 value={away}
                 onChange={(e) => handleChange('away', e.target.value)}
-                className="w-12 text-center bg-slate-800 border-slate-600 text-white p-1 h-9"
+                className="w-12 text-center bg-slate-950 border-slate-700 text-white p-1 h-9"
                 placeholder="0"
               />
             </div>
