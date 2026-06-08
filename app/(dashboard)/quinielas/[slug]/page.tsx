@@ -26,7 +26,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import type { ApiResponse, Quiniela, Standing, RoundWithMatches, Prediction } from '@/types';
 import {
   Users, Link2, Copy, Check, Loader2,
-  Target, Eye, LayoutDashboard,
+  Target, ListChecks, LayoutDashboard,
   MoreVertical, Trash2, Share2,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -155,53 +155,52 @@ export default function QuinielaPage() {
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
       {/* Header */}
-      <div className="mb-5">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-start gap-3 flex-1 min-w-0">
-            <TournamentLogo tournament={quiniela.tournament} size="md" className="mt-0.5" />
-            <div className="flex-1 min-w-0">
-              <h2 className="text-2xl font-bold text-white truncate">{quiniela.name}</h2>
-              <p className="text-slate-400 text-sm mt-0.5">{quiniela.tournament.name}</p>
+      <div className="flex items-center justify-between gap-3 mb-5">
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          <TournamentLogo tournament={quiniela.tournament} size="md" className="shrink-0" />
+          <div className="flex-1 min-w-0">
+            <h2 className="text-xl font-bold text-white leading-tight truncate">{quiniela.name}</h2>
+            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+              <span className="text-slate-400 text-xs truncate">{quiniela.tournament.name}</span>
+              <span className="text-slate-700 text-xs shrink-0">·</span>
+              <span className="flex items-center gap-1 text-slate-500 text-xs shrink-0">
+                <Users className="h-3 w-3" />
+                {quiniela.participants_count} participantes
+              </span>
             </div>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
-            {/* Actions menu */}
-            <DropdownMenu>
-              <DropdownMenuTrigger className="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-400 hover:text-white hover:bg-slate-800 transition-colors focus:outline-none">
-                <MoreVertical className="h-4 w-4" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                align="end"
-                className="bg-slate-900 border-slate-800 text-slate-200 min-w-47.5"
-              >
-                <DropdownMenuItem
-                  onClick={() => setShowShare(true)}
-                  className="gap-2 cursor-pointer hover:bg-slate-800 focus:bg-slate-800"
-                >
-                  <Share2 className="h-4 w-4 text-emerald-400" />
-                  Compartir mi posición
-                </DropdownMenuItem>
+        </div>
 
-                {isAdmin && (
-                  <>
-                    <DropdownMenuSeparator className="bg-slate-800" />
-                    <DropdownMenuItem
-                      onClick={() => setShowDelete(true)}
-                      className="gap-2 cursor-pointer text-red-400 hover:bg-red-950/40 focus:bg-red-950/40 hover:text-red-300 focus:text-red-300"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      Eliminar quiniela
-                    </DropdownMenuItem>
-                  </>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
-        <div className="flex items-center gap-1.5 text-slate-500 text-sm mt-2">
-          <Users className="h-3.5 w-3.5" />
-          <span>{quiniela.participants_count} participantes</span>
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger className="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-400 hover:text-white hover:bg-slate-800 transition-colors focus:outline-none shrink-0">
+            <MoreVertical className="h-4 w-4" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            align="end"
+            className="bg-slate-900 border-slate-800 text-slate-200 min-w-47.5"
+          >
+            <DropdownMenuItem
+              onClick={() => setShowShare(true)}
+              className="gap-2 cursor-pointer hover:bg-slate-800 focus:bg-slate-800"
+            >
+              <Share2 className="h-4 w-4 text-emerald-400" />
+              Compartir mi posición
+            </DropdownMenuItem>
+
+            {isAdmin && (
+              <>
+                <DropdownMenuSeparator className="bg-slate-800" />
+                <DropdownMenuItem
+                  onClick={() => setShowDelete(true)}
+                  className="gap-2 cursor-pointer text-red-400 hover:bg-red-950/40 focus:bg-red-950/40 hover:text-red-300 focus:text-red-300"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Eliminar quiniela
+                </DropdownMenuItem>
+              </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -225,7 +224,7 @@ export default function QuinielaPage() {
             value="transparency"
             className="flex flex-col items-center gap-1 py-2.5 h-auto rounded-lg text-slate-400 hover:text-white transition-colors"
           >
-            <Eye className="h-4 w-4" />
+            <ListChecks className="h-4 w-4" />
             <span className="text-xs font-medium">Resultados</span>
           </TabsTrigger>
           <TabsTrigger
@@ -242,6 +241,7 @@ export default function QuinielaPage() {
             standings={standings}
             rounds={rounds}
             currentUserId={user?.id}
+            totalParticipants={standings.length}
             onGoToPredictions={() => setActiveTab('predictions')}
             onShare={() => setShowShare(true)}
           />

@@ -189,7 +189,7 @@ export function PredictionForm({ quinielaSlug, rounds, initialPredictions, onSav
     <div className="space-y-4 pb-4">
       {/* ── Progress header ────────────────────────────────────────────── */}
       {totalPredictable > 0 && (
-        <div className="rounded-xl bg-slate-900 border border-slate-800 p-4">
+        <div className="rounded-xl bg-slate-950 border border-slate-800 p-4">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-medium text-slate-400">Mis pronósticos</span>
             <span className="text-xs font-semibold text-white">

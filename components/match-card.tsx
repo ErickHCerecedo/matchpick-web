@@ -57,7 +57,7 @@ export function MatchCard({ match, prediction, onChange, readOnly, isSaved }: Pr
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className={cn('bg-slate-900 border rounded-xl p-4 space-y-3', borderClass)}
+      className={cn('bg-slate-950 border rounded-xl p-4 space-y-3', borderClass)}
     >
       {/* Date + status */}
       <div className="flex items-center justify-between text-xs text-slate-500">
