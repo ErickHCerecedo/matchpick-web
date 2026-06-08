@@ -203,7 +203,7 @@ function MyStatsCard({
               border
             )}
           >
-            {isLeader ? (
+            {myStanding.rank <= 3 ? (
               <Crown className={cn('h-5 w-5', text)} />
             ) : (
               <>
@@ -228,8 +228,12 @@ function MyStatsCard({
               </span>
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
-              {isLeader
+              {myStanding.rank === 1
                 ? 'Liderando la quiniela'
+                : myStanding.rank === 2
+                ? 'Liderando la quiniela en 2do puesto'
+                : myStanding.rank === 3
+                ? 'Liderando la quiniela en 3er puesto'
                 : `Posición ${myStanding.rank} de ${totalParticipants}`}
             </p>
           </div>
@@ -246,29 +250,27 @@ function MyStatsCard({
 
       {/* Stats grid */}
       <div className="grid grid-cols-3 mt-4 border border-slate-800 rounded-lg overflow-hidden divide-x divide-slate-800">
-        <div className="px-3 py-2.5 text-center">
+        <div className="px-3 py-3 text-center">
           <p className="text-lg font-bold text-white tabular-nums">{myStanding.exact_scores}</p>
-          <p className="text-[10px] text-slate-500 mt-0.5">Marcador exacto</p>
-          <p className="text-[9px] text-slate-700 mt-0.5">+3 pts c/u</p>
+          <p className="text-xs text-slate-400 mt-1">Marcador exacto</p>
+          <p className="text-[10px] text-slate-600 mt-0.5">+3 puntos</p>
         </div>
-        <div className="px-3 py-2.5 text-center">
+        <div className="px-3 py-3 text-center">
           <p className="text-lg font-bold text-white tabular-nums">{myStanding.correct_results}</p>
-          <p className="text-[10px] text-slate-500 mt-0.5">Ganador correcto</p>
-          <p className="text-[9px] text-slate-700 mt-0.5">+1 pt c/u</p>
+          <p className="text-xs text-slate-400 mt-1">Ganador correcto</p>
+          <p className="text-[10px] text-slate-600 mt-0.5">+1 punto</p>
         </div>
-        <div className="px-3 py-2.5 text-center flex flex-col items-center justify-center">
+        <div className="px-3 py-3 text-center flex flex-col items-center justify-center">
           {precision !== null ? (
-            <>
-              <div className="flex items-baseline gap-0.5">
-                <p className="text-lg font-bold text-white tabular-nums">{precision}</p>
-                <Percent className="h-3.5 w-3.5 text-slate-400 mb-0.5" />
-              </div>
-            </>
+            <div className="flex items-baseline gap-0.5">
+              <p className="text-lg font-bold text-white tabular-nums">{precision}</p>
+              <Percent className="h-3.5 w-3.5 text-slate-400 mb-0.5" />
+            </div>
           ) : (
             <p className="text-lg font-bold text-slate-700">—</p>
           )}
-          <p className="text-[10px] text-slate-500 mt-0.5">Precisión</p>
-          <p className="text-[9px] text-slate-700 mt-0.5">de aciertos</p>
+          <p className="text-xs text-slate-400 mt-1">Precisión</p>
+          <p className="text-[10px] text-slate-600 mt-0.5">de aciertos</p>
         </div>
       </div>
 
@@ -439,11 +441,13 @@ function UpcomingMatches({
     const pending = matches.filter(({ match }) => !match.my_prediction).length;
     const isToday = targetDate === todayKey();
 
-    // Format date label
+    // Format date label (force lowercase to avoid locale capitalization quirks)
     const d = new Date(targetDate + 'T12:00:00');
     const dayLabel = isToday
       ? 'Hoy'
-      : d.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'short' });
+      : d
+          .toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'short' })
+          .toLowerCase();
 
     return { date: targetDate, matches, pending, isToday, dayLabel };
   }, [rounds]);
@@ -462,7 +466,7 @@ function UpcomingMatches({
         </div>
         {nextDayData && nextDayData.pending > 0 && (
           <span className="shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400/80 border border-amber-500/20">
-            {nextDayData.pending} sin pronosticar
+            {nextDayData.pending} {nextDayData.pending === 1 ? 'partido' : 'partidos'} sin pronosticar
           </span>
         )}
         {nextDayData && nextDayData.pending === 0 && (
@@ -487,15 +491,12 @@ function UpcomingMatches({
             {nextDayData!.matches.map(({ match, roundName }) => {
               const pred = match.my_prediction;
               return (
-                <div key={match.id} className="px-4 py-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                <div key={match.id} className="flex items-center gap-3 px-4 py-3">
+                  {/* Teams + meta */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
                       {match.home_team?.flag_url && (
-                        <img
-                          src={match.home_team.flag_url}
-                          alt=""
-                          className="w-4 h-3 object-cover rounded-xs shrink-0"
-                        />
+                        <img src={match.home_team.flag_url} alt="" className="w-4 h-3 object-cover rounded-xs shrink-0" />
                       )}
                       <span className="text-xs font-semibold text-white truncate">
                         {match.home_team?.short_name ?? '?'}
@@ -505,36 +506,34 @@ function UpcomingMatches({
                         {match.away_team?.short_name ?? '?'}
                       </span>
                       {match.away_team?.flag_url && (
-                        <img
-                          src={match.away_team.flag_url}
-                          alt=""
-                          className="w-4 h-3 object-cover rounded-xs shrink-0"
-                        />
+                        <img src={match.away_team.flag_url} alt="" className="w-4 h-3 object-cover rounded-xs shrink-0" />
                       )}
                     </div>
-
-                    {pred ? (
-                      <div className="flex items-center gap-1.5 shrink-0 bg-emerald-500/8 border border-emerald-500/20 rounded-lg px-2.5 py-1">
-                        <Pencil className="h-2.5 w-2.5 text-emerald-500/60" />
-                        <span className="text-xs font-bold text-emerald-400 tabular-nums">
-                          {pred.home_score} – {pred.away_score}
-                        </span>
-                      </div>
-                    ) : (
-                      <span className="text-[10px] font-medium text-amber-500/60 shrink-0 border border-amber-500/15 rounded-lg px-2 py-1 bg-amber-500/5">
-                        pendiente
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="flex items-center gap-1.5 mt-1.5">
-                    <p className="text-[10px] text-slate-600">
+                    <p className="text-[10px] text-slate-600 mt-1">
                       {formatMatchDate(match.scheduled_at)} · {roundName}
                     </p>
-                    {pred && (
-                      <span className="text-[10px] text-emerald-600/60">· tu pronóstico</span>
-                    )}
                   </div>
+
+                  {/* Prediction — right side, stacked label + score */}
+                  {pred ? (
+                    <div className="shrink-0 text-right">
+                      <p className="text-[9px] font-medium text-slate-500 uppercase tracking-wide leading-none mb-1">
+                        Tu pronóstico
+                      </p>
+                      <p className="text-sm font-bold text-white tabular-nums font-mono leading-none">
+                        {pred.home_score} &ndash; {pred.away_score}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="shrink-0 text-right">
+                      <p className="text-[9px] font-medium text-slate-500 uppercase tracking-wide leading-none mb-1">
+                        Pronóstico
+                      </p>
+                      <p className="text-xs font-semibold text-amber-500/70 leading-none">
+                        Pendiente
+                      </p>
+                    </div>
+                  )}
                 </div>
               );
             })}
