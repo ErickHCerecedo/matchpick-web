@@ -52,41 +52,49 @@ function PendingMatchesAlert({
   rounds: RoundWithMatches[];
   onGoToPredictions: () => void;
 }) {
-  const today = useMemo(() => todayKey(), []);
-  const tomorrowKey = useMemo(() => {
-    const d = new Date();
-    d.setDate(d.getDate() + 1);
-    return toLocalDateKey(d.toISOString());
-  }, []);
-
   const alertData = useMemo(() => {
-    const pendingByDay: Record<string, Match[]> = { [today]: [], [tomorrowKey]: [] };
+    // Collect all open unpredicted matches
+    const allPending: Match[] = [];
     for (const r of rounds) {
       for (const m of r.matches) {
-        if (!m.is_prediction_open || m.my_prediction) continue;
-        const dk = toLocalDateKey(m.scheduled_at);
-        if (dk === today || dk === tomorrowKey) pendingByDay[dk].push(m);
+        if (m.is_prediction_open && !m.my_prediction) allPending.push(m);
       }
     }
+    if (allPending.length === 0) return null;
 
-    const todayPending = pendingByDay[today];
-    const tomorrowPending = pendingByDay[tomorrowKey];
+    // Sort and find the next match day
+    allPending.sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at));
+    const nextDateKey = toLocalDateKey(allPending[0].scheduled_at);
+    const dayPending = allPending.filter(
+      (m) => toLocalDateKey(m.scheduled_at) === nextDateKey
+    );
 
-    const [pending, dayLabel] =
-      todayPending.length > 0
-        ? [todayPending, 'hoy']
-        : tomorrowPending.length > 0
-        ? [tomorrowPending, 'mañana']
-        : [[], ''];
+    // Build a human-readable day label
+    const today = todayKey();
+    const tomorrowDate = new Date();
+    tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+    const tomorrowKey = toLocalDateKey(tomorrowDate.toISOString());
 
-    if (pending.length === 0) return null;
+    let dayLabel: string;
+    if (nextDateKey === today) {
+      dayLabel = 'hoy';
+    } else if (nextDateKey === tomorrowKey) {
+      dayLabel = 'mañana';
+    } else {
+      const d = new Date(nextDateKey + 'T12:00:00');
+      dayLabel = `el ${d.toLocaleDateString('es-MX', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'short',
+      })}`;
+    }
 
-    const sorted = [...pending].sort((a, b) =>
+    const sorted = [...dayPending].sort((a, b) =>
       a.prediction_closes_at.localeCompare(b.prediction_closes_at)
     );
 
-    return { count: pending.length, dayLabel, closestAt: sorted[0].prediction_closes_at };
-  }, [rounds, today, tomorrowKey]);
+    return { count: dayPending.length, dayLabel, closestAt: sorted[0].prediction_closes_at };
+  }, [rounds]);
 
   const [countdown, setCountdown] = useState('');
 
@@ -486,7 +494,7 @@ function UpcomingMatches({
                         <img
                           src={match.home_team.flag_url}
                           alt=""
-                          className="w-4 h-3 object-cover rounded-[2px] shrink-0"
+                          className="w-4 h-3 object-cover rounded-xs shrink-0"
                         />
                       )}
                       <span className="text-xs font-semibold text-white truncate">
@@ -500,7 +508,7 @@ function UpcomingMatches({
                         <img
                           src={match.away_team.flag_url}
                           alt=""
-                          className="w-4 h-3 object-cover rounded-[2px] shrink-0"
+                          className="w-4 h-3 object-cover rounded-xs shrink-0"
                         />
                       )}
                     </div>
@@ -604,7 +612,7 @@ function RecentResults({ rounds }: { rounds: RoundWithMatches[] }) {
                       <img
                         src={match.home_team.flag_url}
                         alt=""
-                        className="w-4 h-3 object-cover rounded-[2px] shrink-0"
+                        className="w-4 h-3 object-cover rounded-xs shrink-0"
                       />
                     )}
                     <span className="text-xs font-semibold text-white truncate">
@@ -620,7 +628,7 @@ function RecentResults({ rounds }: { rounds: RoundWithMatches[] }) {
                       <img
                         src={match.away_team.flag_url}
                         alt=""
-                        className="w-4 h-3 object-cover rounded-[2px] shrink-0"
+                        className="w-4 h-3 object-cover rounded-xs shrink-0"
                       />
                     )}
                   </div>
