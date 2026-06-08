@@ -4,6 +4,7 @@ import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { MatchCard } from './match-card';
+import { PendingMatchesAlert } from './quiniela-dashboard';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -185,8 +186,20 @@ export function PredictionForm({ quinielaSlug, rounds, initialPredictions, onSav
     );
   }
 
+  const handleGoToPending = useCallback(() => {
+    const pending = firstOpenDate(rounds, predictions);
+    if (pending) setActiveDateKey(pending);
+  }, [rounds, predictions]);
+
   return (
     <div className="space-y-4 pb-4">
+      {/* ── Pending alert ──────────────────────────────────────────────── */}
+      <PendingMatchesAlert
+        rounds={rounds}
+        onGoToPredictions={handleGoToPending}
+        buttonLabel="Ir a pendientes"
+      />
+
       {/* ── Progress header ────────────────────────────────────────────── */}
       {totalPredictable > 0 && (
         <div className="rounded-xl bg-slate-950 border border-slate-800 p-4">
@@ -234,7 +247,7 @@ export function PredictionForm({ quinielaSlug, rounds, initialPredictions, onSav
                 ref={isActive ? activeDateRef : undefined}
                 onClick={() => setActiveDateKey(dateKey)}
                 className={cn(
-                  'shrink-0 flex flex-col items-center px-3 py-2.5 rounded-xl border text-center min-w-[62px] transition-all',
+                  'shrink-0 flex flex-col items-center px-3 py-2.5 rounded-xl border text-center min-w-15.5 transition-all',
                   isActive
                     ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400'
                     : isComplete

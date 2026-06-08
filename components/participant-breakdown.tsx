@@ -110,7 +110,7 @@ function MatchRow({ match }: { match: BreakdownMatch }) {
               <img
                 src={match.home_team.flag_url}
                 alt=""
-                className="w-5 h-3.5 object-cover rounded-[2px] shrink-0"
+                className="w-5 h-3.5 object-cover rounded-xs shrink-0"
               />
             )}
             <span className="text-sm font-medium text-white truncate">
@@ -118,7 +118,7 @@ function MatchRow({ match }: { match: BreakdownMatch }) {
             </span>
           </div>
 
-          <div className="shrink-0 text-center min-w-[52px]">
+          <div className="shrink-0 text-center min-w-13">
             {match.result ? (
               <span className="font-bold text-white text-base font-mono">
                 {match.result.home_score} – {match.result.away_score}
@@ -136,7 +136,7 @@ function MatchRow({ match }: { match: BreakdownMatch }) {
               <img
                 src={match.away_team.flag_url}
                 alt=""
-                className="w-5 h-3.5 object-cover rounded-[2px] shrink-0"
+                className="w-5 h-3.5 object-cover rounded-xs shrink-0"
               />
             )}
           </div>
@@ -443,71 +443,100 @@ export function ParticipantBreakdown({ quinielaSlug, standings, currentUserId, i
                 Aún no hay participantes.
               </p>
             ) : (
-              <div className="space-y-1.5">
-                {standings.map((s) => {
-                  const isMe = s.user.id === currentUserId;
-                  return (
-                    <button
-                      key={s.user.id}
-                      onClick={() => setSelectedUserId(s.user.id)}
-                      className={cn(
-                        'w-full flex items-center gap-3 p-3 rounded-xl border transition-all text-left group',
-                        isMe
-                          ? 'bg-emerald-500/5 border-emerald-500/20 hover:border-emerald-500/40'
-                          : 'bg-slate-900 border-slate-800 hover:border-slate-700 hover:bg-slate-800/60'
-                      )}
-                    >
-                      <RankBadge rank={s.rank} />
+              <>
+                {/* Legend */}
+                <div className="flex items-center gap-2 flex-wrap mb-3 px-0.5">
+                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    🎯 Exacto +3
+                  </span>
+                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded-full bg-slate-800 text-slate-400 border border-slate-700">
+                    ✓ Correcto +1
+                  </span>
+                  <span className="text-[10px] text-slate-600 ml-auto">% = precisión</span>
+                </div>
 
-                      <Avatar className="h-9 w-9 shrink-0">
-                        <AvatarImage src={s.user.avatar_url ?? undefined} />
-                        <AvatarFallback className="bg-slate-700 text-white text-xs font-bold">
-                          {s.user.name.charAt(0).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
+                <div className="space-y-1.5">
+                  {standings.map((s) => {
+                    const isMe = s.user.id === currentUserId;
+                    const accuracy =
+                      s.predictions_made > 0
+                        ? Math.round(
+                            ((s.exact_scores + s.correct_results) / s.predictions_made) * 100
+                          )
+                        : null;
 
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5 min-w-0">
-                          <span
-                            className={cn(
-                              'text-sm font-semibold truncate',
-                              isMe ? 'text-emerald-400' : 'text-white'
+                    return (
+                      <button
+                        key={s.user.id}
+                        onClick={() => setSelectedUserId(s.user.id)}
+                        className={cn(
+                          'w-full flex items-center gap-2.5 px-3 py-3 rounded-xl border transition-all text-left group',
+                          isMe
+                            ? 'bg-emerald-500/5 border-emerald-500/20 hover:border-emerald-500/35'
+                            : 'bg-slate-950 border-slate-800/80 hover:border-slate-700 hover:bg-slate-900/60'
+                        )}
+                      >
+                        <RankBadge rank={s.rank} />
+
+                        <Avatar className="h-8 w-8 shrink-0 ring-1 ring-slate-700/40">
+                          <AvatarImage src={s.user.avatar_url ?? undefined} />
+                          <AvatarFallback className="bg-slate-800 text-white text-xs font-bold">
+                            {s.user.name.charAt(0).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5 mb-1 min-w-0">
+                            <span
+                              className={cn(
+                                'text-sm font-semibold leading-none truncate',
+                                isMe ? 'text-emerald-400' : 'text-white'
+                              )}
+                            >
+                              {s.user.name}
+                            </span>
+                            {isMe && (
+                              <span className="text-[9px] font-bold text-emerald-500/50 bg-emerald-500/10 px-1 py-0.5 rounded shrink-0">
+                                TÚ
+                              </span>
                             )}
-                          >
-                            {s.user.name}
-                          </span>
-                          {isMe && (
-                            <span className="text-[10px] text-emerald-500/60 shrink-0">tú</span>
-                          )}
+                          </div>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/15">
+                              🎯 {s.exact_scores}
+                            </span>
+                            <span className="inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">
+                              ✓ {s.correct_results}
+                            </span>
+                            {accuracy !== null ? (
+                              <span className="text-[10px] text-slate-500 tabular-nums">
+                                {accuracy}%
+                              </span>
+                            ) : (
+                              <span className="text-[10px] text-slate-700">—</span>
+                            )}
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <span className="text-[11px] text-slate-500">
-                            🎯 {s.exact_scores}
-                          </span>
-                          <span className="text-slate-700 text-[10px]">·</span>
-                          <span className="text-[11px] text-slate-500">
-                            ✓ {s.correct_results}
-                          </span>
-                          <span className="text-slate-700 text-[10px]">·</span>
-                          <span className="text-[11px] text-slate-500">
-                            {s.predictions_made} pronósticos
-                          </span>
-                        </div>
-                      </div>
 
-                      <div className="flex items-center gap-2 shrink-0">
-                        <div className="text-right">
-                          <p className="text-base font-bold text-white tabular-nums">
-                            {s.total_points}
-                          </p>
-                          <p className="text-[10px] text-slate-600">pts</p>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <div className="text-right">
+                            <p
+                              className={cn(
+                                'text-base font-bold tabular-nums leading-none',
+                                isMe ? 'text-emerald-400' : 'text-white'
+                              )}
+                            >
+                              {s.total_points}
+                            </p>
+                            <p className="text-[10px] text-slate-600 mt-0.5">pts</p>
+                          </div>
+                          <ChevronRight className="h-4 w-4 text-slate-700 group-hover:text-slate-500 transition-colors -mr-0.5" />
                         </div>
-                        <ChevronRight className="h-4 w-4 text-slate-700 group-hover:text-slate-400 transition-colors" />
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
             )}
           </motion.div>
         ) : (

@@ -3,10 +3,9 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
 import { cn, formatMatchDate } from '@/lib/utils';
 import type { Match, Prediction } from '@/types';
-import { Lock, CheckCircle2 } from 'lucide-react';
+import { Lock, CheckCircle2, ChevronUp, ChevronDown } from 'lucide-react';
 
 interface Props {
   match: Match;
@@ -30,6 +29,38 @@ const STATUS_CLASSES: Record<Match['status'], string> = {
   cancelled: 'border-red-800 text-red-400',
 };
 
+function ScoreStepper({
+  value,
+  onAdjust,
+}: {
+  value: string;
+  onAdjust: (delta: number) => void;
+}) {
+  const num = value !== '' ? parseInt(value) : 0;
+  return (
+    <div className="flex flex-col items-center select-none">
+      <button
+        type="button"
+        onClick={() => onAdjust(1)}
+        className="w-10 h-8 flex items-center justify-center bg-slate-800/70 hover:bg-slate-700 border border-b-0 border-slate-700 rounded-t-lg text-slate-400 hover:text-emerald-400 active:bg-slate-700 transition-colors"
+      >
+        <ChevronUp className="h-3.5 w-3.5" />
+      </button>
+      <div className="w-10 h-10 flex items-center justify-center border border-slate-700 bg-slate-950">
+        <span className="text-xl font-bold text-white tabular-nums font-mono">{num}</span>
+      </div>
+      <button
+        type="button"
+        onClick={() => onAdjust(-1)}
+        disabled={num <= 0}
+        className="w-10 h-8 flex items-center justify-center bg-slate-800/70 hover:bg-slate-700 border border-t-0 border-slate-700 rounded-b-lg text-slate-400 hover:text-red-400 active:bg-slate-700 disabled:opacity-25 disabled:cursor-default transition-colors"
+      >
+        <ChevronDown className="h-3.5 w-3.5" />
+      </button>
+    </div>
+  );
+}
+
 export function MatchCard({ match, prediction, onChange, readOnly, isSaved }: Props) {
   const [home, setHome] = useState<string>(prediction?.home_score?.toString() ?? '');
   const [away, setAway] = useState<string>(prediction?.away_score?.toString() ?? '');
@@ -38,18 +69,20 @@ export function MatchCard({ match, prediction, onChange, readOnly, isSaved }: Pr
   const hasResult = match.result !== null;
   const borderClass = STATUS_CLASSES[match.status];
 
-  const handleChange = (side: 'home' | 'away', val: string) => {
-    const numeric = val.replace(/\D/g, '');
+  const handleAdjust = (side: 'home' | 'away', delta: number) => {
+    const h = home !== '' ? parseInt(home) : 0;
+    const a = away !== '' ? parseInt(away) : 0;
+    // Initialize unset side to 0 on first interaction
+    if (home === '') setHome('0');
+    if (away === '') setAway('0');
     if (side === 'home') {
-      setHome(numeric);
-      if (numeric !== '' && away !== '') {
-        onChange?.(match.id, parseInt(numeric), parseInt(away));
-      }
+      const next = Math.max(0, Math.min(99, h + delta));
+      setHome(next.toString());
+      onChange?.(match.id, next, a);
     } else {
-      setAway(numeric);
-      if (home !== '' && numeric !== '') {
-        onChange?.(match.id, parseInt(home), parseInt(numeric));
-      }
+      const next = Math.max(0, Math.min(99, a + delta));
+      setAway(next.toString());
+      onChange?.(match.id, h, next);
     }
   };
 
@@ -68,7 +101,7 @@ export function MatchCard({ match, prediction, onChange, readOnly, isSaved }: Pr
       </div>
 
       {/* Teams + scores */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
         {/* Home */}
         <div className="flex-1 flex items-center gap-2 min-w-0">
           {match.home_team?.flag_url && (
@@ -93,25 +126,9 @@ export function MatchCard({ match, prediction, onChange, readOnly, isSaved }: Pr
             </div>
           ) : isOpen ? (
             <div className="flex items-center gap-2">
-              <Input
-                type="number"
-                min="0"
-                max="99"
-                value={home}
-                onChange={(e) => handleChange('home', e.target.value)}
-                className="w-12 text-center bg-slate-950 border-slate-700 text-white p-1 h-9"
-                placeholder="0"
-              />
-              <span className="text-slate-500 font-bold">-</span>
-              <Input
-                type="number"
-                min="0"
-                max="99"
-                value={away}
-                onChange={(e) => handleChange('away', e.target.value)}
-                className="w-12 text-center bg-slate-950 border-slate-700 text-white p-1 h-9"
-                placeholder="0"
-              />
+              <ScoreStepper value={home} onAdjust={(d) => handleAdjust('home', d)} />
+              <span className="text-slate-600 font-bold text-lg select-none">–</span>
+              <ScoreStepper value={away} onAdjust={(d) => handleAdjust('away', d)} />
             </div>
           ) : (
             <div className="flex items-center gap-1.5 text-slate-500">

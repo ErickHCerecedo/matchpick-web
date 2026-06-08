@@ -45,12 +45,14 @@ function rankColors(rank: number) {
 
 // ── PendingMatchesAlert ────────────────────────────────────────────────────
 
-function PendingMatchesAlert({
+export function PendingMatchesAlert({
   rounds,
   onGoToPredictions,
+  buttonLabel = 'Pronosticar ahora',
 }: {
   rounds: RoundWithMatches[];
-  onGoToPredictions: () => void;
+  onGoToPredictions?: () => void;
+  buttonLabel?: string;
 }) {
   const alertData = useMemo(() => {
     // Collect all open unpredicted matches
@@ -119,38 +121,40 @@ function PendingMatchesAlert({
     <motion.div
       initial={{ opacity: 0, y: -8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="flex items-center gap-4 px-4 py-3.5 rounded-2xl bg-slate-950 border border-slate-800/80"
+      className="flex flex-col gap-3 px-4 py-4 rounded-2xl bg-slate-950 border border-slate-800/80 sm:flex-row sm:items-center"
     >
-      {/* Icon */}
-      <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-amber-500 shrink-0">
-        <Zap className="h-5 w-5 text-black fill-black" />
-      </div>
-
-      {/* Text */}
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-bold text-white leading-snug">Te toca jugar</p>
-        <p className="text-xs text-slate-400 mt-0.5 leading-snug">
-          Tienes{' '}
-          <span className="font-bold text-amber-400">
-            {alertData.count} partido{alertData.count !== 1 ? 's' : ''}
-          </span>{' '}
-          de {alertData.dayLabel} sin pronosticar.{' '}
-          {countdown ? (
-            <span className="text-amber-500/80 font-medium">Cierra en {countdown}.</span>
-          ) : (
-            <span className="text-slate-500">Cierran cuando inicie cada juego.</span>
-          )}
-        </p>
+      {/* Icon + text row */}
+      <div className="flex items-center gap-3 flex-1 min-w-0">
+        <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-amber-500 shrink-0">
+          <Zap className="h-5 w-5 text-black fill-black" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-bold text-white leading-snug">Te toca jugar</p>
+          <p className="text-xs text-slate-400 mt-0.5 leading-snug">
+            Tienes{' '}
+            <span className="font-bold text-amber-400">
+              {alertData.count} partido{alertData.count !== 1 ? 's' : ''}
+            </span>{' '}
+            de {alertData.dayLabel} sin pronosticar.{' '}
+            {countdown ? (
+              <span className="text-amber-500/80 font-medium">Cierra en {countdown}.</span>
+            ) : (
+              <span className="text-slate-500">Cierran cuando inicie cada juego.</span>
+            )}
+          </p>
+        </div>
       </div>
 
       {/* CTA */}
-      <button
-        onClick={onGoToPredictions}
-        className="flex items-center gap-1.5 shrink-0 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-black text-xs font-bold transition-colors whitespace-nowrap"
-      >
-        Pronosticar ahora
-        <ArrowRight className="h-3.5 w-3.5" />
-      </button>
+      {onGoToPredictions && (
+        <button
+          onClick={onGoToPredictions}
+          className="flex items-center justify-center gap-1.5 w-full sm:w-auto shrink-0 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-black text-xs font-bold transition-colors"
+        >
+          {buttonLabel}
+          <ArrowRight className="h-3.5 w-3.5" />
+        </button>
+      )}
     </motion.div>
   );
 }
