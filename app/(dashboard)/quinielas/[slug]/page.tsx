@@ -270,6 +270,7 @@ export default function QuinielaPage() {
             rounds={rounds}
             currentUserId={user?.id}
             isAdmin={quiniela.my_role === 'admin'}
+            isTournamentCustom={quiniela.tournament.is_custom}
             onResultUpdated={refreshRoundsAndStandings}
           />
         </TabsContent>

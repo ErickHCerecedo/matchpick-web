@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
-import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -10,10 +9,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { MatchCard } from '@/components/match-card';
 import { TeamStandings } from '@/components/team-standings';
 import { api } from '@/lib/api';
+import { toast } from 'sonner';
 import type { ApiResponse, Match, Tournament, RoundWithMatches, TeamStandingsData } from '@/types';
-import { ArrowLeft, CalendarDays, Trophy } from 'lucide-react';
-import { buttonVariants } from '@/components/ui/button';
+import { CalendarDays, Trophy, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   groupByDate,
   formatDateLabel,
@@ -34,6 +34,7 @@ const ROUND_ORDER_MAP = new Map(ROUND_TYPE_ORDER.map((t, i) => [t, i]));
 
 export default function TorneoDetailPage() {
   const { slug } = useParams<{ slug: string }>();
+  const { user } = useAuth();
 
   const [tournament, setTournament] = useState<Tournament | null>(null);
   const [rounds, setRounds] = useState<RoundWithMatches[]>([]);
@@ -42,6 +43,7 @@ export default function TorneoDetailPage() {
   const [teamStandings, setTeamStandings] = useState<TeamStandingsData | null>(null);
   const [loadingTeamStandings, setLoadingTeamStandings] = useState(false);
   const [activeDateKey, setActiveDateKey] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState(false);
   const activeDateRef = useRef<HTMLButtonElement>(null);
   const standingsFetched = useRef(false);
 
@@ -74,6 +76,19 @@ export default function TorneoDetailPage() {
       })
       .catch(console.error);
   }, [slug]);
+
+  const handleSync = async () => {
+    if (!tournament) return;
+    setSyncing(true);
+    try {
+      const res = await api.post<{ message: string }>(`/admin/tournaments/${tournament.slug}/sync-results`, {});
+      toast.success(res.message ?? 'Resultados sincronizados');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Error al sincronizar');
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
@@ -116,10 +131,7 @@ export default function TorneoDetailPage() {
   if (loadingTournament) {
     return (
       <div className="space-y-5">
-        <div className="flex items-start gap-3">
-          <Skeleton className="h-9 w-9 rounded-lg bg-slate-800 shrink-0" />
-          <Skeleton className="h-24 flex-1 rounded-2xl bg-slate-800" />
-        </div>
+        <Skeleton className="h-16 w-full rounded-xl bg-slate-800" />
         <Skeleton className="h-10 w-full rounded-xl bg-slate-800" />
         <div className="flex gap-2">
           {[1, 2, 3, 4, 5].map((i) => (
@@ -147,69 +159,61 @@ export default function TorneoDetailPage() {
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-5">
 
       {/* ── Tournament hero ───────────────────────────────────────────── */}
-      <div className="flex items-start gap-3">
-        <Link
-          href="/torneos"
-          className={cn(
-            buttonVariants({ variant: 'ghost', size: 'icon' }),
-            'text-slate-400 hover:text-white shrink-0 mt-1'
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          {tournament.logo_url && (
+            <img
+              src={tournament.logo_url}
+              alt={tournament.name}
+              className="w-10 h-10 object-contain shrink-0 drop-shadow"
+            />
           )}
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </Link>
-
-        <div
-          className={cn(
-            'flex-1 min-w-0 rounded-2xl border p-4 md:p-5',
-            isActive
-              ? 'bg-emerald-950/30 border-emerald-800/40'
-              : 'bg-slate-900 border-slate-800'
-          )}
-        >
-          <div className="flex items-start gap-4">
-            {tournament.logo_url && (
-              <img
-                src={tournament.logo_url}
-                alt={tournament.name}
-                className="w-12 h-12 md:w-14 md:h-14 object-contain shrink-0 drop-shadow"
-              />
-            )}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-start justify-between gap-2 flex-wrap">
-                <h2 className="text-xl md:text-2xl font-bold text-white leading-tight">
-                  {tournament.name}
-                </h2>
-                <Badge
-                  variant="outline"
-                  className={cn(
-                    'shrink-0 text-xs font-semibold',
-                    isActive
-                      ? 'border-emerald-500/60 bg-emerald-500/10 text-emerald-400'
-                      : 'border-slate-600 bg-slate-800/50 text-slate-400'
-                  )}
-                >
-                  {isActive ? '● En curso' : 'Finalizado'}
-                </Badge>
-              </div>
-              <div className="flex items-center gap-1.5 text-slate-400 text-sm mt-2">
-                <CalendarDays className="h-3.5 w-3.5 shrink-0 text-slate-500" />
-                <span>
-                  {new Date(tournament.starts_at).toLocaleDateString('es-MX', {
-                    day: 'numeric',
-                    month: 'short',
-                    year: 'numeric',
-                  })}
-                  {' — '}
-                  {new Date(tournament.ends_at).toLocaleDateString('es-MX', {
-                    day: 'numeric',
-                    month: 'short',
-                    year: 'numeric',
-                  })}
-                </span>
-              </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="text-lg font-bold text-white leading-tight truncate">
+                {tournament.name}
+              </h2>
+              <Badge
+                variant="outline"
+                className={cn(
+                  'shrink-0 text-xs font-semibold',
+                  isActive
+                    ? 'border-emerald-500/60 bg-emerald-500/10 text-emerald-400'
+                    : 'border-slate-600 bg-slate-800/50 text-slate-400'
+                )}
+              >
+                {isActive ? '● En curso' : 'Finalizado'}
+              </Badge>
+            </div>
+            <div className="flex items-center gap-1.5 text-slate-500 text-xs mt-0.5">
+              <CalendarDays className="h-3 w-3 shrink-0" />
+              <span>
+                {new Date(tournament.starts_at).toLocaleDateString('es-MX', {
+                  day: 'numeric',
+                  month: 'short',
+                  year: 'numeric',
+                })}
+                {' — '}
+                {new Date(tournament.ends_at).toLocaleDateString('es-MX', {
+                  day: 'numeric',
+                  month: 'short',
+                  year: 'numeric',
+                })}
+              </span>
             </div>
           </div>
         </div>
+
+        {user?.is_admin && !tournament.is_custom && (
+          <button
+            onClick={handleSync}
+            disabled={syncing}
+            className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-white border border-slate-700 hover:border-slate-500 rounded-lg px-3 py-2 transition-colors shrink-0 disabled:opacity-50"
+          >
+            <RefreshCw className={cn('h-3.5 w-3.5', syncing && 'animate-spin')} />
+            {syncing ? 'Sincronizando…' : 'Sincronizar resultados'}
+          </button>
+        )}
       </div>
 
       {/* ── Tabs ─────────────────────────────────────────────────────── */}

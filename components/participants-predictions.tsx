@@ -19,6 +19,7 @@ interface Props {
   rounds: RoundWithMatches[];
   currentUserId?: number;
   isAdmin?: boolean;
+  isTournamentCustom?: boolean;
   onResultUpdated?: () => void;
 }
 
@@ -345,6 +346,7 @@ export function ParticipantsPredictions({
   rounds,
   currentUserId,
   isAdmin,
+  isTournamentCustom,
   onResultUpdated,
 }: Props) {
   const matchesByDate = useMemo(() => groupByDate(rounds), [rounds]);
@@ -418,8 +420,8 @@ export function ParticipantsPredictions({
 
   return (
     <div className="space-y-4">
-      {/* Admin toolbar */}
-      {isAdmin && (
+      {/* Admin toolbar — only for custom tournaments; non-custom sync from tournament page */}
+      {isAdmin && isTournamentCustom !== false && (
         <div className="flex items-center justify-between gap-3 p-3.5 rounded-xl bg-slate-950 border border-slate-800">
           <p className="text-xs text-slate-500">
             Sincroniza con API-Football o ingresa resultados por partido.
