@@ -206,31 +206,31 @@ export default function QuinielaPage() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         {/* Mobile-first: 2×2 grid on small screens, 4-col row on sm+ */}
-        <TabsList className="!grid grid-cols-4 w-full !h-auto bg-slate-800 border border-slate-700/60 mb-5 p-1 gap-1 rounded-xl">
+        <TabsList className="!grid grid-cols-4 w-full !h-auto bg-slate-900 border border-slate-700/60 mb-5 p-1 gap-1 rounded-xl">
           <TabsTrigger
             value="dashboard"
-            className="flex flex-col items-center gap-1 py-2.5 h-auto rounded-lg text-slate-400 data-active:bg-emerald-500/20 data-active:text-emerald-400 hover:text-white transition-colors"
+            className="flex flex-col items-center gap-1 py-2.5 h-auto rounded-lg text-slate-400 hover:text-white transition-colors"
           >
             <LayoutDashboard className="h-4 w-4" />
             <span className="text-xs font-medium">Dashboard</span>
           </TabsTrigger>
           <TabsTrigger
             value="predictions"
-            className="flex flex-col items-center gap-1 py-2.5 h-auto rounded-lg text-slate-400 data-active:bg-emerald-500/20 data-active:text-emerald-400 hover:text-white transition-colors"
+            className="flex flex-col items-center gap-1 py-2.5 h-auto rounded-lg text-slate-400 hover:text-white transition-colors"
           >
             <Target className="h-4 w-4" />
             <span className="text-xs font-medium">Predicciones</span>
           </TabsTrigger>
           <TabsTrigger
             value="transparency"
-            className="flex flex-col items-center gap-1 py-2.5 h-auto rounded-lg text-slate-400 data-active:bg-emerald-500/20 data-active:text-emerald-400 hover:text-white transition-colors"
+            className="flex flex-col items-center gap-1 py-2.5 h-auto rounded-lg text-slate-400 hover:text-white transition-colors"
           >
             <Eye className="h-4 w-4" />
             <span className="text-xs font-medium">Resultados</span>
           </TabsTrigger>
           <TabsTrigger
             value="participants"
-            className="flex flex-col items-center gap-1 py-2.5 h-auto rounded-lg text-slate-400 data-active:bg-emerald-500/20 data-active:text-emerald-400 hover:text-white transition-colors"
+            className="flex flex-col items-center gap-1 py-2.5 h-auto rounded-lg text-slate-400 hover:text-white transition-colors"
           >
             <Users className="h-4 w-4" />
             <span className="text-xs font-medium">Participantes</span>

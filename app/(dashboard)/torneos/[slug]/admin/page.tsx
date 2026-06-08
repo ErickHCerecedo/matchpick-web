@@ -490,7 +490,7 @@ export default function TorneoAdminPage() {
 
       {/* ── Tabs ── */}
       <Tabs defaultValue="teams">
-        <TabsList className="!grid grid-cols-2 w-full !h-auto bg-slate-800 border border-slate-700/60 p-1 gap-1 rounded-xl mb-1">
+        <TabsList className="!grid grid-cols-2 w-full !h-auto bg-slate-900 border border-slate-700/60 p-1 gap-1 rounded-xl mb-1">
           <TabsTrigger
             value="teams"
             className="flex items-center gap-1.5 py-2.5 h-auto rounded-lg text-slate-400 data-active:bg-emerald-500/20 data-active:text-emerald-400 hover:text-white transition-colors"

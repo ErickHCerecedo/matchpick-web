@@ -83,7 +83,7 @@ function TabsTrigger({ className, ...props }: TabsPrimitive.Tab.Props) {
         "dark:group-data-[variant=line]/tabs-list:data-active:border-transparent dark:group-data-[variant=line]/tabs-list:data-active:bg-transparent",
         // active state
         "data-active:bg-background data-active:text-foreground",
-        "dark:data-active:border-input dark:data-active:bg-input/30 dark:data-active:text-foreground",
+        "dark:data-active:border-emerald-500/30 dark:data-active:bg-emerald-500/15 dark:data-active:text-emerald-400",
         // animated underline for line variant (horizontal / vertical)
         "after:absolute after:bg-foreground after:opacity-0 after:transition-opacity",
         "group-data-[orientation=horizontal]/tabs:after:inset-x-0 group-data-[orientation=horizontal]/tabs:after:bottom-[-5px] group-data-[orientation=horizontal]/tabs:after:h-0.5",
