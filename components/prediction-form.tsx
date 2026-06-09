@@ -17,6 +17,7 @@ interface Props {
   rounds: RoundWithMatches[];
   initialPredictions: Record<number, Prediction>;
   onSaved?: (predictions: Record<number, Prediction>) => void;
+  isCustomTournament?: boolean;
 }
 
 // ── helpers ────────────────────────────────────────────────────────────────
@@ -40,7 +41,7 @@ function firstOpenDate(rounds: RoundWithMatches[], predictions: Record<number, P
 
 // ── component ──────────────────────────────────────────────────────────────
 
-export function PredictionForm({ quinielaSlug, rounds, initialPredictions, onSaved }: Props) {
+export function PredictionForm({ quinielaSlug, rounds, initialPredictions, onSaved, isCustomTournament }: Props) {
   const [predictions, setPredictions] =
     useState<Record<number, Prediction>>(initialPredictions);
   const [savedPredictions, setSavedPredictions] =
@@ -306,15 +307,18 @@ export function PredictionForm({ quinielaSlug, rounds, initialPredictions, onSav
                 </span>
                 <span className="h-px flex-1 bg-slate-800" />
               </div>
-              {matches.map((match) => (
-                <MatchCard
-                  key={match.id}
-                  match={match}
-                  prediction={predictions[match.id] ?? null}
-                  onChange={handleChange}
-                  isSaved={savedMatchIds.has(match.id)}
-                />
-              ))}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {matches.map((match) => (
+                  <MatchCard
+                    key={match.id}
+                    match={match}
+                    prediction={predictions[match.id] ?? null}
+                    onChange={handleChange}
+                    isSaved={savedMatchIds.has(match.id)}
+                    showTeamColors={!isCustomTournament}
+                  />
+                ))}
+              </div>
             </div>
           ))}
         </div>

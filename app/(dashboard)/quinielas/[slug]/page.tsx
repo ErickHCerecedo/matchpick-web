@@ -255,6 +255,7 @@ export default function QuinielaPage() {
               rounds={rounds}
               initialPredictions={initialPredictions}
               onSaved={handlePredictionsSaved}
+              isCustomTournament={quiniela.tournament.is_custom}
             />
           ) : (
             <div className="text-center py-10 space-y-2">

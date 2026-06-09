@@ -102,12 +102,14 @@ function MatchResultCard({
   currentUserId,
   isAdmin,
   onResultUpdated,
+  showTeamColors,
 }: {
   match: Match;
   quinielaSlug: string;
   currentUserId?: number;
   isAdmin?: boolean;
   onResultUpdated?: () => void;
+  showTeamColors?: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [predictions, setPredictions] = useState<Prediction[] | null>(null);
@@ -146,7 +148,7 @@ function MatchResultCard({
   return (
     <div
       className={cn(
-        'rounded-xl border overflow-hidden',
+        'rounded-xl border overflow-hidden relative',
         match.status === 'in_progress'
           ? 'border-emerald-500/40'
           : match.status === 'finished'
@@ -154,13 +156,36 @@ function MatchResultCard({
           : 'border-slate-800/60'
       )}
     >
+      {/* Team color wash */}
+      {showTeamColors && (
+        <div className="absolute inset-0 z-0 pointer-events-none" aria-hidden>
+          {match.home_team?.flag_url && (
+            <img
+              src={match.home_team.flag_url}
+              alt=""
+              className="absolute inset-y-0 left-0 w-3/5 h-full object-cover opacity-[0.08]"
+              style={{ filter: 'blur(28px) saturate(2)', transform: 'scale(1.5)' }}
+            />
+          )}
+          {match.away_team?.flag_url && (
+            <img
+              src={match.away_team.flag_url}
+              alt=""
+              className="absolute inset-y-0 right-0 w-3/5 h-full object-cover opacity-[0.08]"
+              style={{ filter: 'blur(28px) saturate(2)', transform: 'scale(1.5)' }}
+            />
+          )}
+          <div className="absolute inset-0 bg-linear-to-r from-transparent via-slate-950/55 to-transparent" />
+        </div>
+      )}
+
       {/* Header */}
       <button
         onClick={handleToggle}
         disabled={!matchHasStarted}
         className={cn(
-          'w-full p-4 bg-slate-950 text-left transition-colors',
-          matchHasStarted ? 'cursor-pointer hover:bg-slate-900' : 'cursor-default'
+          'relative z-10 w-full p-4 bg-slate-950/90 text-left transition-colors',
+          matchHasStarted ? 'cursor-pointer hover:bg-slate-900/90' : 'cursor-default'
         )}
       >
         {/* Status row */}
@@ -232,7 +257,7 @@ function MatchResultCard({
 
       {/* Admin result toggle */}
       {isAdmin && matchHasStarted && (
-        <div className="flex justify-end px-4 py-2 bg-slate-950 border-t border-slate-800/50">
+        <div className="relative z-10 flex justify-end px-4 py-2 bg-slate-950/90 border-t border-slate-800/50">
           <button
             onClick={() => setShowResultForm((v) => !v)}
             className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-emerald-400 transition-colors"
@@ -513,16 +538,19 @@ export function ParticipantsPredictions({
                   </span>
                   <span className="h-px flex-1 bg-slate-800" />
                 </div>
-                {matches.map((match) => (
-                  <MatchResultCard
-                    key={match.id}
-                    match={match}
-                    quinielaSlug={quinielaSlug}
-                    currentUserId={currentUserId}
-                    isAdmin={isAdmin}
-                    onResultUpdated={onResultUpdated}
-                  />
-                ))}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  {matches.map((match) => (
+                    <MatchResultCard
+                      key={match.id}
+                      match={match}
+                      quinielaSlug={quinielaSlug}
+                      currentUserId={currentUserId}
+                      isAdmin={isAdmin}
+                      onResultUpdated={onResultUpdated}
+                      showTeamColors={!isTournamentCustom}
+                    />
+                  ))}
+                </div>
               </div>
             ))}
           </motion.div>
