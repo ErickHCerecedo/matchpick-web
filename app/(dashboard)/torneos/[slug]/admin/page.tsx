@@ -399,13 +399,13 @@ export default function TorneoAdminPage() {
     if (!expandedRoundId) return;
     setSavingResult(true);
     try {
-      const res = await api.post<ApiResponse<MatchResult>>(
-        `/tournaments/${slug}/rounds/${expandedRoundId}/matches/${match.id}/result`,
-        {
-          home_score: Number(resultForm.home_score),
-          away_score: Number(resultForm.away_score),
-        }
-      );
+      const endpoint = tournament!.is_custom
+        ? `/tournaments/${slug}/rounds/${expandedRoundId}/matches/${match.id}/result`
+        : `/admin/matches/${match.id}/results`;
+      const res = await api.post<ApiResponse<MatchResult>>(endpoint, {
+        home_score: Number(resultForm.home_score),
+        away_score: Number(resultForm.away_score),
+      });
       setMatchesByRound((prev) => ({
         ...prev,
         [expandedRoundId]: (prev[expandedRoundId] ?? []).map((m) =>
@@ -654,7 +654,7 @@ export default function TorneoAdminPage() {
 
         {/* ════════════════════ CALENDARIO ════════════════════ */}
         <TabsContent value="calendar" className="mt-4">
-          {user?.is_admin && (
+          {!tournament.is_custom && user?.is_admin && (
             <div className="flex justify-end mb-3">
               <Button
                 size="sm"
@@ -879,7 +879,7 @@ export default function TorneoAdminPage() {
                                           </p>
                                         </div>
                                         <div className="flex items-center gap-0.5 shrink-0">
-                                          {hasStarted && (
+                                          {hasStarted && (tournament.is_custom || user?.is_admin) && (
                                             <button
                                               onClick={() => startSetResult(match)}
                                               className={cn(
