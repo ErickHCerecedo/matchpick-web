@@ -17,7 +17,7 @@ import { useSiteConfig } from '@/contexts/SiteConfigContext';
 import type { ApiResponse, Tournament } from '@/types';
 import {
   Shield, Settings, ToggleLeft, ToggleRight, Plus, Calendar,
-  Trophy, Users, Pencil, X, Check, Loader2, ImageIcon, Eye, EyeOff,
+  Trophy, Users, Pencil, X, Check, Loader2, ImageIcon, Eye, EyeOff, Puzzle,
 } from 'lucide-react';
 
 export default function AdminPage() {
@@ -133,8 +133,8 @@ export default function AdminPage() {
 
   if (loading || !user?.is_admin) return null;
 
-  // Only non-custom tournaments are managed from the super admin panel
   const officialTournaments = tournaments.filter((t) => !t.is_custom);
+  const customTournaments  = tournaments.filter((t) => t.is_custom);
   const active   = officialTournaments.filter((t) => t.is_active);
   const inactive = officialTournaments.filter((t) => !t.is_active);
 
@@ -161,20 +161,27 @@ export default function AdminPage() {
 
       {/* ── Menu tabs ── */}
       <Tabs defaultValue="tournaments">
-        <TabsList className="!grid grid-cols-2 w-full !h-auto bg-slate-900 border border-slate-700/60 p-1 gap-1 rounded-xl mb-1">
+        <TabsList className="!grid grid-cols-3 w-full !h-auto bg-slate-900 border border-slate-700/60 p-1 gap-1 rounded-xl mb-1">
           <TabsTrigger
             value="tournaments"
             className="flex items-center gap-1.5 py-2.5 h-auto rounded-lg text-slate-400 data-active:bg-emerald-500/20 data-active:text-emerald-400 hover:text-white transition-colors"
           >
             <Trophy className="h-4 w-4 shrink-0" />
-            <span className="text-xs font-medium">Partidos</span>
+            <span className="text-xs font-medium">Oficiales</span>
+          </TabsTrigger>
+          <TabsTrigger
+            value="custom"
+            className="flex items-center gap-1.5 py-2.5 h-auto rounded-lg text-slate-400 data-active:bg-emerald-500/20 data-active:text-emerald-400 hover:text-white transition-colors"
+          >
+            <Puzzle className="h-4 w-4 shrink-0" />
+            <span className="text-xs font-medium">Custom</span>
           </TabsTrigger>
           <TabsTrigger
             value="config"
             className="flex items-center gap-1.5 py-2.5 h-auto rounded-lg text-slate-400 data-active:bg-emerald-500/20 data-active:text-emerald-400 hover:text-white transition-colors"
           >
             <ImageIcon className="h-4 w-4 shrink-0" />
-            <span className="text-xs font-medium">Configuración</span>
+            <span className="text-xs font-medium">Config</span>
           </TabsTrigger>
         </TabsList>
 
@@ -353,6 +360,65 @@ export default function AdminPage() {
               ))
             )}
           </div>
+        </TabsContent>
+
+        {/* ════════════════════ TORNEOS CUSTOM ════════════════════ */}
+        <TabsContent value="custom" className="mt-4 space-y-3">
+          {loadingData ? (
+            Array.from({ length: 3 }).map((_, i) => (
+              <Skeleton key={i} className="h-20 bg-slate-800 rounded-xl" />
+            ))
+          ) : customTournaments.length === 0 ? (
+            <div className="text-center py-12">
+              <Puzzle className="h-10 w-10 text-slate-700 mx-auto mb-3" />
+              <p className="text-slate-500 text-sm">No hay torneos custom registrados.</p>
+            </div>
+          ) : (
+            customTournaments.map((tournament) => (
+              <div
+                key={tournament.id}
+                className={`rounded-xl bg-slate-900 border transition-colors ${
+                  tournament.is_active ? 'border-slate-700' : 'border-slate-800/60 opacity-70'
+                }`}
+              >
+                <div className="flex items-center gap-3 p-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-sm font-semibold text-white truncate">{tournament.name}</p>
+                      <Badge
+                        variant="outline"
+                        className={
+                          tournament.is_active
+                            ? 'border-emerald-500/50 text-emerald-400 text-[10px] h-5'
+                            : 'border-slate-600 text-slate-500 text-[10px] h-5'
+                        }
+                      >
+                        {tournament.is_active ? 'Activo' : 'Inactivo'}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-3 mt-1">
+                      <span className="text-xs text-slate-500 flex items-center gap-1">
+                        <Calendar className="h-3 w-3" />
+                        {new Date(tournament.starts_at).toLocaleDateString('es-MX', {
+                          day: 'numeric', month: 'short', year: 'numeric',
+                        })}
+                        {' — '}
+                        {new Date(tournament.ends_at).toLocaleDateString('es-MX', {
+                          day: 'numeric', month: 'short', year: 'numeric',
+                        })}
+                      </span>
+                    </div>
+                    {tournament.creator && (
+                      <p className="text-[11px] text-slate-500 mt-0.5 flex items-center gap-1">
+                        <Users className="h-2.5 w-2.5" />
+                        {tournament.creator.name}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
         </TabsContent>
 
         {/* ════════════════════ CONFIGURACIÓN ════════════════════ */}

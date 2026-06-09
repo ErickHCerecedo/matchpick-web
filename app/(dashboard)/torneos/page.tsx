@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { TournamentLogo } from '@/components/tournament-logo';
 import { api } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
-import type { ApiResponse, Tournament } from '@/types';
+import type { ApiResponse, Tournament, Quiniela } from '@/types';
 import { Calendar, Plus, Settings } from 'lucide-react';
 
 function TournamentCard({ tournament, index, isOwner }: { tournament: Tournament; index: number; isOwner: boolean }) {
@@ -92,6 +92,7 @@ export default function TorneosPage() {
   const { user } = useAuth();
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [myTournaments, setMyTournaments] = useState<Tournament[]>([]);
+  const [participatingIds, setParticipatingIds] = useState<Set<number>>(new Set());
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -104,14 +105,26 @@ export default function TorneosPage() {
       api.get<ApiResponse<Tournament[]>>('/my-tournaments')
         .then((res) => setMyTournaments(res.data))
         .catch(console.error);
+
+      api.get<ApiResponse<Quiniela[]>>('/quinielas')
+        .then((res) => {
+          setParticipatingIds(new Set(res.data.map((q) => q.tournament.id)));
+        })
+        .catch(console.error);
     }
   }, [user]);
 
   const myIds = useMemo(() => new Set(myTournaments.map((t) => t.id)), [myTournaments]);
+
   const allTournaments = useMemo(() => [
+    // My own custom tournaments are always visible
     ...myTournaments,
-    ...tournaments.filter((t) => !myIds.has(t.id) && (!t.is_custom || !!user?.is_admin)),
-  ], [myTournaments, tournaments, myIds, user]);
+    // From the public list: only tournaments the user is participating in (official or other's custom)
+    ...tournaments.filter((t) => {
+      if (myIds.has(t.id)) return false;
+      return participatingIds.has(t.id);
+    }),
+  ], [myTournaments, tournaments, myIds, participatingIds]);
 
   return (
     <div>
