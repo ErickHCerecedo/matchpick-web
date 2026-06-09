@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
+import { cn, formatMatchDateParts } from '@/lib/utils';
 import type { Match, Prediction } from '@/types';
 import { Lock, CheckCircle2, ChevronUp, ChevronDown, Calendar, MapPin } from 'lucide-react';
 
@@ -25,28 +25,12 @@ const STATUS_LABELS: Record<Match['status'], string> = {
   cancelled: 'Cancelado',
 };
 
-const STATUS_COLORS: Record<Match['status'], { dot: string; icon: string; badge: string }> = {
-  scheduled:   { dot: 'bg-emerald-400', icon: 'text-emerald-400', badge: 'border-emerald-600/40 text-emerald-400' },
-  in_progress: { dot: 'bg-red-400',     icon: 'text-red-400',     badge: 'border-red-500/60 text-red-400'         },
-  finished:    { dot: 'bg-slate-500',   icon: 'text-slate-500',   badge: 'border-slate-600 text-slate-500'         },
-  cancelled:   { dot: 'bg-slate-500',   icon: 'text-slate-500',   badge: 'border-slate-600 text-slate-500'         },
+const STATUS_COLORS: Record<Match['status'], { dot: string; icon: string; badge: string; line: string }> = {
+  scheduled:   { dot: 'bg-emerald-400', icon: 'text-emerald-400', badge: 'border-emerald-600/40 text-emerald-400', line: 'bg-emerald-400/60' },
+  in_progress: { dot: 'bg-red-400',     icon: 'text-red-400',     badge: 'border-red-500/60 text-red-400',         line: 'bg-red-400/60'     },
+  finished:    { dot: 'bg-slate-500',   icon: 'text-slate-500',   badge: 'border-slate-600 text-slate-500',         line: 'bg-slate-600/60'   },
+  cancelled:   { dot: 'bg-slate-500',   icon: 'text-slate-500',   badge: 'border-slate-600 text-slate-500',         line: 'bg-slate-600/60'   },
 };
-
-function formatMatchDateParts(dateStr: string): { date: string; time: string } {
-  const d = new Date(dateStr);
-  const date = d
-    .toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short' })
-    .replace(/\.$/, '')
-    .replace(/\.,/g, '')
-    .replace(/,/g, '')
-    .trim();
-  const time = d
-    .toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: true })
-    .toLowerCase()
-    .replace(/ /g, ' ')
-    .trim();
-  return { date, time };
-}
 
 function ScoreStepper({
   value,
@@ -135,10 +119,8 @@ export function MatchCard({ match, prediction, onChange, readOnly, isSaved }: Pr
           backgroundPosition: 'center',
         }}
       />
-      {/* Dark overlay */}
       <div className="absolute inset-0 z-0 bg-slate-950/78" />
 
-      {/* ── Main content ── */}
       <div className="relative z-10 p-4 space-y-3">
 
         {/* Date + status row */}
@@ -164,33 +146,36 @@ export function MatchCard({ match, prediction, onChange, readOnly, isSaved }: Pr
         </div>
 
         {/* Teams + scores */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
+
           {/* Home */}
-          <div className="flex-1 flex items-center gap-2 min-w-0">
-            {match.home_team?.flag_url && (
+          <div className="flex-1 flex flex-col items-center gap-1 min-w-0">
+            {match.home_team?.flag_url ? (
               <img
                 src={match.home_team.flag_url}
                 alt={match.home_team.short_name}
-                className="w-10 h-7 object-cover rounded shrink-0 shadow-sm"
+                className="w-12 h-8 object-cover rounded shadow-md"
               />
+            ) : (
+              <div className="w-12 h-8 rounded bg-slate-800/60 border border-slate-700" />
             )}
-            <span className="min-w-0 text-sm font-medium text-white truncate">
+            <span className="w-full text-[11px] font-semibold text-white text-center leading-tight truncate px-1 mt-0.5">
               {match.home_team?.name ?? 'TBD'}
             </span>
+            <div className={cn('h-0.5 w-8 rounded-full', sc.line)} />
           </div>
 
           {/* Score / VS area */}
           <div className="flex items-center gap-2 shrink-0">
             {hasResult ? (
-              <div className="flex items-center gap-2 font-bold text-white">
-                <span className="w-8 text-center text-lg">{match.result!.home_score}</span>
-                <span className="text-slate-500 text-sm font-normal">-</span>
-                <span className="w-8 text-center text-lg">{match.result!.away_score}</span>
+              <div className="flex items-center gap-1.5 font-bold text-white">
+                <span className="w-8 text-center text-xl tabular-nums font-mono">{match.result!.home_score}</span>
+                <span className="text-slate-500 text-sm font-normal">–</span>
+                <span className="w-8 text-center text-xl tabular-nums font-mono">{match.result!.away_score}</span>
               </div>
             ) : isOpen ? (
               <div className="flex items-center gap-2">
                 <ScoreStepper value={home} onAdjust={(d) => handleAdjust('home', d)} />
-                {/* VS badge */}
                 <div className="flex flex-col items-center justify-center px-0.5">
                   <span className="text-[10px] font-black tracking-widest text-white/80 bg-white/10 border border-white/20 rounded px-1.5 py-0.5 leading-none backdrop-blur-sm">
                     VS
@@ -200,7 +185,6 @@ export function MatchCard({ match, prediction, onChange, readOnly, isSaved }: Pr
               </div>
             ) : (
               <div className="flex flex-col items-center gap-1.5">
-                {/* VS badge */}
                 <span className="text-xs font-black tracking-widest text-white/80 bg-white/10 border border-white/20 rounded px-2.5 py-0.5 backdrop-blur-sm">
                   VS
                 </span>
@@ -221,25 +205,29 @@ export function MatchCard({ match, prediction, onChange, readOnly, isSaved }: Pr
           </div>
 
           {/* Away */}
-          <div className="flex-1 flex items-center gap-2 justify-end min-w-0">
-            <span className="min-w-0 text-sm font-medium text-white truncate text-right">
-              {match.away_team?.name ?? 'TBD'}
-            </span>
-            {match.away_team?.flag_url && (
+          <div className="flex-1 flex flex-col items-center gap-1 min-w-0">
+            {match.away_team?.flag_url ? (
               <img
                 src={match.away_team.flag_url}
                 alt={match.away_team.short_name}
-                className="w-10 h-7 object-cover rounded shrink-0 shadow-sm"
+                className="w-12 h-8 object-cover rounded shadow-md"
               />
+            ) : (
+              <div className="w-12 h-8 rounded bg-slate-800/60 border border-slate-700" />
             )}
+            <span className="w-full text-[11px] font-semibold text-white text-center leading-tight truncate px-1 mt-0.5">
+              {match.away_team?.name ?? 'TBD'}
+            </span>
+            <div className={cn('h-0.5 w-8 rounded-full', sc.line)} />
           </div>
+
         </div>
 
-        {/* Venue */}
+        {/* Venue — centered */}
         {match.venue && (
-          <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
+          <div className="flex items-center justify-center gap-1.5 text-[11px] text-slate-400">
             <MapPin className={cn('h-3 w-3 shrink-0', sc.icon)} />
-            <span className="truncate">{match.venue}</span>
+            <span className="truncate max-w-[80%]">{match.venue}</span>
           </div>
         )}
 

@@ -7,12 +7,29 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
-import { cn, formatMatchDate } from '@/lib/utils';
+import { cn, formatMatchDateParts } from '@/lib/utils';
 import { groupByDate, formatDateLabel, toLocalDateKey, todayKey } from '@/lib/date-utils';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
 import type { RoundWithMatches, Prediction, ApiResponse, Match } from '@/types';
-import { Lock, Eye, ChevronDown, RefreshCw, Pencil, Check } from 'lucide-react';
+import { Lock, Eye, ChevronDown, RefreshCw, Pencil, Check, Calendar, MapPin } from 'lucide-react';
+
+const CARD_BG =
+  'https://res.cloudinary.com/dr0klvutj/image/upload/v1781001150/MatchPick/file_00000000042c71fb8d0d570a11881d55.png';
+
+const RESULT_STATUS_LABELS: Record<string, string> = {
+  scheduled:   'Programado',
+  in_progress: 'En vivo',
+  finished:    'Finalizado',
+  cancelled:   'Cancelado',
+};
+
+const RESULT_STATUS_COLORS: Record<string, { dot: string; icon: string; badge: string; line: string }> = {
+  scheduled:   { dot: 'bg-emerald-400', icon: 'text-emerald-400', badge: 'border-emerald-600/40 text-emerald-400', line: 'bg-emerald-400/60' },
+  in_progress: { dot: 'bg-red-400',     icon: 'text-red-400',     badge: 'border-red-500/60 text-red-400',         line: 'bg-red-400/60'     },
+  finished:    { dot: 'bg-slate-500',   icon: 'text-slate-500',   badge: 'border-slate-600 text-slate-500',         line: 'bg-slate-600/60'   },
+  cancelled:   { dot: 'bg-slate-500',   icon: 'text-slate-500',   badge: 'border-slate-600 text-slate-500',         line: 'bg-slate-600/60'   },
+};
 
 interface Props {
   quinielaSlug: string;
@@ -65,7 +82,7 @@ function ResultForm({
   };
 
   return (
-    <div className="flex items-center gap-2 px-4 py-3 bg-slate-900 border-t border-slate-800">
+    <div className="flex items-center gap-2 px-4 py-3 bg-slate-950/90 border-t border-slate-800/60">
       <span className="text-xs text-slate-400 shrink-0">
         {match.result ? 'Editar resultado:' : 'Ingresar resultado:'}
       </span>
@@ -116,6 +133,8 @@ function MatchResultCard({
   const [showResultForm, setShowResultForm] = useState(false);
 
   const matchHasStarted = new Date(match.scheduled_at) <= new Date();
+  const sc = RESULT_STATUS_COLORS[match.status] ?? RESULT_STATUS_COLORS.finished;
+  const { date, time } = formatMatchDateParts(match.scheduled_at);
 
   const handleToggle = useCallback(async () => {
     if (!matchHasStarted) return;
@@ -146,16 +165,26 @@ function MatchResultCard({
   return (
     <div
       className={cn(
-        'rounded-xl border overflow-hidden relative bg-slate-900',
+        'rounded-xl border overflow-hidden relative transition-all duration-200',
         match.status === 'in_progress'
-          ? 'border-emerald-500/40'
+          ? 'border-red-500/40'
           : match.status === 'finished'
           ? 'border-slate-800'
           : 'border-slate-800/60'
       )}
     >
+      {/* Background image */}
+      <div
+        className="absolute inset-0 z-0"
+        style={{
+          backgroundImage: `url(${CARD_BG})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        }}
+      />
+      <div className="absolute inset-0 z-0 bg-slate-950/82" />
 
-      {/* Header */}
+      {/* Header button */}
       <button
         onClick={handleToggle}
         disabled={!matchHasStarted}
@@ -164,24 +193,21 @@ function MatchResultCard({
           matchHasStarted ? 'cursor-pointer hover:bg-white/5' : 'cursor-default'
         )}
       >
-        {/* Status row */}
-        <div className="flex items-center justify-between gap-3 mb-2.5">
-          <span className="text-xs text-slate-500">{formatMatchDate(match.scheduled_at)}</span>
+        {/* Date + status row */}
+        <div className="flex items-center justify-between gap-2 text-xs mb-3">
+          <div className="flex items-center gap-1.5 text-slate-400">
+            <Calendar className={cn('h-3.5 w-3.5 shrink-0', sc.icon)} />
+            <span className="font-medium">{date}</span>
+            <span className="text-slate-600">|</span>
+            <span className="text-slate-500">{time}</span>
+          </div>
           <div className="flex items-center gap-2">
-            {match.status === 'in_progress' && (
-              <Badge variant="outline" className="border-emerald-500 text-emerald-400 text-xs">
-                🔴 En vivo
-              </Badge>
-            )}
-            {match.status === 'finished' && (
-              <Badge variant="outline" className="border-slate-700 text-slate-500 text-xs">
-                Finalizado
-              </Badge>
-            )}
+            <Badge variant="outline" className={cn('text-xs flex items-center gap-1', sc.badge)}>
+              <span className={cn('w-1.5 h-1.5 rounded-full shrink-0', sc.dot)} />
+              {RESULT_STATUS_LABELS[match.status] ?? match.status}
+            </Badge>
             {matchHasStarted ? (
-              <ChevronDown
-                className={cn('h-4 w-4 text-slate-500 transition-transform', expanded && 'rotate-180')}
-              />
+              <ChevronDown className={cn('h-4 w-4 text-slate-500 transition-transform', expanded && 'rotate-180')} />
             ) : (
               <Lock className="h-3.5 w-3.5 text-slate-700" />
             )}
@@ -190,32 +216,53 @@ function MatchResultCard({
 
         {/* Teams + score */}
         <div className="flex items-center gap-3">
-          <div className="flex-1 flex items-center gap-2 min-w-0">
-            {match.home_team?.flag_url && (
-              <img src={match.home_team.flag_url} alt="" className="w-10 h-7 object-cover rounded shrink-0 shadow-sm" />
+          {/* Home */}
+          <div className="flex-1 flex flex-col items-center gap-1 min-w-0">
+            {match.home_team?.flag_url ? (
+              <img src={match.home_team.flag_url} alt="" className="w-12 h-8 object-cover rounded shadow-md" />
+            ) : (
+              <div className="w-12 h-8 rounded bg-slate-800/60 border border-slate-700" />
             )}
-            <span className="text-sm font-medium text-white truncate">
+            <span className="w-full text-[11px] font-semibold text-white text-center leading-tight truncate px-1 mt-0.5">
               {match.home_team?.name ?? 'TBD'}
             </span>
+            <div className={cn('h-0.5 w-8 rounded-full', sc.line)} />
           </div>
 
-          {match.result ? (
-            <span className="font-bold text-white text-base font-mono shrink-0">
-              {match.result.home_score} – {match.result.away_score}
-            </span>
-          ) : (
-            <span className="text-slate-500 text-sm shrink-0 font-medium">vs</span>
-          )}
-
-          <div className="flex-1 flex items-center gap-2 justify-end min-w-0">
-            <span className="text-sm font-medium text-white truncate text-right">
-              {match.away_team?.name ?? 'TBD'}
-            </span>
-            {match.away_team?.flag_url && (
-              <img src={match.away_team.flag_url} alt="" className="w-10 h-7 object-cover rounded shrink-0 shadow-sm" />
+          {/* Score / VS */}
+          <div className="shrink-0 flex items-center">
+            {match.result ? (
+              <span className="text-xl font-bold text-white font-mono tabular-nums">
+                {match.result.home_score} – {match.result.away_score}
+              </span>
+            ) : (
+              <span className="text-xs font-black tracking-widest text-white/80 bg-white/10 border border-white/20 rounded px-2.5 py-0.5 backdrop-blur-sm">
+                VS
+              </span>
             )}
           </div>
+
+          {/* Away */}
+          <div className="flex-1 flex flex-col items-center gap-1 min-w-0">
+            {match.away_team?.flag_url ? (
+              <img src={match.away_team.flag_url} alt="" className="w-12 h-8 object-cover rounded shadow-md" />
+            ) : (
+              <div className="w-12 h-8 rounded bg-slate-800/60 border border-slate-700" />
+            )}
+            <span className="w-full text-[11px] font-semibold text-white text-center leading-tight truncate px-1 mt-0.5">
+              {match.away_team?.name ?? 'TBD'}
+            </span>
+            <div className={cn('h-0.5 w-8 rounded-full', sc.line)} />
+          </div>
         </div>
+
+        {/* Venue — centered */}
+        {match.venue && (
+          <div className="flex items-center justify-center gap-1.5 text-[11px] text-slate-400 mt-2.5">
+            <MapPin className={cn('h-3 w-3 shrink-0', sc.icon)} />
+            <span className="truncate max-w-[80%]">{match.venue}</span>
+          </div>
+        )}
 
         {!matchHasStarted && (
           <p className="text-xs text-slate-700 mt-2.5 flex items-center gap-1.5">
@@ -252,7 +299,7 @@ function MatchResultCard({
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.15 }}
-            className="overflow-hidden"
+            className="relative z-10 overflow-hidden"
           >
             <ResultForm match={match} quinielaSlug={quinielaSlug} onSaved={handleResultSaved} />
           </motion.div>
@@ -268,9 +315,9 @@ function MatchResultCard({
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.2, ease: 'easeInOut' }}
-            className="overflow-hidden"
+            className="relative z-10 overflow-hidden"
           >
-            <div className="border-t border-slate-800">
+            <div className="border-t border-slate-800/60 bg-slate-950/70">
               {loading && (
                 <div className="p-3 space-y-2">
                   {[0, 1, 2].map((i) => <Skeleton key={i} className="h-9 bg-slate-800 rounded-lg" />)}
