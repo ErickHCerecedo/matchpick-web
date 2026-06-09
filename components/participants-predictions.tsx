@@ -156,6 +156,28 @@ function MatchResultCard({
           : 'border-slate-800/60'
       )}
     >
+      {/* Ambient color wash */}
+      {showTeamColors && (
+        <div className="absolute inset-0 z-0 pointer-events-none" aria-hidden>
+          {match.home_team?.flag_url && (
+            <img
+              src={match.home_team.flag_url}
+              alt=""
+              className="absolute inset-y-0 left-0 w-3/5 h-full object-cover"
+              style={{ filter: 'blur(30px) saturate(4) brightness(0.8)', transform: 'scale(2)', opacity: 0.5 }}
+            />
+          )}
+          {match.away_team?.flag_url && (
+            <img
+              src={match.away_team.flag_url}
+              alt=""
+              className="absolute inset-y-0 right-0 w-3/5 h-full object-cover"
+              style={{ filter: 'blur(30px) saturate(4) brightness(0.8)', transform: 'scale(2)', opacity: 0.5 }}
+            />
+          )}
+          <div className="absolute inset-0 bg-slate-950/50" />
+        </div>
+      )}
 
       {/* Header */}
       <button
@@ -190,34 +212,32 @@ function MatchResultCard({
           </div>
         </div>
 
-        {/* Teams + score — grid for equal space, names wrap on mobile */}
-        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-          <div className="flex flex-col gap-1.5">
+        {/* Teams + score */}
+        <div className="flex items-center gap-3">
+          <div className="flex-1 flex items-center gap-2 min-w-0">
             {match.home_team?.flag_url && (
-              <img src={match.home_team.flag_url} alt="" className="w-7 h-5 sm:w-8 sm:h-6 object-cover rounded shadow-sm" />
+              <img src={match.home_team.flag_url} alt="" className="w-10 h-7 object-cover rounded shrink-0 shadow-sm" />
             )}
-            <span className="text-xs sm:text-sm font-semibold text-white leading-tight line-clamp-2">
+            <span className="text-sm font-medium text-white truncate">
               {match.home_team?.name ?? 'TBD'}
             </span>
           </div>
 
-          <div className="flex items-center justify-center px-1">
-            {match.result ? (
-              <span className="font-bold text-white text-base font-mono">
-                {match.result.home_score} – {match.result.away_score}
-              </span>
-            ) : (
-              <span className="text-slate-500 text-sm font-medium">vs</span>
-            )}
-          </div>
+          {match.result ? (
+            <span className="font-bold text-white text-base font-mono shrink-0">
+              {match.result.home_score} – {match.result.away_score}
+            </span>
+          ) : (
+            <span className="text-slate-500 text-sm shrink-0 font-medium">vs</span>
+          )}
 
-          <div className="flex flex-col items-end gap-1.5">
-            {match.away_team?.flag_url && (
-              <img src={match.away_team.flag_url} alt="" className="w-7 h-5 sm:w-8 sm:h-6 object-cover rounded shadow-sm" />
-            )}
-            <span className="text-xs sm:text-sm font-semibold text-white text-right leading-tight line-clamp-2">
+          <div className="flex-1 flex items-center gap-2 justify-end min-w-0">
+            <span className="text-sm font-medium text-white truncate text-right">
               {match.away_team?.name ?? 'TBD'}
             </span>
+            {match.away_team?.flag_url && (
+              <img src={match.away_team.flag_url} alt="" className="w-10 h-7 object-cover rounded shrink-0 shadow-sm" />
+            )}
           </div>
         </div>
 
