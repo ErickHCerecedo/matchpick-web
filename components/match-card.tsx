@@ -109,29 +109,6 @@ export function MatchCard({ match, prediction, onChange, readOnly, isSaved, show
           : 'border-slate-700/60',
       )}
     >
-      {/* ── Flag background: each flag fills its half, dark-tinted ── */}
-      {showColors && (
-        <div className="absolute inset-0 z-0 pointer-events-none" aria-hidden>
-          {match.home_team?.flag_url && (
-            <img
-              src={match.home_team.flag_url}
-              alt=""
-              className="absolute inset-y-0 left-0 w-1/2 h-full object-cover"
-              style={{ filter: 'blur(8px) saturate(2.5) brightness(0.35)', transform: 'scale(1.15)', opacity: 0.95 }}
-            />
-          )}
-          {match.away_team?.flag_url && (
-            <img
-              src={match.away_team.flag_url}
-              alt=""
-              className="absolute inset-y-0 right-0 w-1/2 h-full object-cover"
-              style={{ filter: 'blur(8px) saturate(2.5) brightness(0.35)', transform: 'scale(1.15)', opacity: 0.95 }}
-            />
-          )}
-          {/* Center channel: darker behind score/steppers for contrast */}
-          <div className="absolute inset-0 bg-linear-to-r from-slate-950/20 via-slate-950/65 to-slate-950/20" />
-        </div>
-      )}
 
       {/* ── Content ── */}
       <div className="relative z-10 p-4 space-y-3">
@@ -161,7 +138,7 @@ export function MatchCard({ match, prediction, onChange, readOnly, isSaved, show
               <img
                 src={match.home_team.flag_url}
                 alt={match.home_team.short_name ?? ''}
-                className="w-8 h-5 sm:w-10 sm:h-7 object-cover rounded shadow-sm"
+                className="w-7 h-5 sm:w-8 sm:h-6 object-cover rounded shadow-sm"
               />
             )}
             <span className="text-xs sm:text-sm font-semibold text-white leading-tight line-clamp-2">
@@ -207,7 +184,7 @@ export function MatchCard({ match, prediction, onChange, readOnly, isSaved, show
               <img
                 src={match.away_team.flag_url}
                 alt={match.away_team.short_name ?? ''}
-                className="w-8 h-5 sm:w-10 sm:h-7 object-cover rounded shadow-sm"
+                className="w-7 h-5 sm:w-8 sm:h-6 object-cover rounded shadow-sm"
               />
             )}
             <span className="text-xs sm:text-sm font-semibold text-white text-right leading-tight line-clamp-2">
