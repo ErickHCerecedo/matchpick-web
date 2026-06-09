@@ -12,10 +12,11 @@ import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { api } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSiteConfig } from '@/contexts/SiteConfigContext';
 import type { ApiResponse, Tournament } from '@/types';
 import {
   Shield, Settings, ToggleLeft, ToggleRight, Plus, Calendar,
-  Trophy, Users, Pencil, X, Check, Loader2,
+  Trophy, Users, Pencil, X, Check, Loader2, ImageIcon, Eye, EyeOff,
 } from 'lucide-react';
 
 export default function AdminPage() {
@@ -29,6 +30,33 @@ export default function AdminPage() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editForm, setEditForm] = useState({ name: '', logo_url: '', description: '' });
   const [saving, setSaving] = useState(false);
+
+  // Site config
+  const { bgUrl, setBgUrl } = useSiteConfig();
+  const [bgInput, setBgInput] = useState('');
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewError, setPreviewError] = useState(false);
+
+  useEffect(() => {
+    setBgInput(bgUrl ?? '');
+    setShowPreview(!!bgUrl);
+  }, [bgUrl]);
+
+  const handleSaveBg = () => {
+    const url = bgInput.trim();
+    setBgUrl(url || null);
+    setShowPreview(!!url);
+    setPreviewError(false);
+    toast.success(url ? 'Fondo de pantalla aplicado' : 'Fondo de pantalla eliminado');
+  };
+
+  const handleRemoveBg = () => {
+    setBgUrl(null);
+    setBgInput('');
+    setShowPreview(false);
+    setPreviewError(false);
+    toast.success('Fondo de pantalla eliminado');
+  };
 
   useEffect(() => {
     if (!loading && (!user || !user.is_admin)) {
@@ -308,6 +336,112 @@ export default function AdminPage() {
             </div>
           ))
         )}
+      </div>
+
+      {/* ── Configuración de Sitio ─────────────────────────────────────── */}
+      <div className="space-y-3">
+        <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+          <ImageIcon className="h-3.5 w-3.5" />
+          Configuración de Sitio
+        </h3>
+
+        <div className="rounded-xl bg-slate-900 border border-slate-800 overflow-hidden">
+          {/* Header */}
+          <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-800">
+            <div className="p-1.5 rounded-lg bg-slate-800">
+              <ImageIcon className="h-4 w-4 text-slate-400" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-white">Fondo de pantalla global</p>
+              <p className="text-xs text-slate-500">Se aplica a toda la aplicación</p>
+            </div>
+            {bgUrl && (
+              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                Activo
+              </span>
+            )}
+          </div>
+
+          <div className="p-4 space-y-4">
+            {/* Live preview */}
+            <AnimatePresence>
+              {showPreview && bgInput.trim() && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="overflow-hidden"
+                >
+                  <div className="relative rounded-xl overflow-hidden h-32 border border-slate-700">
+                    {!previewError ? (
+                      <>
+                        <img
+                          src={bgInput.trim()}
+                          alt="Preview fondo"
+                          className="w-full h-full object-cover"
+                          onError={() => setPreviewError(true)}
+                        />
+                        <div className="absolute inset-0 bg-slate-950/65" />
+                        <div className="absolute inset-0 flex flex-col items-center justify-center gap-1">
+                          <Eye className="h-4 w-4 text-white/40" />
+                          <span className="text-xs text-white/50 font-medium">Vista previa</span>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="w-full h-full flex flex-col items-center justify-center gap-2 bg-slate-800/60">
+                        <EyeOff className="h-5 w-5 text-slate-500" />
+                        <span className="text-xs text-slate-500">No se pudo cargar la imagen</span>
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* URL input */}
+            <div className="space-y-1.5">
+              <Label className="text-slate-400 text-xs">URL de la imagen de fondo</Label>
+              <Input
+                value={bgInput}
+                onChange={(e) => {
+                  setBgInput(e.target.value);
+                  setPreviewError(false);
+                  setShowPreview(!!e.target.value.trim());
+                }}
+                placeholder="https://res.cloudinary.com/…/imagen.png"
+                className="bg-slate-950 border-slate-700 text-white placeholder:text-slate-600 text-sm h-9"
+              />
+              <p className="text-[11px] text-slate-600">
+                Deja vacío y guarda para quitar el fondo. Usa imágenes de alta resolución (mínimo 1920×1080).
+              </p>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-2 flex-wrap">
+              <Button
+                size="sm"
+                onClick={handleSaveBg}
+                disabled={bgInput.trim() === (bgUrl ?? '')}
+                className="bg-emerald-500 hover:bg-emerald-600 text-white disabled:opacity-40"
+              >
+                <Check className="h-3.5 w-3.5 mr-1.5" />
+                {bgInput.trim() ? 'Aplicar fondo' : 'Guardar cambios'}
+              </Button>
+              {bgUrl && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleRemoveBg}
+                  className="border-slate-700 text-slate-400 hover:text-red-400 hover:border-red-500/40 transition-colors"
+                >
+                  <X className="h-3.5 w-3.5 mr-1.5" />
+                  Quitar fondo
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Access info */}

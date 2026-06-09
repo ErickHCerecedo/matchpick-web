@@ -18,6 +18,7 @@ import {
 import { Home, Trophy, LogOut, Shield, UserCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
+import { useSiteConfig } from '@/contexts/SiteConfigContext';
 
 type NavItem = { href: string; label: string; icon: React.ElementType };
 
@@ -56,6 +57,7 @@ function NavLink({ href, label, icon: Icon }: NavItem) {
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { user, loading, logout } = useAuth();
+  const { bgUrl } = useSiteConfig();
 
   const navItems: NavItem[] = [
     ...BASE_NAV,
@@ -84,7 +86,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-slate-950 flex">
+    <div
+      className={cn('min-h-screen flex', !bgUrl && 'bg-slate-950')}
+      style={bgUrl ? {
+        backgroundImage: `linear-gradient(rgba(2,6,23,0.74), rgba(2,6,23,0.74)), url(${bgUrl})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center top',
+        backgroundAttachment: 'fixed',
+        backgroundRepeat: 'no-repeat',
+      } : undefined}
+    >
       {/* Sidebar — desktop */}
       <aside className="hidden md:flex flex-col w-64 border-r border-slate-800 bg-slate-900/50 p-4">
         <div className="mb-6">
