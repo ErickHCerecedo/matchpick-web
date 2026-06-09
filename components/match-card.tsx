@@ -13,7 +13,7 @@ interface Props {
   onChange?: (matchId: number, home: number, away: number) => void;
   readOnly?: boolean;
   isSaved?: boolean;
-  /** Show blurred team flag color wash — enable for non-custom tournaments */
+  /** Enable team flag color accents — set true for non-custom tournaments */
   showTeamColors?: boolean;
 }
 
@@ -75,8 +75,11 @@ export function MatchCard({ match, prediction, onChange, readOnly, isSaved, show
 
   const isOpen = match.is_prediction_open && !readOnly;
   const hasResult = match.result !== null;
-  // Prediction window closed and match hasn't started — show inactive state
+  // Prediction window closed, not played yet — render as inactive in prediction form
   const isClosed = !isOpen && !readOnly && !hasResult && match.status === 'scheduled';
+
+  const hasFlags = !!(match.home_team?.flag_url || match.away_team?.flag_url);
+  const showColors = showTeamColors && hasFlags && !isClosed;
 
   const handleAdjust = (side: 'home' | 'away', delta: number) => {
     const h = home !== null ? home : -1;
@@ -101,42 +104,40 @@ export function MatchCard({ match, prediction, onChange, readOnly, isSaved, show
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       className={cn(
-        'border rounded-xl relative overflow-hidden transition-all duration-200',
+        'border rounded-xl relative overflow-hidden bg-slate-900 transition-all duration-200',
         isClosed
           ? 'border-slate-800/40 opacity-[0.65]'
           : match.status === 'in_progress'
           ? 'border-emerald-500/40'
-          : hasResult
-          ? 'border-slate-700/60'
           : 'border-slate-700/60',
       )}
     >
-      {/* ── Team color wash (non-custom tournaments, open matches only) ── */}
-      {showTeamColors && !isClosed && (
+      {/* ── Ambient color wash: blurred flags fill each half ── */}
+      {showColors && (
         <div className="absolute inset-0 z-0 pointer-events-none" aria-hidden>
           {match.home_team?.flag_url && (
             <img
               src={match.home_team.flag_url}
               alt=""
-              className="absolute inset-y-0 left-0 w-3/5 h-full object-cover scale-150 opacity-[0.09] saturate-[2]"
-              style={{ filter: 'blur(28px) saturate(2)', transform: 'scale(1.5)' }}
+              className="absolute inset-y-0 left-0 w-3/5 h-full object-cover"
+              style={{ filter: 'blur(30px) saturate(4) brightness(0.8)', transform: 'scale(2)', opacity: 0.5 }}
             />
           )}
           {match.away_team?.flag_url && (
             <img
               src={match.away_team.flag_url}
               alt=""
-              className="absolute inset-y-0 right-0 w-3/5 h-full object-cover opacity-[0.09]"
-              style={{ filter: 'blur(28px) saturate(2)', transform: 'scale(1.5)' }}
+              className="absolute inset-y-0 right-0 w-3/5 h-full object-cover"
+              style={{ filter: 'blur(30px) saturate(4) brightness(0.8)', transform: 'scale(2)', opacity: 0.5 }}
             />
           )}
-          {/* Center blend to soften the transition between team halves */}
-          <div className="absolute inset-0 bg-linear-to-r from-transparent via-slate-950/55 to-transparent" />
+          {/* Uniform dark overlay — keeps text readable without killing the color */}
+          <div className="absolute inset-0 bg-slate-950/50" />
         </div>
       )}
 
-      {/* ── Card content (above the color wash) ── */}
-      <div className="relative z-10 bg-slate-950/90 p-4 space-y-3">
+      {/* ── Main content ── */}
+      <div className="relative z-10 p-4 space-y-3">
 
         {/* Date + status row */}
         <div className="flex items-center justify-between gap-2 text-xs text-slate-500">
@@ -162,7 +163,7 @@ export function MatchCard({ match, prediction, onChange, readOnly, isSaved, show
               <img
                 src={match.home_team.flag_url}
                 alt={match.home_team.short_name}
-                className="w-6 h-4 object-cover rounded-sm shrink-0"
+                className="w-10 h-7 object-cover rounded shrink-0 shadow-sm"
               />
             )}
             <span className="min-w-0 text-sm font-medium text-white truncate">
@@ -209,7 +210,7 @@ export function MatchCard({ match, prediction, onChange, readOnly, isSaved, show
               <img
                 src={match.away_team.flag_url}
                 alt={match.away_team.short_name}
-                className="w-6 h-4 object-cover rounded-sm shrink-0"
+                className="w-10 h-7 object-cover rounded shrink-0 shadow-sm"
               />
             )}
           </div>
@@ -245,6 +246,32 @@ export function MatchCard({ match, prediction, onChange, readOnly, isSaved, show
             </div>
           )}
       </div>
+
+      {/* ── Bottom team color strip ── */}
+      {showColors && (
+        <div className="relative z-10 h-1.5 flex" aria-hidden>
+          <div className="flex-1 overflow-hidden">
+            {match.home_team?.flag_url && (
+              <img
+                src={match.home_team.flag_url}
+                alt=""
+                className="w-full h-full object-cover"
+                style={{ filter: 'saturate(2.5) brightness(1.1)', opacity: 0.85 }}
+              />
+            )}
+          </div>
+          <div className="flex-1 overflow-hidden">
+            {match.away_team?.flag_url && (
+              <img
+                src={match.away_team.flag_url}
+                alt=""
+                className="w-full h-full object-cover"
+                style={{ filter: 'saturate(2.5) brightness(1.1)', opacity: 0.85 }}
+              />
+            )}
+          </div>
+        </div>
+      )}
     </motion.div>
   );
 }

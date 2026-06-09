@@ -315,7 +315,7 @@ export function PredictionForm({ quinielaSlug, rounds, initialPredictions, onSav
                     prediction={predictions[match.id] ?? null}
                     onChange={handleChange}
                     isSaved={savedMatchIds.has(match.id)}
-                    showTeamColors={!isCustomTournament}
+                    showTeamColors
                   />
                 ))}
               </div>

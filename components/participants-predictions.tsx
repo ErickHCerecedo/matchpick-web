@@ -148,7 +148,7 @@ function MatchResultCard({
   return (
     <div
       className={cn(
-        'rounded-xl border overflow-hidden relative',
+        'rounded-xl border overflow-hidden relative bg-slate-900',
         match.status === 'in_progress'
           ? 'border-emerald-500/40'
           : match.status === 'finished'
@@ -156,26 +156,26 @@ function MatchResultCard({
           : 'border-slate-800/60'
       )}
     >
-      {/* Team color wash */}
+      {/* Ambient color wash */}
       {showTeamColors && (
         <div className="absolute inset-0 z-0 pointer-events-none" aria-hidden>
           {match.home_team?.flag_url && (
             <img
               src={match.home_team.flag_url}
               alt=""
-              className="absolute inset-y-0 left-0 w-3/5 h-full object-cover opacity-[0.08]"
-              style={{ filter: 'blur(28px) saturate(2)', transform: 'scale(1.5)' }}
+              className="absolute inset-y-0 left-0 w-3/5 h-full object-cover"
+              style={{ filter: 'blur(30px) saturate(4) brightness(0.8)', transform: 'scale(2)', opacity: 0.5 }}
             />
           )}
           {match.away_team?.flag_url && (
             <img
               src={match.away_team.flag_url}
               alt=""
-              className="absolute inset-y-0 right-0 w-3/5 h-full object-cover opacity-[0.08]"
-              style={{ filter: 'blur(28px) saturate(2)', transform: 'scale(1.5)' }}
+              className="absolute inset-y-0 right-0 w-3/5 h-full object-cover"
+              style={{ filter: 'blur(30px) saturate(4) brightness(0.8)', transform: 'scale(2)', opacity: 0.5 }}
             />
           )}
-          <div className="absolute inset-0 bg-linear-to-r from-transparent via-slate-950/55 to-transparent" />
+          <div className="absolute inset-0 bg-slate-950/50" />
         </div>
       )}
 
@@ -184,8 +184,8 @@ function MatchResultCard({
         onClick={handleToggle}
         disabled={!matchHasStarted}
         className={cn(
-          'relative z-10 w-full p-4 bg-slate-950/90 text-left transition-colors',
-          matchHasStarted ? 'cursor-pointer hover:bg-slate-900/90' : 'cursor-default'
+          'relative z-10 w-full p-4 text-left transition-colors',
+          matchHasStarted ? 'cursor-pointer hover:bg-white/5' : 'cursor-default'
         )}
       >
         {/* Status row */}
@@ -216,7 +216,7 @@ function MatchResultCard({
         <div className="flex items-center gap-3">
           <div className="flex-1 flex items-center gap-2 min-w-0">
             {match.home_team?.flag_url && (
-              <img src={match.home_team.flag_url} alt="" className="w-6 h-4 object-cover rounded-sm shrink-0" />
+              <img src={match.home_team.flag_url} alt="" className="w-10 h-7 object-cover rounded shrink-0 shadow-sm" />
             )}
             <span className="text-sm font-medium text-white truncate">
               {match.home_team?.name ?? 'TBD'}
@@ -236,7 +236,7 @@ function MatchResultCard({
               {match.away_team?.name ?? 'TBD'}
             </span>
             {match.away_team?.flag_url && (
-              <img src={match.away_team.flag_url} alt="" className="w-6 h-4 object-cover rounded-sm shrink-0" />
+              <img src={match.away_team.flag_url} alt="" className="w-10 h-7 object-cover rounded shrink-0 shadow-sm" />
             )}
           </div>
         </div>
@@ -257,7 +257,7 @@ function MatchResultCard({
 
       {/* Admin result toggle */}
       {isAdmin && matchHasStarted && (
-        <div className="relative z-10 flex justify-end px-4 py-2 bg-slate-950/90 border-t border-slate-800/50">
+        <div className="relative z-10 flex justify-end px-4 py-2 border-t border-slate-800/50">
           <button
             onClick={() => setShowResultForm((v) => !v)}
             className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-emerald-400 transition-colors"
@@ -360,6 +360,32 @@ function MatchResultCard({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Bottom team color strip */}
+      {showTeamColors && (
+        <div className="relative z-10 h-1.5 flex" aria-hidden>
+          <div className="flex-1 overflow-hidden">
+            {match.home_team?.flag_url && (
+              <img
+                src={match.home_team.flag_url}
+                alt=""
+                className="w-full h-full object-cover"
+                style={{ filter: 'saturate(2.5) brightness(1.1)', opacity: 0.85 }}
+              />
+            )}
+          </div>
+          <div className="flex-1 overflow-hidden">
+            {match.away_team?.flag_url && (
+              <img
+                src={match.away_team.flag_url}
+                alt=""
+                className="w-full h-full object-cover"
+                style={{ filter: 'saturate(2.5) brightness(1.1)', opacity: 0.85 }}
+              />
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -547,7 +573,7 @@ export function ParticipantsPredictions({
                       currentUserId={currentUserId}
                       isAdmin={isAdmin}
                       onResultUpdated={onResultUpdated}
-                      showTeamColors={!isTournamentCustom}
+                      showTeamColors
                     />
                   ))}
                 </div>
