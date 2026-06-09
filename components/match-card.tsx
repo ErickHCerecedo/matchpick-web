@@ -13,7 +13,6 @@ interface Props {
   onChange?: (matchId: number, home: number, away: number) => void;
   readOnly?: boolean;
   isSaved?: boolean;
-  /** Enable team flag color accents — set true for non-custom tournaments */
   showTeamColors?: boolean;
 }
 
@@ -31,8 +30,6 @@ const STATUS_BADGE_CLASSES: Record<Match['status'], string> = {
   cancelled: 'border-red-800 text-red-400',
 };
 
-// null  → no prediction yet (displays "—", ▼ disabled)
-// 0..99 → prediction value (▼ disabled at 0 to prevent negatives)
 function ScoreStepper({
   value,
   onAdjust,
@@ -46,22 +43,22 @@ function ScoreStepper({
       <button
         type="button"
         onClick={() => onAdjust(1)}
-        className="w-10 h-8 flex items-center justify-center bg-slate-800/70 hover:bg-slate-700 border border-b-0 border-slate-700 rounded-t-lg text-slate-400 hover:text-emerald-400 active:bg-slate-700 transition-colors"
+        className="w-9 h-7 flex items-center justify-center bg-slate-800/80 hover:bg-slate-700 border border-b-0 border-slate-600/80 rounded-t-lg text-slate-400 hover:text-emerald-400 active:bg-slate-700 transition-colors"
       >
         <ChevronUp className="h-3.5 w-3.5" />
       </button>
-      <div className="w-10 h-10 flex items-center justify-center border border-slate-700 bg-slate-950/80">
+      <div className="w-9 h-9 flex items-center justify-center border border-slate-600/80 bg-slate-950/90">
         {value === null ? (
-          <span className="text-lg font-bold text-slate-600 select-none">—</span>
+          <span className="text-base font-bold text-slate-600 select-none">—</span>
         ) : (
-          <span className="text-xl font-bold text-white tabular-nums font-mono">{value}</span>
+          <span className="text-lg font-bold text-white tabular-nums font-mono">{value}</span>
         )}
       </div>
       <button
         type="button"
         onClick={() => onAdjust(-1)}
         disabled={atMin}
-        className="w-10 h-8 flex items-center justify-center bg-slate-800/70 hover:bg-slate-700 border border-t-0 border-slate-700 rounded-b-lg text-slate-400 hover:text-red-400 active:bg-slate-700 disabled:opacity-25 disabled:cursor-default transition-colors"
+        className="w-9 h-7 flex items-center justify-center bg-slate-800/80 hover:bg-slate-700 border border-t-0 border-slate-600/80 rounded-b-lg text-slate-400 hover:text-red-400 active:bg-slate-700 disabled:opacity-25 disabled:cursor-default transition-colors"
       >
         <ChevronDown className="h-3.5 w-3.5" />
       </button>
@@ -75,7 +72,6 @@ export function MatchCard({ match, prediction, onChange, readOnly, isSaved, show
 
   const isOpen = match.is_prediction_open && !readOnly;
   const hasResult = match.result !== null;
-  // Prediction window closed, not played yet — render as inactive in prediction form
   const isClosed = !isOpen && !readOnly && !hasResult && match.status === 'scheduled';
 
   const hasFlags = !!(match.home_team?.flag_url || match.away_team?.flag_url);
@@ -103,48 +99,49 @@ export function MatchCard({ match, prediction, onChange, readOnly, isSaved, show
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
+      style={isClosed ? { filter: 'grayscale(70%)' } : undefined}
       className={cn(
         'border rounded-xl relative overflow-hidden bg-slate-900 transition-all duration-200',
         isClosed
-          ? 'border-slate-800/40 opacity-[0.65]'
+          ? 'border-slate-700/30 opacity-70'
           : match.status === 'in_progress'
           ? 'border-emerald-500/40'
           : 'border-slate-700/60',
       )}
     >
-      {/* ── Ambient color wash: blurred flags fill each half ── */}
+      {/* ── Flag background: each flag fills its half, dark-tinted ── */}
       {showColors && (
         <div className="absolute inset-0 z-0 pointer-events-none" aria-hidden>
           {match.home_team?.flag_url && (
             <img
               src={match.home_team.flag_url}
               alt=""
-              className="absolute inset-y-0 left-0 w-3/5 h-full object-cover"
-              style={{ filter: 'blur(30px) saturate(4) brightness(0.8)', transform: 'scale(2)', opacity: 0.5 }}
+              className="absolute inset-y-0 left-0 w-1/2 h-full object-cover"
+              style={{ filter: 'blur(8px) saturate(2.5) brightness(0.35)', transform: 'scale(1.15)', opacity: 0.95 }}
             />
           )}
           {match.away_team?.flag_url && (
             <img
               src={match.away_team.flag_url}
               alt=""
-              className="absolute inset-y-0 right-0 w-3/5 h-full object-cover"
-              style={{ filter: 'blur(30px) saturate(4) brightness(0.8)', transform: 'scale(2)', opacity: 0.5 }}
+              className="absolute inset-y-0 right-0 w-1/2 h-full object-cover"
+              style={{ filter: 'blur(8px) saturate(2.5) brightness(0.35)', transform: 'scale(1.15)', opacity: 0.95 }}
             />
           )}
-          {/* Uniform dark overlay — keeps text readable without killing the color */}
-          <div className="absolute inset-0 bg-slate-950/50" />
+          {/* Center channel: darker behind score/steppers for contrast */}
+          <div className="absolute inset-0 bg-linear-to-r from-slate-950/20 via-slate-950/65 to-slate-950/20" />
         </div>
       )}
 
-      {/* ── Main content ── */}
+      {/* ── Content ── */}
       <div className="relative z-10 p-4 space-y-3">
 
-        {/* Date + status row */}
+        {/* Date + status */}
         <div className="flex items-center justify-between gap-2 text-xs text-slate-500">
           <span>{formatMatchDate(match.scheduled_at)}</span>
           <div className="flex items-center gap-1.5">
             {isClosed && (
-              <span className="flex items-center gap-1 text-[10px] font-semibold text-slate-600 bg-slate-800/60 border border-slate-700/50 px-1.5 py-0.5 rounded">
+              <span className="flex items-center gap-1 text-[10px] font-semibold text-slate-500 bg-slate-800/60 border border-slate-700/50 px-1.5 py-0.5 rounded">
                 <Lock className="h-2.5 w-2.5" />
                 Cerrado
               </span>
@@ -155,45 +152,48 @@ export function MatchCard({ match, prediction, onChange, readOnly, isSaved, show
           </div>
         </div>
 
-        {/* Teams + scores */}
-        <div className="flex items-center gap-2">
+        {/* Teams + score — grid gives each team equal space, names wrap instead of truncate */}
+        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+
           {/* Home */}
-          <div className="flex-1 flex items-center gap-2 min-w-0">
+          <div className="flex flex-col gap-1.5">
             {match.home_team?.flag_url && (
               <img
                 src={match.home_team.flag_url}
-                alt={match.home_team.short_name}
-                className="w-10 h-7 object-cover rounded shrink-0 shadow-sm"
+                alt={match.home_team.short_name ?? ''}
+                className="w-8 h-5 sm:w-10 sm:h-7 object-cover rounded shadow-sm"
               />
             )}
-            <span className="min-w-0 text-sm font-medium text-white truncate">
+            <span className="text-xs sm:text-sm font-semibold text-white leading-tight line-clamp-2">
               {match.home_team?.name ?? 'TBD'}
             </span>
           </div>
 
-          {/* Score area */}
-          <div className="flex items-center gap-2 shrink-0">
+          {/* Center: score or steppers */}
+          <div className="flex flex-col items-center gap-1 px-1">
             {hasResult ? (
-              <div className="flex items-center gap-2 font-bold text-white">
-                <span className="w-8 text-center text-lg">{match.result!.home_score}</span>
-                <span className="text-slate-500">-</span>
-                <span className="w-8 text-center text-lg">{match.result!.away_score}</span>
+              <div className="flex items-center gap-1.5 font-bold text-white">
+                <span className="w-6 text-center text-lg font-mono">{match.result!.home_score}</span>
+                <span className="text-slate-500 text-sm">–</span>
+                <span className="w-6 text-center text-lg font-mono">{match.result!.away_score}</span>
               </div>
             ) : isOpen ? (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
                 <ScoreStepper value={home} onAdjust={(d) => handleAdjust('home', d)} />
-                <span className="text-slate-600 font-bold text-lg select-none">–</span>
+                <span className="text-slate-600 font-bold text-base select-none">–</span>
                 <ScoreStepper value={away} onAdjust={(d) => handleAdjust('away', d)} />
               </div>
             ) : (
-              <div className="flex items-center gap-1.5">
-                <Lock className={cn('h-3 w-3 shrink-0', isClosed && !prediction ? 'text-amber-700/80' : 'text-slate-600')} />
+              <div className="flex flex-col items-center gap-1">
+                <Lock className={cn('h-3.5 w-3.5', isClosed && !prediction ? 'text-amber-700/80' : 'text-slate-600')} />
                 {prediction ? (
                   <span className="text-xs font-mono text-slate-400">
                     {prediction.home_score} – {prediction.away_score}
                   </span>
                 ) : isClosed ? (
-                  <span className="text-[11px] text-amber-700/70 font-medium">Sin pronóstico</span>
+                  <span className="text-[10px] text-amber-700/70 font-medium text-center leading-tight">
+                    Sin<br />pronóstico
+                  </span>
                 ) : (
                   <span className="text-xs text-slate-600">--</span>
                 )}
@@ -202,17 +202,17 @@ export function MatchCard({ match, prediction, onChange, readOnly, isSaved, show
           </div>
 
           {/* Away */}
-          <div className="flex-1 flex items-center gap-2 justify-end min-w-0">
-            <span className="min-w-0 text-sm font-medium text-white truncate text-right">
-              {match.away_team?.name ?? 'TBD'}
-            </span>
+          <div className="flex flex-col items-end gap-1.5">
             {match.away_team?.flag_url && (
               <img
                 src={match.away_team.flag_url}
-                alt={match.away_team.short_name}
-                className="w-10 h-7 object-cover rounded shrink-0 shadow-sm"
+                alt={match.away_team.short_name ?? ''}
+                className="w-8 h-5 sm:w-10 sm:h-7 object-cover rounded shadow-sm"
               />
             )}
+            <span className="text-xs sm:text-sm font-semibold text-white text-right leading-tight line-clamp-2">
+              {match.away_team?.name ?? 'TBD'}
+            </span>
           </div>
         </div>
 
@@ -256,7 +256,7 @@ export function MatchCard({ match, prediction, onChange, readOnly, isSaved, show
                 src={match.home_team.flag_url}
                 alt=""
                 className="w-full h-full object-cover"
-                style={{ filter: 'saturate(2.5) brightness(1.1)', opacity: 0.85 }}
+                style={{ filter: 'saturate(3) brightness(1.1)', opacity: 1 }}
               />
             )}
           </div>
@@ -266,7 +266,7 @@ export function MatchCard({ match, prediction, onChange, readOnly, isSaved, show
                 src={match.away_team.flag_url}
                 alt=""
                 className="w-full h-full object-cover"
-                style={{ filter: 'saturate(2.5) brightness(1.1)', opacity: 0.85 }}
+                style={{ filter: 'saturate(3) brightness(1.1)', opacity: 1 }}
               />
             )}
           </div>
