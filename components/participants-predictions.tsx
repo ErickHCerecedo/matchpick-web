@@ -487,13 +487,12 @@ export function ParticipantsPredictions({
 
       {/* Date strip */}
       {sortedDateKeys.length > 0 && (
-        <div className="flex gap-2 overflow-x-auto scrollbar-none pb-1">
+        <div className="flex gap-2 overflow-x-auto scrollbar-none pb-1 -mx-0.5 px-0.5">
           {sortedDateKeys.map((dk) => {
             const { weekday, day, month } = formatDateLabel(dk);
             const stat = dateStats.get(dk)!;
             const isActive = activeDateKey === dk;
             const isToday = dk === today;
-            const isFuture = dk > today;
             const isComplete = stat.total > 0 && stat.withResult === stat.total;
             const isPartial = stat.withResult > 0 && stat.withResult < stat.total;
 
@@ -503,27 +502,27 @@ export function ParticipantsPredictions({
                 ref={isActive ? activeDateRef : undefined}
                 onClick={() => setActiveDateKey(dk)}
                 className={cn(
-                  'shrink-0 flex flex-col items-center px-3.5 py-3 rounded-xl border text-center min-w-15.5 transition-all duration-150',
+                  'shrink-0 flex flex-col items-center px-3 py-2.5 rounded-xl border text-center min-w-15.5 transition-all',
                   isActive
-                    ? 'bg-emerald-500 border-emerald-500 text-white shadow-md shadow-emerald-500/25'
+                    ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400'
                     : isComplete
                     ? 'border-emerald-800/60 text-emerald-600 hover:border-emerald-600 hover:text-emerald-400'
-                    : isToday
-                    ? 'border-emerald-500/50 bg-emerald-500/5 text-emerald-300 hover:bg-emerald-500/10'
-                    : isFuture
-                    ? 'border-slate-800/60 text-slate-700 hover:border-slate-700 hover:text-slate-500'
-                    : 'border-slate-700/70 bg-slate-900/40 text-slate-400 hover:border-slate-600 hover:text-white'
+                    : isPartial
+                    ? 'border-amber-800/60 text-amber-500 hover:border-amber-500 hover:text-amber-400'
+                    : 'border-slate-700 text-slate-400 hover:border-slate-500 hover:text-white'
                 )}
               >
-                <span className={cn('text-[10px] uppercase tracking-wide leading-none mb-1 font-semibold', isActive ? 'text-white/80' : '')}>
+                <span className="text-[10px] uppercase tracking-wide leading-none mb-1">
                   {isToday ? 'Hoy' : weekday}
                 </span>
                 <span className="text-xl font-bold leading-none">{day}</span>
-                <span className={cn('text-[10px] uppercase tracking-wide leading-none mt-1', isActive ? 'text-white/70' : '')}>
+                <span className="text-[10px] uppercase tracking-wide leading-none mt-1">
                   {month}
                 </span>
-                {/* Result indicator */}
-                <span className={cn('text-[9px] font-semibold mt-1.5 leading-none tabular-nums', isActive ? 'text-white/60' : isComplete ? 'text-emerald-500' : isPartial ? 'text-slate-500' : 'text-slate-700')}>
+                <span className={cn(
+                  'text-[9px] font-semibold mt-1.5 leading-none tabular-nums',
+                  isComplete ? 'text-emerald-500' : isPartial ? 'text-amber-500' : 'text-slate-600'
+                )}>
                   {isComplete ? '✓' : stat.withResult > 0 ? `${stat.withResult}/${stat.total}` : `${stat.total} ptdos`}
                 </span>
               </button>
