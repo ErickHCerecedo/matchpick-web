@@ -27,7 +27,7 @@ import type { ApiResponse, Quiniela, Standing, RoundWithMatches, Prediction } fr
 import {
   Users, Link2, Copy, Check, Loader2,
   Target, ListChecks, LayoutDashboard,
-  MoreVertical, Trash2, Share2,
+  MoreVertical, Trash2, Share2, UserPlus,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -283,20 +283,28 @@ export default function QuinielaPage() {
             currentUserId={user?.id}
             invitePanel={
               quiniela.my_role === 'admin' ? (
-                <div className="rounded-xl border border-slate-700 bg-slate-900 p-4 space-y-3">
-                  <p className="text-sm font-medium text-white">Invitar participantes</p>
+                <div className="rounded-xl border border-slate-800 bg-slate-950 p-4 space-y-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 shrink-0">
+                      <UserPlus className="h-3.5 w-3.5 text-emerald-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-white">Invitar participantes</p>
+                      <p className="text-xs text-slate-500">Comparte el enlace con tus amigos</p>
+                    </div>
+                  </div>
                   {inviteLink ? (
                     <div className="flex gap-2">
                       <input
                         readOnly
                         value={inviteLink}
-                        className="flex-1 rounded-lg bg-slate-950 border border-slate-700 text-slate-300 text-xs px-3 py-2 truncate focus:outline-none"
+                        className="flex-1 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 text-xs px-3 py-2 truncate focus:outline-none"
                       />
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={handleCopyLink}
-                        className="border-slate-600 text-slate-300 hover:text-white shrink-0"
+                        className="border-slate-700 text-slate-300 hover:text-emerald-400 hover:border-emerald-500/40 shrink-0"
                       >
                         {copied ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
                       </Button>
@@ -306,7 +314,7 @@ export default function QuinielaPage() {
                       size="sm"
                       onClick={handleGenerateInvite}
                       disabled={generatingInvite}
-                      className="bg-emerald-500 hover:bg-emerald-600 text-white"
+                      className="bg-emerald-500 hover:bg-emerald-600 text-white w-full"
                     >
                       {generatingInvite ? (
                         <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -316,7 +324,7 @@ export default function QuinielaPage() {
                       Generar enlace de invitación
                     </Button>
                   )}
-                  <p className="text-xs text-slate-500">El enlace expira en 7 días.</p>
+                  <p className="text-[11px] text-slate-600">El enlace expira en 7 días.</p>
                 </div>
               ) : undefined
             }

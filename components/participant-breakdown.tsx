@@ -438,105 +438,143 @@ export function ParticipantBreakdown({ quinielaSlug, standings, currentUserId, i
           >
             {invitePanel && <div className="mb-4">{invitePanel}</div>}
 
+            {/* Points info card */}
+            <div className="rounded-xl border border-slate-800 bg-slate-950 p-3.5 mb-4">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-2.5">Cómo se calculan los puntos</p>
+              <div className="grid grid-cols-3 gap-2">
+                <div className="rounded-lg bg-slate-900 border border-slate-800 px-2 py-2.5 flex flex-col items-center gap-0.5">
+                  <span className="text-lg leading-none">🎯</span>
+                  <span className="text-base font-bold text-emerald-400 tabular-nums leading-tight">+3</span>
+                  <span className="text-[10px] text-slate-500 text-center leading-tight mt-0.5">Marcador exacto</span>
+                </div>
+                <div className="rounded-lg bg-slate-900 border border-slate-800 px-2 py-2.5 flex flex-col items-center gap-0.5">
+                  <span className="text-base font-bold text-blue-400 leading-none">✓</span>
+                  <span className="text-base font-bold text-blue-400 tabular-nums leading-tight">+1</span>
+                  <span className="text-[10px] text-slate-500 text-center leading-tight mt-0.5">Resultado correcto</span>
+                </div>
+                <div className="rounded-lg bg-slate-900 border border-slate-800 px-2 py-2.5 flex flex-col items-center gap-0.5">
+                  <span className="text-base font-bold text-slate-600 leading-none">✗</span>
+                  <span className="text-base font-bold text-slate-600 tabular-nums leading-tight">0</span>
+                  <span className="text-[10px] text-slate-500 text-center leading-tight mt-0.5">Incorrecto</span>
+                </div>
+              </div>
+            </div>
+
             {standings.length === 0 ? (
               <p className="text-slate-500 text-sm text-center py-12">
                 Aún no hay participantes.
               </p>
             ) : (
-              <>
-                {/* Legend */}
-                <div className="flex items-center gap-2 flex-wrap mb-3 px-0.5">
-                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                    🎯 Exacto +3
+              <div className="rounded-xl border border-slate-800 bg-slate-950 overflow-hidden">
+                {/* Table header */}
+                <div className="flex items-center gap-2 px-3 py-2.5 bg-slate-900/60 border-b border-slate-800">
+                  <span className="w-8 shrink-0 text-[10px] font-bold uppercase tracking-wider text-slate-600 text-center">
+                    #
                   </span>
-                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded-full bg-slate-800 text-slate-400 border border-slate-700">
-                    ✓ Correcto +1
+                  <span className="flex-1 min-w-0 text-[10px] font-bold uppercase tracking-wider text-slate-600">
+                    Participante
                   </span>
-                  <span className="text-[10px] text-slate-600 ml-auto">% = precisión</span>
+                  <span className="w-12 shrink-0 text-[10px] font-bold uppercase tracking-wider text-slate-600 text-center hidden sm:block">
+                    Exactas
+                  </span>
+                  <span className="w-13 shrink-0 text-[10px] font-bold uppercase tracking-wider text-slate-600 text-center hidden sm:block">
+                    Correctas
+                  </span>
+                  <span className="w-14 shrink-0 text-[10px] font-bold uppercase tracking-wider text-slate-600 text-center hidden sm:block">
+                    % Aciertos
+                  </span>
+                  <span className="w-14 shrink-0 text-[10px] font-bold uppercase tracking-wider text-slate-600 text-right">
+                    Puntaje
+                  </span>
+                  <span className="w-4 shrink-0" />
                 </div>
 
-                <div className="space-y-1.5">
-                  {standings.map((s) => {
-                    const isMe = s.user.id === currentUserId;
-                    const accuracy =
-                      s.predictions_made > 0
-                        ? Math.round(
-                            ((s.exact_scores + s.correct_results) / s.predictions_made) * 100
-                          )
-                        : null;
+                {/* Rows */}
+                {standings.map((s) => {
+                  const isMe = s.user.id === currentUserId;
+                  const accuracy =
+                    s.predictions_made > 0
+                      ? Math.round(((s.exact_scores + s.correct_results) / s.predictions_made) * 100)
+                      : null;
 
-                    return (
-                      <button
-                        key={s.user.id}
-                        onClick={() => setSelectedUserId(s.user.id)}
-                        className={cn(
-                          'w-full flex items-center gap-2.5 px-3 py-3 rounded-xl border transition-all text-left group',
-                          isMe
-                            ? 'bg-emerald-500/5 border-emerald-500/20 hover:border-emerald-500/35'
-                            : 'bg-slate-950 border-slate-800/80 hover:border-slate-700 hover:bg-slate-900/60'
-                        )}
-                      >
+                  return (
+                    <motion.button
+                      key={s.user.id}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.22, delay: s.rank * 0.04 }}
+                      onClick={() => setSelectedUserId(s.user.id)}
+                      className={cn(
+                        'w-full flex items-center gap-2 px-3 py-3 border-b border-slate-800/60 last:border-b-0 transition-all text-left group',
+                        isMe ? 'bg-emerald-500/5 hover:bg-emerald-500/[0.08]' : 'hover:bg-slate-900/50'
+                      )}
+                    >
+                      <span className="w-8 shrink-0 flex justify-center">
                         <RankBadge rank={s.rank} />
+                      </span>
 
-                        <Avatar className="h-8 w-8 shrink-0 ring-1 ring-slate-700/40">
+                      <div className="flex-1 min-w-0 flex items-center gap-2">
+                        <Avatar className="h-7 w-7 shrink-0 ring-1 ring-slate-700/40">
                           <AvatarImage src={s.user.avatar_url ?? undefined} />
                           <AvatarFallback className="bg-slate-800 text-white text-xs font-bold">
                             {s.user.name.charAt(0).toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
-
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5 mb-1 min-w-0">
-                            <span
-                              className={cn(
-                                'text-sm font-semibold leading-none truncate',
-                                isMe ? 'text-emerald-400' : 'text-white'
-                              )}
-                            >
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span className={cn('text-sm font-semibold truncate leading-none', isMe ? 'text-emerald-400' : 'text-white')}>
                               {s.user.name}
                             </span>
                             {isMe && (
-                              <span className="text-[9px] font-bold text-emerald-500/50 bg-emerald-500/10 px-1 py-0.5 rounded shrink-0">
+                              <span className="text-[9px] font-bold text-emerald-500/60 bg-emerald-500/10 px-1 py-0.5 rounded shrink-0">
                                 TÚ
                               </span>
                             )}
                           </div>
-                          <div className="flex items-center gap-1.5 flex-wrap">
+                          {/* Compact stats — mobile only */}
+                          <div className="flex items-center gap-1.5 mt-1 sm:hidden">
                             <span className="inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/15">
                               🎯 {s.exact_scores}
                             </span>
                             <span className="inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">
                               ✓ {s.correct_results}
                             </span>
-                            {accuracy !== null ? (
-                              <span className="text-[10px] text-slate-500 tabular-nums">
-                                {accuracy}%
-                              </span>
-                            ) : (
-                              <span className="text-[10px] text-slate-700">—</span>
+                            {accuracy !== null && (
+                              <span className="text-[10px] text-slate-500 tabular-nums">{accuracy}%</span>
                             )}
                           </div>
                         </div>
+                      </div>
 
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          <div className="text-right">
-                            <p
-                              className={cn(
-                                'text-base font-bold tabular-nums leading-none',
-                                isMe ? 'text-emerald-400' : 'text-white'
-                              )}
-                            >
-                              {s.total_points}
-                            </p>
-                            <p className="text-[10px] text-slate-600 mt-0.5">pts</p>
-                          </div>
-                          <ChevronRight className="h-4 w-4 text-slate-700 group-hover:text-slate-500 transition-colors -mr-0.5" />
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </>
+                      {/* Desktop columns */}
+                      <span className="w-12 shrink-0 text-center hidden sm:block">
+                        <span className="text-sm font-bold text-white tabular-nums">{s.exact_scores}</span>
+                      </span>
+                      <span className="w-13 shrink-0 text-center hidden sm:block">
+                        <span className="text-sm font-bold text-white tabular-nums">{s.correct_results}</span>
+                      </span>
+                      <span className="w-14 shrink-0 text-center hidden sm:block">
+                        <span className="text-sm text-slate-400 tabular-nums">
+                          {accuracy !== null ? `${accuracy}%` : '—'}
+                        </span>
+                      </span>
+
+                      {/* Score — highlighted */}
+                      <div className="w-14 shrink-0 text-right">
+                        <p className={cn(
+                          'text-base font-bold tabular-nums leading-none',
+                          isMe ? 'text-emerald-400' : s.rank === 1 ? 'text-yellow-400' : 'text-white'
+                        )}>
+                          {s.total_points}
+                        </p>
+                        <p className="text-[10px] text-slate-600 mt-0.5">pts</p>
+                      </div>
+
+                      <ChevronRight className="w-4 h-4 shrink-0 text-slate-700 group-hover:text-slate-500 transition-colors" />
+                    </motion.button>
+                  );
+                })}
+              </div>
             )}
           </motion.div>
         ) : (
