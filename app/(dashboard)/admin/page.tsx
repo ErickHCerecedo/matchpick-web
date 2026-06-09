@@ -32,7 +32,7 @@ export default function AdminPage() {
   const [saving, setSaving] = useState(false);
 
   // Site config
-  const { bgUrl, setBgUrl } = useSiteConfig();
+  const { bgUrl, setBgUrl, saving: savingBg } = useSiteConfig();
   const [bgInput, setBgInput] = useState('');
   const [showPreview, setShowPreview] = useState(false);
   const [previewError, setPreviewError] = useState(false);
@@ -42,20 +42,28 @@ export default function AdminPage() {
     setShowPreview(!!bgUrl);
   }, [bgUrl]);
 
-  const handleSaveBg = () => {
+  const handleSaveBg = async () => {
     const url = bgInput.trim();
-    setBgUrl(url || null);
-    setShowPreview(!!url);
-    setPreviewError(false);
-    toast.success(url ? 'Fondo de pantalla aplicado' : 'Fondo de pantalla eliminado');
+    try {
+      await setBgUrl(url || null);
+      setShowPreview(!!url);
+      setPreviewError(false);
+      toast.success(url ? 'Fondo de pantalla aplicado a todos los dispositivos' : 'Fondo de pantalla eliminado');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Error al guardar la configuración');
+    }
   };
 
-  const handleRemoveBg = () => {
-    setBgUrl(null);
-    setBgInput('');
-    setShowPreview(false);
-    setPreviewError(false);
-    toast.success('Fondo de pantalla eliminado');
+  const handleRemoveBg = async () => {
+    try {
+      await setBgUrl(null);
+      setBgInput('');
+      setShowPreview(false);
+      setPreviewError(false);
+      toast.success('Fondo de pantalla eliminado');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Error al eliminar el fondo');
+    }
   };
 
   useEffect(() => {
@@ -422,10 +430,14 @@ export default function AdminPage() {
               <Button
                 size="sm"
                 onClick={handleSaveBg}
-                disabled={bgInput.trim() === (bgUrl ?? '')}
+                disabled={savingBg || bgInput.trim() === (bgUrl ?? '')}
                 className="bg-emerald-500 hover:bg-emerald-600 text-white disabled:opacity-40"
               >
-                <Check className="h-3.5 w-3.5 mr-1.5" />
+                {savingBg ? (
+                  <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                ) : (
+                  <Check className="h-3.5 w-3.5 mr-1.5" />
+                )}
                 {bgInput.trim() ? 'Aplicar fondo' : 'Guardar cambios'}
               </Button>
               {bgUrl && (
@@ -433,7 +445,8 @@ export default function AdminPage() {
                   size="sm"
                   variant="outline"
                   onClick={handleRemoveBg}
-                  className="border-slate-700 text-slate-400 hover:text-red-400 hover:border-red-500/40 transition-colors"
+                  disabled={savingBg}
+                  className="border-slate-700 text-slate-400 hover:text-red-400 hover:border-red-500/40 transition-colors disabled:opacity-40"
                 >
                   <X className="h-3.5 w-3.5 mr-1.5" />
                   Quitar fondo
