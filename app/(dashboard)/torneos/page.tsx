@@ -110,7 +110,7 @@ export default function TorneosPage() {
   const myIds = useMemo(() => new Set(myTournaments.map((t) => t.id)), [myTournaments]);
   const allTournaments = useMemo(() => [
     ...myTournaments,
-    ...tournaments.filter((t) => !myIds.has(t.id)),
+    ...tournaments.filter((t) => !myIds.has(t.id) && !t.is_custom),
   ], [myTournaments, tournaments, myIds]);
 
   return (

@@ -16,7 +16,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import type { ApiResponse, Tournament, Round, CustomTeam, CustomMatch, MatchResult } from '@/types';
 import {
   ArrowLeft, Plus, Trash2, Loader2, Users, CalendarDays, Trophy,
-  Pencil, Check, X, Shield, ChevronRight, RefreshCw,
+  Pencil, Check, X, Shield, ChevronRight, RefreshCw, Settings2, ImageIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -117,6 +117,11 @@ export default function TorneoAdminPage() {
 
   const [saving, setSaving] = useState(false);
 
+  // Config state (custom tournament settings)
+  const [configName, setConfigName] = useState('');
+  const [configLogo, setConfigLogo] = useState('');
+  const [savingConfig, setSavingConfig] = useState(false);
+
   // ── Load initial data ──────────────────────────────────────────────────
 
   useEffect(() => {
@@ -128,6 +133,8 @@ export default function TorneoAdminPage() {
     ])
       .then(async ([tRes, teRes, rRes]) => {
         setTournament(tRes.data);
+        setConfigName(tRes.data.name);
+        setConfigLogo(tRes.data.logo_url ?? '');
         setTeams(teRes.data);
         setRounds(rRes.data);
         // Auto-expand the first round that has matches, or just the first round
@@ -442,6 +449,27 @@ export default function TorneoAdminPage() {
     }
   };
 
+  // ── Config ────────────────────────────────────────────────────────────
+
+  const handleSaveConfig = async () => {
+    if (!configName.trim()) return;
+    setSavingConfig(true);
+    try {
+      const res = await api.patch<ApiResponse<Tournament>>(`/tournaments/${slug}`, {
+        name: configName.trim(),
+        logo_url: configLogo.trim() || null,
+      });
+      setTournament(res.data);
+      setConfigName(res.data.name);
+      setConfigLogo(res.data.logo_url ?? '');
+      toast.success('Torneo actualizado.');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Error al guardar');
+    } finally {
+      setSavingConfig(false);
+    }
+  };
+
   // ── Render ─────────────────────────────────────────────────────────────
 
   if (loading) {
@@ -490,7 +518,7 @@ export default function TorneoAdminPage() {
 
       {/* ── Tabs ── */}
       <Tabs defaultValue="teams">
-        <TabsList className="!grid grid-cols-2 w-full !h-auto bg-slate-900 border border-slate-700/60 p-1 gap-1 rounded-xl mb-1">
+        <TabsList className={cn('!grid w-full !h-auto bg-slate-900 border border-slate-700/60 p-1 gap-1 rounded-xl mb-1', tournament.is_custom ? 'grid-cols-3' : 'grid-cols-2')}>
           <TabsTrigger
             value="teams"
             className="flex items-center gap-1.5 py-2.5 h-auto rounded-lg text-slate-400 data-active:bg-emerald-500/20 data-active:text-emerald-400 hover:text-white transition-colors"
@@ -505,6 +533,15 @@ export default function TorneoAdminPage() {
             <CalendarDays className="h-4 w-4 shrink-0" />
             <span className="text-xs font-medium">Calendario</span>
           </TabsTrigger>
+          {tournament.is_custom && (
+            <TabsTrigger
+              value="config"
+              className="flex items-center gap-1.5 py-2.5 h-auto rounded-lg text-slate-400 data-active:bg-emerald-500/20 data-active:text-emerald-400 hover:text-white transition-colors"
+            >
+              <Settings2 className="h-4 w-4 shrink-0" />
+              <span className="text-xs font-medium">Config</span>
+            </TabsTrigger>
+          )}
         </TabsList>
 
         {/* ════════════════════ EQUIPOS ════════════════════ */}
@@ -1007,6 +1044,65 @@ export default function TorneoAdminPage() {
             </form>
           )}
         </TabsContent>
+        {/* ════════════════════ CONFIGURACIÓN ════════════════════ */}
+        {tournament.is_custom && (
+          <TabsContent value="config" className="mt-4 space-y-5">
+            {/* Name */}
+            <div className="rounded-xl border border-slate-800 bg-slate-900 p-4 space-y-3">
+              <p className="text-xs font-semibold text-slate-300 uppercase tracking-wide">Nombre del torneo</p>
+              <div className="space-y-1">
+                <Label className="text-slate-400 text-xs">Nombre</Label>
+                <Input
+                  value={configName}
+                  onChange={(e) => setConfigName(e.target.value)}
+                  placeholder="Mi torneo"
+                  className="bg-slate-950 border-slate-700 text-white placeholder:text-slate-600 text-sm"
+                />
+              </div>
+            </div>
+
+            {/* Logo */}
+            <div className="rounded-xl border border-slate-800 bg-slate-900 p-4 space-y-3">
+              <p className="text-xs font-semibold text-slate-300 uppercase tracking-wide">Logo del torneo</p>
+              <div className="space-y-1">
+                <Label className="text-slate-400 text-xs">URL de imagen</Label>
+                <Input
+                  value={configLogo}
+                  onChange={(e) => setConfigLogo(e.target.value)}
+                  placeholder="https://ejemplo.com/logo.png"
+                  className="bg-slate-950 border-slate-700 text-white placeholder:text-slate-600 text-sm"
+                />
+              </div>
+              {configLogo ? (
+                <div className="flex items-center gap-3 pt-1">
+                  <img
+                    src={configLogo}
+                    alt="preview"
+                    onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                    className="h-12 w-12 rounded-lg object-cover border border-slate-700 bg-slate-800"
+                  />
+                  <p className="text-xs text-slate-500">Vista previa del logo</p>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 rounded-lg border border-dashed border-slate-700 px-3 py-4 justify-center">
+                  <ImageIcon className="h-4 w-4 text-slate-600" />
+                  <p className="text-xs text-slate-600">Sin logo configurado</p>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end">
+              <Button
+                onClick={handleSaveConfig}
+                disabled={savingConfig || !configName.trim()}
+                className="bg-emerald-500 hover:bg-emerald-600 text-white text-sm"
+              >
+                {savingConfig ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Check className="h-4 w-4 mr-2" />}
+                Guardar cambios
+              </Button>
+            </div>
+          </TabsContent>
+        )}
       </Tabs>
     </motion.div>
   );
