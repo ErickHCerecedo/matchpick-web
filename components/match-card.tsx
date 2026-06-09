@@ -3,9 +3,12 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
-import { cn, formatMatchDate } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import type { Match, Prediction } from '@/types';
-import { Lock, CheckCircle2, ChevronUp, ChevronDown } from 'lucide-react';
+import { Lock, CheckCircle2, ChevronUp, ChevronDown, Calendar, MapPin } from 'lucide-react';
+
+const CARD_BG =
+  'https://res.cloudinary.com/dr0klvutj/image/upload/v1781001150/MatchPick/file_00000000042c71fb8d0d570a11881d55.png';
 
 interface Props {
   match: Match;
@@ -17,20 +20,34 @@ interface Props {
 
 const STATUS_LABELS: Record<Match['status'], string> = {
   scheduled: 'Programado',
-  in_progress: '🔴 En vivo',
+  in_progress: 'En vivo',
   finished: 'Finalizado',
   cancelled: 'Cancelado',
 };
 
-const STATUS_BADGE_CLASSES: Record<Match['status'], string> = {
-  scheduled: 'border-slate-600 text-slate-400',
-  in_progress: 'border-emerald-500 text-emerald-400',
-  finished: 'border-slate-600 text-slate-500',
-  cancelled: 'border-red-800 text-red-400',
+const STATUS_COLORS: Record<Match['status'], { dot: string; icon: string; badge: string }> = {
+  scheduled:   { dot: 'bg-emerald-400', icon: 'text-emerald-400', badge: 'border-emerald-600/40 text-emerald-400' },
+  in_progress: { dot: 'bg-red-400',     icon: 'text-red-400',     badge: 'border-red-500/60 text-red-400'         },
+  finished:    { dot: 'bg-slate-500',   icon: 'text-slate-500',   badge: 'border-slate-600 text-slate-500'         },
+  cancelled:   { dot: 'bg-slate-500',   icon: 'text-slate-500',   badge: 'border-slate-600 text-slate-500'         },
 };
 
-// null  → no prediction yet (displays "—", ▼ disabled)
-// 0..99 → prediction value (▼ disabled at 0 to prevent negatives)
+function formatMatchDateParts(dateStr: string): { date: string; time: string } {
+  const d = new Date(dateStr);
+  const date = d
+    .toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short' })
+    .replace(/\.$/, '')
+    .replace(/\.,/g, '')
+    .replace(/,/g, '')
+    .trim();
+  const time = d
+    .toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: true })
+    .toLowerCase()
+    .replace(/ /g, ' ')
+    .trim();
+  return { date, time };
+}
+
 function ScoreStepper({
   value,
   onAdjust,
@@ -44,11 +61,11 @@ function ScoreStepper({
       <button
         type="button"
         onClick={() => onAdjust(1)}
-        className="w-10 h-8 flex items-center justify-center bg-slate-800/70 hover:bg-slate-700 border border-b-0 border-slate-700 rounded-t-lg text-slate-400 hover:text-emerald-400 active:bg-slate-700 transition-colors"
+        className="w-10 h-8 flex items-center justify-center bg-black/40 hover:bg-slate-700/80 border border-b-0 border-slate-700 rounded-t-lg text-slate-400 hover:text-emerald-400 active:bg-slate-700 transition-colors"
       >
         <ChevronUp className="h-3.5 w-3.5" />
       </button>
-      <div className="w-10 h-10 flex items-center justify-center border border-slate-700 bg-slate-950/80">
+      <div className="w-10 h-10 flex items-center justify-center border border-slate-700 bg-black/50">
         {value === null ? (
           <span className="text-lg font-bold text-slate-600 select-none">—</span>
         ) : (
@@ -59,7 +76,7 @@ function ScoreStepper({
         type="button"
         onClick={() => onAdjust(-1)}
         disabled={atMin}
-        className="w-10 h-8 flex items-center justify-center bg-slate-800/70 hover:bg-slate-700 border border-t-0 border-slate-700 rounded-b-lg text-slate-400 hover:text-red-400 active:bg-slate-700 disabled:opacity-25 disabled:cursor-default transition-colors"
+        className="w-10 h-8 flex items-center justify-center bg-black/40 hover:bg-slate-700/80 border border-t-0 border-slate-700 rounded-b-lg text-slate-400 hover:text-red-400 active:bg-slate-700 disabled:opacity-25 disabled:cursor-default transition-colors"
       >
         <ChevronDown className="h-3.5 w-3.5" />
       </button>
@@ -73,8 +90,10 @@ export function MatchCard({ match, prediction, onChange, readOnly, isSaved }: Pr
 
   const isOpen = match.is_prediction_open && !readOnly;
   const hasResult = match.result !== null;
-  // Prediction window closed, not played yet — render as inactive in prediction form
   const isClosed = !isOpen && !readOnly && !hasResult && match.status === 'scheduled';
+
+  const { date, time } = formatMatchDateParts(match.scheduled_at);
+  const sc = STATUS_COLORS[match.status];
 
   const handleAdjust = (side: 'home' | 'away', delta: number) => {
     const h = home !== null ? home : -1;
@@ -99,28 +118,46 @@ export function MatchCard({ match, prediction, onChange, readOnly, isSaved }: Pr
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       className={cn(
-        'border rounded-xl relative overflow-hidden bg-slate-900 transition-all duration-200',
+        'border rounded-xl relative overflow-hidden transition-all duration-200',
         isClosed
           ? 'border-slate-800/40 opacity-[0.65]'
           : match.status === 'in_progress'
-          ? 'border-emerald-500/40'
+          ? 'border-red-500/40'
           : 'border-slate-700/60',
       )}
     >
+      {/* Background image */}
+      <div
+        className="absolute inset-0 z-0"
+        style={{
+          backgroundImage: `url(${CARD_BG})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        }}
+      />
+      {/* Dark overlay */}
+      <div className="absolute inset-0 z-0 bg-slate-950/78" />
+
       {/* ── Main content ── */}
       <div className="relative z-10 p-4 space-y-3">
 
         {/* Date + status row */}
-        <div className="flex items-center justify-between gap-2 text-xs text-slate-500">
-          <span>{formatMatchDate(match.scheduled_at)}</span>
+        <div className="flex items-center justify-between gap-2 text-xs">
+          <div className="flex items-center gap-1.5 text-slate-400">
+            <Calendar className={cn('h-3.5 w-3.5 shrink-0', sc.icon)} />
+            <span className="font-medium">{date}</span>
+            <span className="text-slate-600">|</span>
+            <span className="text-slate-500">{time}</span>
+          </div>
           <div className="flex items-center gap-1.5">
             {isClosed && (
-              <span className="flex items-center gap-1 text-[10px] font-semibold text-slate-600 bg-slate-800/60 border border-slate-700/50 px-1.5 py-0.5 rounded">
+              <span className="flex items-center gap-1 text-[10px] font-semibold text-slate-600 bg-black/40 border border-slate-700/50 px-1.5 py-0.5 rounded">
                 <Lock className="h-2.5 w-2.5" />
                 Cerrado
               </span>
             )}
-            <Badge variant="outline" className={cn('text-xs', STATUS_BADGE_CLASSES[match.status])}>
+            <Badge variant="outline" className={cn('text-xs flex items-center gap-1', sc.badge)}>
+              <span className={cn('w-1.5 h-1.5 rounded-full shrink-0', sc.dot)} />
               {STATUS_LABELS[match.status]}
             </Badge>
           </div>
@@ -142,32 +179,43 @@ export function MatchCard({ match, prediction, onChange, readOnly, isSaved }: Pr
             </span>
           </div>
 
-          {/* Score area */}
+          {/* Score / VS area */}
           <div className="flex items-center gap-2 shrink-0">
             {hasResult ? (
               <div className="flex items-center gap-2 font-bold text-white">
                 <span className="w-8 text-center text-lg">{match.result!.home_score}</span>
-                <span className="text-slate-500">-</span>
+                <span className="text-slate-500 text-sm font-normal">-</span>
                 <span className="w-8 text-center text-lg">{match.result!.away_score}</span>
               </div>
             ) : isOpen ? (
               <div className="flex items-center gap-2">
                 <ScoreStepper value={home} onAdjust={(d) => handleAdjust('home', d)} />
-                <span className="text-slate-600 font-bold text-lg select-none">–</span>
+                {/* VS badge */}
+                <div className="flex flex-col items-center justify-center px-0.5">
+                  <span className="text-[10px] font-black tracking-widest text-white/80 bg-white/10 border border-white/20 rounded px-1.5 py-0.5 leading-none backdrop-blur-sm">
+                    VS
+                  </span>
+                </div>
                 <ScoreStepper value={away} onAdjust={(d) => handleAdjust('away', d)} />
               </div>
             ) : (
-              <div className="flex items-center gap-1.5">
-                <Lock className={cn('h-3 w-3 shrink-0', isClosed && !prediction ? 'text-amber-700/80' : 'text-slate-600')} />
-                {prediction ? (
-                  <span className="text-xs font-mono text-slate-400">
-                    {prediction.home_score} – {prediction.away_score}
-                  </span>
-                ) : isClosed ? (
-                  <span className="text-[11px] text-amber-700/70 font-medium">Sin pronóstico</span>
-                ) : (
-                  <span className="text-xs text-slate-600">--</span>
-                )}
+              <div className="flex flex-col items-center gap-1.5">
+                {/* VS badge */}
+                <span className="text-xs font-black tracking-widest text-white/80 bg-white/10 border border-white/20 rounded px-2.5 py-0.5 backdrop-blur-sm">
+                  VS
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <Lock className={cn('h-3 w-3 shrink-0', isClosed && !prediction ? 'text-amber-700/80' : 'text-slate-600')} />
+                  {prediction ? (
+                    <span className="text-xs font-mono text-slate-400">
+                      {prediction.home_score} – {prediction.away_score}
+                    </span>
+                  ) : isClosed ? (
+                    <span className="text-[11px] text-amber-700/70 font-medium">Sin pronóstico</span>
+                  ) : (
+                    <span className="text-xs text-slate-600">--</span>
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -186,6 +234,14 @@ export function MatchCard({ match, prediction, onChange, readOnly, isSaved }: Pr
             )}
           </div>
         </div>
+
+        {/* Venue */}
+        {match.venue && (
+          <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
+            <MapPin className={cn('h-3 w-3 shrink-0', sc.icon)} />
+            <span className="truncate">{match.venue}</span>
+          </div>
+        )}
 
         {/* Saved indicator */}
         {isOpen && isSaved && (
@@ -206,7 +262,7 @@ export function MatchCard({ match, prediction, onChange, readOnly, isSaved }: Pr
                   ? 'bg-emerald-500/20 text-emerald-400'
                   : prediction.points === 1
                   ? 'bg-blue-500/20 text-blue-400'
-                  : 'bg-slate-800 text-slate-500'
+                  : 'bg-black/30 text-slate-500'
               )}
             >
               {prediction.points === 3
@@ -217,7 +273,6 @@ export function MatchCard({ match, prediction, onChange, readOnly, isSaved }: Pr
             </div>
           )}
       </div>
-
     </motion.div>
   );
 }
