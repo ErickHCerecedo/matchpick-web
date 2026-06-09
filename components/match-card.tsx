@@ -13,8 +13,6 @@ interface Props {
   onChange?: (matchId: number, home: number, away: number) => void;
   readOnly?: boolean;
   isSaved?: boolean;
-  /** Enable team flag color accents — set true for non-custom tournaments */
-  showTeamColors?: boolean;
 }
 
 const STATUS_LABELS: Record<Match['status'], string> = {
@@ -69,7 +67,7 @@ function ScoreStepper({
   );
 }
 
-export function MatchCard({ match, prediction, onChange, readOnly, isSaved, showTeamColors }: Props) {
+export function MatchCard({ match, prediction, onChange, readOnly, isSaved }: Props) {
   const [home, setHome] = useState<number | null>(prediction?.home_score ?? null);
   const [away, setAway] = useState<number | null>(prediction?.away_score ?? null);
 
@@ -77,9 +75,6 @@ export function MatchCard({ match, prediction, onChange, readOnly, isSaved, show
   const hasResult = match.result !== null;
   // Prediction window closed, not played yet — render as inactive in prediction form
   const isClosed = !isOpen && !readOnly && !hasResult && match.status === 'scheduled';
-
-  const hasFlags = !!(match.home_team?.flag_url || match.away_team?.flag_url);
-  const showColors = showTeamColors && hasFlags && !isClosed;
 
   const handleAdjust = (side: 'home' | 'away', delta: number) => {
     const h = home !== null ? home : -1;
@@ -112,30 +107,6 @@ export function MatchCard({ match, prediction, onChange, readOnly, isSaved, show
           : 'border-slate-700/60',
       )}
     >
-      {/* ── Ambient color wash: blurred flags fill each half ── */}
-      {showColors && (
-        <div className="absolute inset-0 z-0 pointer-events-none" aria-hidden>
-          {match.home_team?.flag_url && (
-            <img
-              src={match.home_team.flag_url}
-              alt=""
-              className="absolute inset-y-0 left-0 w-3/5 h-full object-cover"
-              style={{ filter: 'blur(30px) saturate(4) brightness(0.8)', transform: 'scale(2)', opacity: 0.5 }}
-            />
-          )}
-          {match.away_team?.flag_url && (
-            <img
-              src={match.away_team.flag_url}
-              alt=""
-              className="absolute inset-y-0 right-0 w-3/5 h-full object-cover"
-              style={{ filter: 'blur(30px) saturate(4) brightness(0.8)', transform: 'scale(2)', opacity: 0.5 }}
-            />
-          )}
-          {/* Uniform dark overlay — keeps text readable without killing the color */}
-          <div className="absolute inset-0 bg-slate-950/50" />
-        </div>
-      )}
-
       {/* ── Main content ── */}
       <div className="relative z-10 p-4 space-y-3">
 
@@ -247,31 +218,6 @@ export function MatchCard({ match, prediction, onChange, readOnly, isSaved, show
           )}
       </div>
 
-      {/* ── Bottom team color strip ── */}
-      {showColors && (
-        <div className="relative z-10 h-1.5 flex" aria-hidden>
-          <div className="flex-1 overflow-hidden">
-            {match.home_team?.flag_url && (
-              <img
-                src={match.home_team.flag_url}
-                alt=""
-                className="w-full h-full object-cover"
-                style={{ filter: 'saturate(2.5) brightness(1.1)', opacity: 0.85 }}
-              />
-            )}
-          </div>
-          <div className="flex-1 overflow-hidden">
-            {match.away_team?.flag_url && (
-              <img
-                src={match.away_team.flag_url}
-                alt=""
-                className="w-full h-full object-cover"
-                style={{ filter: 'saturate(2.5) brightness(1.1)', opacity: 0.85 }}
-              />
-            )}
-          </div>
-        </div>
-      )}
     </motion.div>
   );
 }

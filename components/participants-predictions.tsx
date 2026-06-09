@@ -102,14 +102,12 @@ function MatchResultCard({
   currentUserId,
   isAdmin,
   onResultUpdated,
-  showTeamColors,
 }: {
   match: Match;
   quinielaSlug: string;
   currentUserId?: number;
   isAdmin?: boolean;
   onResultUpdated?: () => void;
-  showTeamColors?: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [predictions, setPredictions] = useState<Prediction[] | null>(null);
@@ -156,28 +154,6 @@ function MatchResultCard({
           : 'border-slate-800/60'
       )}
     >
-      {/* Ambient color wash */}
-      {showTeamColors && (
-        <div className="absolute inset-0 z-0 pointer-events-none" aria-hidden>
-          {match.home_team?.flag_url && (
-            <img
-              src={match.home_team.flag_url}
-              alt=""
-              className="absolute inset-y-0 left-0 w-3/5 h-full object-cover"
-              style={{ filter: 'blur(30px) saturate(4) brightness(0.8)', transform: 'scale(2)', opacity: 0.5 }}
-            />
-          )}
-          {match.away_team?.flag_url && (
-            <img
-              src={match.away_team.flag_url}
-              alt=""
-              className="absolute inset-y-0 right-0 w-3/5 h-full object-cover"
-              style={{ filter: 'blur(30px) saturate(4) brightness(0.8)', transform: 'scale(2)', opacity: 0.5 }}
-            />
-          )}
-          <div className="absolute inset-0 bg-slate-950/50" />
-        </div>
-      )}
 
       {/* Header */}
       <button
@@ -361,31 +337,6 @@ function MatchResultCard({
         )}
       </AnimatePresence>
 
-      {/* Bottom team color strip */}
-      {showTeamColors && (
-        <div className="relative z-10 h-1.5 flex" aria-hidden>
-          <div className="flex-1 overflow-hidden">
-            {match.home_team?.flag_url && (
-              <img
-                src={match.home_team.flag_url}
-                alt=""
-                className="w-full h-full object-cover"
-                style={{ filter: 'saturate(2.5) brightness(1.1)', opacity: 0.85 }}
-              />
-            )}
-          </div>
-          <div className="flex-1 overflow-hidden">
-            {match.away_team?.flag_url && (
-              <img
-                src={match.away_team.flag_url}
-                alt=""
-                className="w-full h-full object-cover"
-                style={{ filter: 'saturate(2.5) brightness(1.1)', opacity: 0.85 }}
-              />
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -573,7 +524,6 @@ export function ParticipantsPredictions({
                       currentUserId={currentUserId}
                       isAdmin={isAdmin}
                       onResultUpdated={onResultUpdated}
-                      showTeamColors
                     />
                   ))}
                 </div>
