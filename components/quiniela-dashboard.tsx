@@ -8,7 +8,7 @@ import { groupByDate, toLocalDateKey, todayKey } from '@/lib/date-utils';
 import type { Standing, RoundWithMatches, Match } from '@/types';
 import {
   Trophy, Target, CheckCircle2, Clock, TrendingUp,
-  Crown, Star, ArrowRight, CalendarCheck, Share2, Pencil,
+  Star, ArrowRight, CalendarCheck, Share2, Pencil,
   Zap, Percent,
 } from 'lucide-react';
 
@@ -199,26 +199,23 @@ function MyStatsCard({
       {/* Top row */}
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-3">
-          {/* Rank badge */}
-          <div
-            className={cn(
-              'flex flex-col items-center justify-center w-12 h-12 rounded-xl shrink-0 border',
-              bg,
-              border
-            )}
-          >
-            {myStanding.rank <= 3 ? (
-              <Crown className={cn('h-5 w-5', text)} />
-            ) : (
-              <>
-                <span className={cn('text-xl font-bold leading-none tabular-nums', text)}>
-                  {myStanding.rank}
-                </span>
-                <span className="text-[9px] text-slate-700 mt-0.5 uppercase tracking-wide">
-                  lugar
-                </span>
-              </>
-            )}
+          {/* Avatar with rank overlay */}
+          <div className="relative shrink-0">
+            <Avatar className="h-12 w-12">
+              <AvatarImage src={myStanding.user.avatar_url ?? undefined} />
+              <AvatarFallback className="bg-slate-800 text-white text-base font-semibold">
+                {myStanding.user.name.charAt(0).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <div className={cn(
+              'absolute -bottom-0.5 -right-0.5 flex items-center justify-center w-5 h-5 rounded-full border-2 border-slate-950 text-[9px] font-black',
+              myStanding.rank === 1 ? 'bg-amber-500 text-black' :
+              myStanding.rank === 2 ? 'bg-slate-300 text-black' :
+              myStanding.rank === 3 ? 'bg-orange-500 text-black' :
+              'bg-slate-700 text-white'
+            )}>
+              {myStanding.rank}
+            </div>
           </div>
 
           {/* Name */}

@@ -356,7 +356,7 @@ function MatchResultCard({
                         key={pred.id}
                         className={cn('flex items-center gap-3 px-4 py-2.5', isMe ? 'bg-emerald-500/5' : '')}
                       >
-                        <Avatar className="h-6 w-6 shrink-0">
+                        <Avatar className="h-7 w-7 shrink-0">
                           <AvatarImage src={pred.user?.avatar_url ?? undefined} />
                           <AvatarFallback className="bg-slate-800 text-white text-[10px]">
                             {pred.user?.name?.charAt(0).toUpperCase() ?? '?'}
