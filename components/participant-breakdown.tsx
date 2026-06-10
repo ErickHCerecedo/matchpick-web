@@ -303,7 +303,7 @@ function BreakdownDetail({
       {data && (
         <div className="space-y-5">
           {/* User header card */}
-          <div className="rounded-xl border border-blue-900/40 bg-blue-950/30 p-4 space-y-4">
+          <div className="rounded-xl border border-slate-800 bg-slate-950 p-4 space-y-4">
             <div className="flex items-center gap-3">
               <Avatar className="h-12 w-12">
                 <AvatarImage src={data.user.avatar_url ?? undefined} />
@@ -318,58 +318,59 @@ function BreakdownDetail({
             </div>
 
             {data.standing ? (
-              <div className="space-y-2">
-                <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-2 mt-1">
+                {/* 2-col grid — mismo estilo que el dashboard */}
+                <div className="grid grid-cols-2 border border-slate-800 rounded-lg overflow-hidden divide-x divide-slate-800">
                   {/* Marcador Exacto */}
-                  <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/5 p-3">
-                    <div className="flex items-center gap-1.5 mb-2.5">
+                  <div className="px-3 py-3">
+                    <div className="flex items-center gap-1.5 mb-2">
                       <Target className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
-                      <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wide leading-tight">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide leading-tight">
                         Marcador<br />Exacto
                       </span>
                     </div>
                     <div className="flex items-end justify-between">
                       <div>
-                        <p className="text-3xl font-black text-white tabular-nums leading-none">{data.standing.exact_scores}</p>
-                        <p className="text-[10px] text-slate-500 mt-1">marcadores</p>
+                        <p className="text-2xl font-black text-white tabular-nums leading-none">{data.standing.exact_scores}</p>
+                        <p className="text-[10px] text-slate-600 mt-1">marcadores</p>
                       </div>
                       <div className="text-right">
-                        <p className="text-xl font-black text-emerald-400 tabular-nums leading-none">+{data.standing.exact_scores * 3}</p>
-                        <p className="text-[10px] text-slate-500 mt-1">puntos</p>
+                        <p className="text-base font-bold text-emerald-400 tabular-nums leading-none">+{data.standing.exact_scores * 3}</p>
+                        <p className="text-[10px] text-slate-600 mt-1">puntos</p>
                       </div>
                     </div>
                   </div>
                   {/* Resultado Correcto */}
-                  <div className="rounded-xl border border-blue-500/25 bg-blue-500/5 p-3">
-                    <div className="flex items-center gap-1.5 mb-2.5">
+                  <div className="px-3 py-3">
+                    <div className="flex items-center gap-1.5 mb-2">
                       <CheckCircle2 className="h-3.5 w-3.5 text-blue-400 shrink-0" />
-                      <span className="text-[10px] font-bold text-blue-400 uppercase tracking-wide leading-tight">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide leading-tight">
                         Resultado<br />Correcto
                       </span>
                     </div>
                     <div className="flex items-end justify-between">
                       <div>
-                        <p className="text-3xl font-black text-white tabular-nums leading-none">{data.standing.correct_results}</p>
-                        <p className="text-[10px] text-slate-500 mt-1">resultados</p>
+                        <p className="text-2xl font-black text-white tabular-nums leading-none">{data.standing.correct_results}</p>
+                        <p className="text-[10px] text-slate-600 mt-1">resultados</p>
                       </div>
                       <div className="text-right">
-                        <p className="text-xl font-black text-blue-400 tabular-nums leading-none">+{data.standing.correct_results}</p>
-                        <p className="text-[10px] text-slate-500 mt-1">puntos</p>
+                        <p className="text-base font-bold text-blue-400 tabular-nums leading-none">+{data.standing.correct_results}</p>
+                        <p className="text-[10px] text-slate-600 mt-1">puntos</p>
                       </div>
                     </div>
                   </div>
                 </div>
                 {/* Puntuación Total */}
-                <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 flex items-center justify-between">
+                <div className="border border-slate-800 rounded-lg px-4 py-3 flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Trophy className="h-4 w-4 text-amber-400 shrink-0" />
+                    <Trophy className="h-4 w-4 text-slate-400 shrink-0" />
                     <div>
                       <p className="text-xs font-bold text-white">Puntuación Total</p>
-                      <p className="text-[10px] text-slate-500">acumulado</p>
+                      <p className="text-[10px] text-slate-600">acumulado</p>
                     </div>
                   </div>
                   <div className="flex items-baseline gap-1">
-                    <span className="text-3xl font-black text-amber-400 tabular-nums">{data.standing.total_points}</span>
+                    <span className="text-3xl font-black text-white tabular-nums">{data.standing.total_points}</span>
                     <span className="text-xs text-slate-500 font-medium">pts</span>
                   </div>
                 </div>
