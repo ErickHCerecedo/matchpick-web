@@ -454,7 +454,7 @@ function RulesModal({ onClose }: { onClose: () => void }) {
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 40 }}
         transition={{ duration: 0.25, ease: 'easeOut' }}
-        className="relative w-full sm:max-w-lg max-h-[calc(100dvh-5rem)] sm:max-h-[85vh] flex flex-col rounded-t-2xl sm:rounded-2xl border border-slate-700 bg-slate-950 overflow-hidden shadow-2xl"
+        className="relative w-full sm:max-w-lg max-h-[calc(100dvh-4.5rem)] sm:max-h-[85vh] flex flex-col rounded-2xl border border-slate-700 bg-slate-950 overflow-hidden shadow-2xl"
       >
         {/* Header */}
         <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-800 shrink-0">
