@@ -18,6 +18,11 @@ import {
   Minus,
   Crown,
   X,
+  HelpCircle,
+  BookOpen,
+  Clock,
+  Eye,
+  Zap,
 } from 'lucide-react';
 
 // ── Points badge ──────────────────────────────────────────────────────────────
@@ -387,6 +392,250 @@ function BreakdownDetail({
   );
 }
 
+// ── Rules modal ───────────────────────────────────────────────────────────────
+
+const SCENARIOS = [
+  {
+    label: 'Marcador exacto',
+    prediction: '2 – 1',
+    result: '2 – 1',
+    points: 3,
+    icon: Target,
+    color: 'emerald' as const,
+    desc: 'Predijiste el marcador exacto del partido. ¡La mejor predicción posible!',
+  },
+  {
+    label: 'Resultado correcto',
+    prediction: '3 – 1',
+    result: '2 – 1',
+    points: 1,
+    icon: CheckCircle2,
+    color: 'blue' as const,
+    desc: 'Predijiste el ganador pero no el marcador exacto. ¡Sigue sumando!',
+  },
+  {
+    label: 'Incorrecto',
+    prediction: '0 – 2',
+    result: '2 – 1',
+    points: 0,
+    icon: X,
+    color: 'slate' as const,
+    desc: 'El resultado no coincidió con tu predicción. ¡Más suerte la próxima!',
+  },
+];
+
+function RulesModal({ onClose }: { onClose: () => void }) {
+  const [activeScenario, setActiveScenario] = useState(0);
+  const s = SCENARIOS[activeScenario];
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+      {/* Backdrop */}
+      <motion.div
+        key="backdrop"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.2 }}
+        className="absolute inset-0 bg-slate-950/85 backdrop-blur-sm"
+        onClick={onClose}
+      />
+
+      {/* Panel */}
+      <motion.div
+        key="panel"
+        initial={{ opacity: 0, y: 40 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 40 }}
+        transition={{ duration: 0.25, ease: 'easeOut' }}
+        className="relative w-full sm:max-w-lg max-h-[92vh] sm:max-h-[85vh] flex flex-col rounded-t-2xl sm:rounded-2xl border border-slate-700 bg-slate-950 overflow-hidden shadow-2xl"
+      >
+        {/* Header */}
+        <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-800 shrink-0">
+          <div className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+            <BookOpen className="h-4 w-4 text-emerald-400" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h2 className="text-base font-bold text-white">Reglas de la Quiniela</h2>
+            <p className="text-xs text-slate-500">Aprende a ganar puntos y dominar el juego</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800 transition-colors"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Scrollable content */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="p-5 space-y-6">
+
+            {/* ── 1. Points system ── */}
+            <section className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Zap className="h-4 w-4 text-emerald-400" />
+                <h3 className="text-sm font-bold text-white">Sistema de puntos</h3>
+              </div>
+
+              {/* Scenario tabs */}
+              <div className="grid grid-cols-3 gap-2">
+                {SCENARIOS.map((sc, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setActiveScenario(i)}
+                    className={cn(
+                      'py-2 px-1.5 rounded-xl border text-[10px] font-bold transition-all text-center leading-tight',
+                      activeScenario === i
+                        ? sc.color === 'emerald'
+                          ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400'
+                          : sc.color === 'blue'
+                          ? 'bg-blue-500/20 border-blue-500/50 text-blue-400'
+                          : 'bg-slate-800 border-slate-600 text-slate-300'
+                        : 'border-slate-800 text-slate-600 hover:border-slate-700 hover:text-slate-400'
+                    )}
+                  >
+                    {sc.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Active scenario card */}
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={activeScenario}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.15 }}
+                  className={cn(
+                    'rounded-xl border p-4 space-y-4',
+                    s.color === 'emerald'
+                      ? 'border-emerald-500/30 bg-emerald-500/5'
+                      : s.color === 'blue'
+                      ? 'border-blue-500/30 bg-blue-500/5'
+                      : 'border-slate-800 bg-slate-900/40'
+                  )}
+                >
+                  {/* Score comparison */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="rounded-lg bg-slate-900 border border-slate-800 px-3 py-3 text-center">
+                      <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1.5">Tu pronóstico</p>
+                      <p className="text-2xl font-bold text-white tabular-nums font-mono">{s.prediction}</p>
+                    </div>
+                    <div className="rounded-lg bg-slate-900 border border-slate-800 px-3 py-3 text-center">
+                      <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1.5">Resultado</p>
+                      <p className="text-2xl font-bold text-white tabular-nums font-mono">{s.result}</p>
+                    </div>
+                  </div>
+
+                  {/* Result row */}
+                  <div className="flex items-center gap-3 pt-1">
+                    <s.icon className={cn(
+                      'h-4 w-4 shrink-0',
+                      s.color === 'emerald' ? 'text-emerald-400' : s.color === 'blue' ? 'text-blue-400' : 'text-slate-600'
+                    )} />
+                    <p className="flex-1 text-xs text-slate-400 leading-relaxed">{s.desc}</p>
+                    <span className={cn(
+                      'text-3xl font-black tabular-nums shrink-0',
+                      s.color === 'emerald' ? 'text-emerald-400' : s.color === 'blue' ? 'text-blue-400' : 'text-slate-700'
+                    )}>
+                      +{s.points}
+                    </span>
+                  </div>
+                </motion.div>
+              </AnimatePresence>
+
+              {/* Quick reference */}
+              <div className="grid grid-cols-3 gap-2">
+                {SCENARIOS.map((sc, i) => (
+                  <div key={i} className="rounded-lg bg-slate-900 border border-slate-800 px-2 py-2 flex items-center gap-1.5">
+                    <sc.icon className={cn(
+                      'h-3.5 w-3.5 shrink-0',
+                      sc.color === 'emerald' ? 'text-emerald-400' : sc.color === 'blue' ? 'text-blue-400' : 'text-slate-600'
+                    )} />
+                    <span className={cn(
+                      'text-sm font-black tabular-nums',
+                      sc.color === 'emerald' ? 'text-emerald-400' : sc.color === 'blue' ? 'text-blue-400' : 'text-slate-600'
+                    )}>
+                      +{sc.points}
+                    </span>
+                    <span className="text-[10px] text-slate-600 truncate">{sc.label}</span>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            {/* ── 2. When to predict ── */}
+            <section className="space-y-2.5">
+              <div className="flex items-center gap-2">
+                <Clock className="h-4 w-4 text-amber-400" />
+                <h3 className="text-sm font-bold text-white">Cuándo pronosticar</h3>
+              </div>
+              <div className="rounded-xl border border-slate-800 bg-slate-900 p-4 space-y-2">
+                <p className="text-sm text-slate-300 leading-relaxed">
+                  Tus predicciones se cierran{' '}
+                  <span className="text-amber-400 font-semibold">automáticamente</span>{' '}
+                  cuando el partido comienza. ¡No te quedes sin pronosticar!
+                </p>
+                <div className="flex items-center gap-2 pt-1">
+                  <div className="h-px flex-1 bg-slate-800" />
+                  <span className="text-[10px] text-slate-600 uppercase tracking-wider">consejo</span>
+                  <div className="h-px flex-1 bg-slate-800" />
+                </div>
+                <p className="text-xs text-slate-500">
+                  Revisa el calendario y anticipa tus predicciones para no perderte ningún partido.
+                </p>
+              </div>
+            </section>
+
+            {/* ── 3. Transparency ── */}
+            <section className="space-y-2.5">
+              <div className="flex items-center gap-2">
+                <Eye className="h-4 w-4 text-blue-400" />
+                <h3 className="text-sm font-bold text-white">Transparencia</h3>
+              </div>
+              <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
+                <p className="text-sm text-slate-300 leading-relaxed">
+                  Las predicciones de otros participantes son{' '}
+                  <span className="text-blue-400 font-semibold">visibles</span>{' '}
+                  solo después de que el partido haya iniciado. Esto garantiza que nadie copie tus pronósticos.
+                </p>
+              </div>
+            </section>
+
+            {/* ── 4. How to win ── */}
+            <section className="space-y-2.5">
+              <div className="flex items-center gap-2">
+                <Trophy className="h-4 w-4 text-yellow-400" />
+                <h3 className="text-sm font-bold text-white">Cómo ganar</h3>
+              </div>
+              <div className="rounded-xl border border-slate-800 bg-slate-900 p-4 space-y-3">
+                <p className="text-sm text-slate-300 leading-relaxed">
+                  El participante con{' '}
+                  <span className="text-yellow-400 font-semibold">más puntos</span>{' '}
+                  al finalizar el torneo gana la quiniela.
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="rounded-lg bg-slate-800/80 p-3 text-center">
+                    <p className="text-2xl font-black text-emerald-400 tabular-nums">+3</p>
+                    <p className="text-[10px] text-slate-500 mt-0.5">marcador exacto</p>
+                  </div>
+                  <div className="rounded-lg bg-slate-800/80 p-3 text-center">
+                    <p className="text-2xl font-black text-blue-400 tabular-nums">+1</p>
+                    <p className="text-[10px] text-slate-500 mt-0.5">resultado correcto</p>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+          </div>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
 // ── Rank badge ────────────────────────────────────────────────────────────────
 
 function RankBadge({ rank }: { rank: number }) {
@@ -407,9 +656,14 @@ interface Props {
 
 export function ParticipantBreakdown({ quinielaSlug, standings, currentUserId, invitePanel }: Props) {
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
+  const [showRules, setShowRules] = useState(false);
 
   return (
     <div>
+      <AnimatePresence>
+        {showRules && <RulesModal onClose={() => setShowRules(false)} />}
+      </AnimatePresence>
+
       <AnimatePresence mode="wait">
         {selectedUserId === null ? (
           <motion.div
@@ -421,27 +675,19 @@ export function ParticipantBreakdown({ quinielaSlug, standings, currentUserId, i
           >
             {invitePanel && <div className="mb-4">{invitePanel}</div>}
 
-            {/* Points info card */}
-            <div className="rounded-xl border border-slate-800 bg-slate-950 p-3.5 mb-4">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-2.5">Cómo se calculan los puntos</p>
-              <div className="grid grid-cols-3 gap-2">
-                <div className="rounded-lg bg-slate-900 border border-slate-800 px-2 py-2.5 flex flex-col items-center gap-1">
-                  <Target className="h-4 w-4 text-emerald-400" />
-                  <span className="text-base font-bold text-emerald-400 tabular-nums leading-tight">+3</span>
-                  <span className="text-[10px] text-slate-500 text-center leading-tight">Marcador exacto</span>
-                </div>
-                <div className="rounded-lg bg-slate-900 border border-slate-800 px-2 py-2.5 flex flex-col items-center gap-1">
-                  <CheckCircle2 className="h-4 w-4 text-blue-400" />
-                  <span className="text-base font-bold text-blue-400 tabular-nums leading-tight">+1</span>
-                  <span className="text-[10px] text-slate-500 text-center leading-tight">Resultado correcto</span>
-                </div>
-                <div className="rounded-lg bg-slate-900 border border-slate-800 px-2 py-2.5 flex flex-col items-center gap-1">
-                  <X className="h-4 w-4 text-slate-600" />
-                  <span className="text-base font-bold text-slate-600 tabular-nums leading-tight">0</span>
-                  <span className="text-[10px] text-slate-500 text-center leading-tight">Incorrecto</span>
-                </div>
+            {/* FAQ trigger */}
+            <button
+              onClick={() => setShowRules(true)}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-slate-800 bg-slate-950 hover:border-slate-700 hover:bg-slate-900 transition-all group mb-4"
+            >
+              <div className="p-1.5 rounded-lg bg-slate-800 shrink-0 group-hover:bg-emerald-500/10 transition-colors">
+                <HelpCircle className="h-3.5 w-3.5 text-slate-500 group-hover:text-emerald-400 transition-colors" />
               </div>
-            </div>
+              <span className="flex-1 text-sm text-slate-400 text-left group-hover:text-white transition-colors">
+                ¿Cómo se calculan los puntos y reglas de la quiniela?
+              </span>
+              <ChevronRight className="h-4 w-4 text-slate-600 group-hover:text-slate-400 transition-colors shrink-0" />
+            </button>
 
             {standings.length === 0 ? (
               <p className="text-slate-500 text-sm text-center py-12">
@@ -457,16 +703,21 @@ export function ParticipantBreakdown({ quinielaSlug, standings, currentUserId, i
                   <span className="flex-1 min-w-0 text-[10px] font-bold uppercase tracking-wider text-slate-600">
                     Participante
                   </span>
-                  <span className="w-12 shrink-0 text-[10px] font-bold uppercase tracking-wider text-slate-600 text-center hidden sm:flex sm:items-center sm:justify-center sm:gap-1">
-                    <Target className="h-3 w-3" /> Exactas
-                  </span>
-                  <span className="w-14 shrink-0 text-[10px] font-bold uppercase tracking-wider text-slate-600 text-center hidden sm:flex sm:items-center sm:justify-center sm:gap-1">
-                    <CheckCircle2 className="h-3 w-3" /> Correctas
-                  </span>
-                  <span className="w-12 shrink-0 text-[10px] font-bold uppercase tracking-wider text-slate-600 text-center hidden sm:block">
-                    % Aciertos
-                  </span>
-                  <span className="w-14 shrink-0 text-[10px] font-bold uppercase tracking-wider text-slate-600 text-right">
+                  <div className="w-20 shrink-0 text-[10px] font-bold uppercase tracking-wide text-slate-600 text-center leading-tight hidden sm:flex sm:flex-col sm:items-center sm:gap-0.5">
+                    <Target className="h-3 w-3 text-emerald-600" />
+                    <span>Marcador</span>
+                    <span>Exacto</span>
+                  </div>
+                  <div className="w-20 shrink-0 text-[10px] font-bold uppercase tracking-wide text-slate-600 text-center leading-tight hidden sm:flex sm:flex-col sm:items-center sm:gap-0.5">
+                    <CheckCircle2 className="h-3 w-3 text-blue-700" />
+                    <span>Resultado</span>
+                    <span>Correcto</span>
+                  </div>
+                  <div className="w-16 shrink-0 text-[10px] font-bold uppercase tracking-wide text-slate-600 text-center leading-tight hidden sm:flex sm:flex-col sm:items-center sm:gap-0.5">
+                    <span>%</span>
+                    <span>Aciertos</span>
+                  </div>
+                  <span className="w-16 shrink-0 text-[10px] font-bold uppercase tracking-wider text-slate-600 text-right">
                     Puntaje
                   </span>
                   <span className="w-4 shrink-0" />
@@ -518,13 +769,13 @@ export function ParticipantBreakdown({ quinielaSlug, standings, currentUserId, i
                       </div>
 
                       {/* Desktop columns */}
-                      <span className="w-12 shrink-0 text-center hidden sm:block">
+                      <span className="w-20 shrink-0 text-center hidden sm:block">
                         <span className="text-sm font-bold text-white tabular-nums">{s.exact_scores}</span>
                       </span>
-                      <span className="w-14 shrink-0 text-center hidden sm:block">
+                      <span className="w-20 shrink-0 text-center hidden sm:block">
                         <span className="text-sm font-bold text-white tabular-nums">{s.correct_results}</span>
                       </span>
-                      <span className="w-12 shrink-0 text-center hidden sm:block">
+                      <span className="w-16 shrink-0 text-center hidden sm:block">
                         <span className="text-sm text-slate-400 tabular-nums">
                           {accuracy !== null ? `${accuracy}%` : '—'}
                         </span>
@@ -532,7 +783,7 @@ export function ParticipantBreakdown({ quinielaSlug, standings, currentUserId, i
 
                       {/* Score — highlighted */}
                       <span className={cn(
-                        'w-14 shrink-0 text-right text-base font-bold tabular-nums',
+                        'w-16 shrink-0 text-right text-xl font-bold tabular-nums',
                         isMe ? 'text-emerald-400' : s.rank === 1 ? 'text-yellow-400' : 'text-white'
                       )}>
                         {s.total_points}
