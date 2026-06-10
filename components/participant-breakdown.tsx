@@ -25,6 +25,35 @@ import {
   Zap,
 } from 'lucide-react';
 
+// ── Football avatar ───────────────────────────────────────────────────────────
+
+const JERSEY_PALETTES = [
+  { shirt: '#10b981', trim: '#065f46', bg: '#022c22' },
+  { shirt: '#3b82f6', trim: '#1d4ed8', bg: '#172554' },
+  { shirt: '#ef4444', trim: '#991b1b', bg: '#450a0a' },
+  { shirt: '#f59e0b', trim: '#b45309', bg: '#451a03' },
+  { shirt: '#8b5cf6', trim: '#6d28d9', bg: '#2e1065' },
+  { shirt: '#06b6d4', trim: '#0e7490', bg: '#083344' },
+  { shirt: '#f97316', trim: '#c2410c', bg: '#431407' },
+  { shirt: '#84cc16', trim: '#4d7c0f', bg: '#1a2e05' },
+];
+
+function FootballAvatar({ userId, name }: { userId: number; name: string }) {
+  const hash = Math.abs((userId * 31) + (name.charCodeAt(0) || 0)) % JERSEY_PALETTES.length;
+  const p = JERSEY_PALETTES[hash];
+  const num = (userId % 99) + 1;
+  return (
+    <svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+      <circle cx="20" cy="20" r="20" fill={p.bg} />
+      <path d="M13 17 L11 22 L14 23 L14 33 L26 33 L26 23 L29 22 L27 17 L23 15 Q20 13 17 15 Z" fill={p.shirt} />
+      <path d="M13 17 L11 22 L14 23 L14 19 Z" fill={p.trim} />
+      <path d="M27 17 L29 22 L26 23 L26 19 Z" fill={p.trim} />
+      <path d="M17 15 L20 19 L23 15 Q20 13 17 15 Z" fill={p.bg} />
+      <text x="20" y="29" textAnchor="middle" fill="white" fontSize="9" fontWeight="bold" fontFamily="monospace">{num}</text>
+    </svg>
+  );
+}
+
 // ── Points badge ──────────────────────────────────────────────────────────────
 
 function ScoreBadge({ score }: { score: BreakdownMatch['score'] }) {
@@ -47,32 +76,6 @@ function ScoreBadge({ score }: { score: BreakdownMatch['score'] }) {
     <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-800 text-slate-500 border border-slate-700 shrink-0">
       <X className="h-3 w-3" /> 0
     </span>
-  );
-}
-
-function BreakdownPill({ score }: { score: BreakdownMatch['score'] }) {
-  if (!score) return null;
-  const { result, exact } = score.breakdown;
-  return (
-    <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-      <span
-        className={cn(
-          'text-[10px] px-1.5 py-0.5 rounded font-medium',
-          result === 1 ? 'bg-blue-500/10 text-blue-400' : 'bg-slate-800 text-slate-600'
-        )}
-      >
-        {result === 1 ? '+1 resultado' : '−1 resultado'}
-      </span>
-      <span className="text-slate-700 text-[10px]">·</span>
-      <span
-        className={cn(
-          'text-[10px] px-1.5 py-0.5 rounded font-medium',
-          exact === 2 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-slate-800 text-slate-600'
-        )}
-      >
-        {exact === 2 ? '+2 exacto' : '−2 exacto'}
-      </span>
-    </div>
   );
 }
 
@@ -157,14 +160,11 @@ function MatchRow({ match }: { match: BreakdownMatch }) {
             </div>
           ) : match.prediction ? (
             <div className="flex items-center justify-between gap-3">
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-slate-500">Pronóstico:</span>
-                  <span className="text-xs font-bold font-mono text-slate-300">
-                    {match.prediction.home_score} – {match.prediction.away_score}
-                  </span>
-                </div>
-                {match.score && <BreakdownPill score={match.score} />}
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-500">Pronóstico:</span>
+                <span className="text-xs font-bold font-mono text-slate-300">
+                  {match.prediction.home_score} – {match.prediction.away_score}
+                </span>
               </div>
               <ScoreBadge score={match.score} />
             </div>
@@ -303,51 +303,75 @@ function BreakdownDetail({
       {data && (
         <div className="space-y-5">
           {/* User header card */}
-          <div className="rounded-xl border border-slate-700/60 bg-slate-900 p-4">
-            <div className="flex items-center gap-3 mb-4">
-              <Avatar className="h-11 w-11">
+          <div className="rounded-xl border border-blue-900/40 bg-blue-950/30 p-4 space-y-4">
+            <div className="flex items-center gap-3">
+              <Avatar className="h-12 w-12">
                 <AvatarImage src={data.user.avatar_url ?? undefined} />
-                <AvatarFallback className="bg-slate-700 text-white text-sm font-bold">
-                  {data.user.name.charAt(0).toUpperCase()}
+                <AvatarFallback className="p-0 overflow-hidden">
+                  <FootballAvatar userId={userId} name={data.user.name} />
                 </AvatarFallback>
               </Avatar>
               <div>
-                <p className="font-semibold text-white">{data.user.name}</p>
+                <p className="font-bold text-white text-base">{data.user.name}</p>
                 <p className="text-xs text-slate-500">Desglose de puntos</p>
               </div>
             </div>
 
             {data.standing ? (
-              <div className="grid grid-cols-3 gap-3">
-                <div className="rounded-lg bg-slate-800/70 px-3 py-2.5 text-center">
-                  <div className="flex items-center justify-center gap-1 mb-1">
-                    <Trophy className="h-3 w-3 text-emerald-400" />
-                    <span className="text-[10px] text-slate-500 uppercase tracking-wider font-medium">Total</span>
+              <div className="space-y-2">
+                <div className="grid grid-cols-2 gap-2">
+                  {/* Marcador Exacto */}
+                  <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/5 p-3">
+                    <div className="flex items-center gap-1.5 mb-2.5">
+                      <Target className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                      <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wide leading-tight">
+                        Marcador<br />Exacto
+                      </span>
+                    </div>
+                    <div className="flex items-end justify-between">
+                      <div>
+                        <p className="text-3xl font-black text-white tabular-nums leading-none">{data.standing.exact_scores}</p>
+                        <p className="text-[10px] text-slate-500 mt-1">marcadores</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xl font-black text-emerald-400 tabular-nums leading-none">+{data.standing.exact_scores * 3}</p>
+                        <p className="text-[10px] text-slate-500 mt-1">puntos</p>
+                      </div>
+                    </div>
                   </div>
-                  <p className="text-xl font-bold text-white tabular-nums">
-                    {data.standing.total_points}
-                  </p>
-                  <p className="text-[10px] text-slate-600">puntos</p>
+                  {/* Resultado Correcto */}
+                  <div className="rounded-xl border border-blue-500/25 bg-blue-500/5 p-3">
+                    <div className="flex items-center gap-1.5 mb-2.5">
+                      <CheckCircle2 className="h-3.5 w-3.5 text-blue-400 shrink-0" />
+                      <span className="text-[10px] font-bold text-blue-400 uppercase tracking-wide leading-tight">
+                        Resultado<br />Correcto
+                      </span>
+                    </div>
+                    <div className="flex items-end justify-between">
+                      <div>
+                        <p className="text-3xl font-black text-white tabular-nums leading-none">{data.standing.correct_results}</p>
+                        <p className="text-[10px] text-slate-500 mt-1">resultados</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xl font-black text-blue-400 tabular-nums leading-none">+{data.standing.correct_results}</p>
+                        <p className="text-[10px] text-slate-500 mt-1">puntos</p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div className="rounded-lg bg-slate-800/70 px-3 py-2.5 text-center">
-                  <div className="flex items-center justify-center gap-1 mb-1">
-                    <Target className="h-3 w-3 text-emerald-400" />
-                    <span className="text-[10px] text-slate-500 uppercase tracking-wider font-medium">Exactos</span>
+                {/* Puntuación Total */}
+                <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Trophy className="h-4 w-4 text-amber-400 shrink-0" />
+                    <div>
+                      <p className="text-xs font-bold text-white">Puntuación Total</p>
+                      <p className="text-[10px] text-slate-500">acumulado</p>
+                    </div>
                   </div>
-                  <p className="text-xl font-bold text-white tabular-nums">
-                    {data.standing.exact_scores}
-                  </p>
-                  <p className="text-[10px] text-slate-600">marcadores</p>
-                </div>
-                <div className="rounded-lg bg-slate-800/70 px-3 py-2.5 text-center">
-                  <div className="flex items-center justify-center gap-1 mb-1">
-                    <CheckCircle2 className="h-3 w-3 text-blue-400" />
-                    <span className="text-[10px] text-slate-500 uppercase tracking-wider font-medium">Correctos</span>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-3xl font-black text-amber-400 tabular-nums">{data.standing.total_points}</span>
+                    <span className="text-xs text-slate-500 font-medium">pts</span>
                   </div>
-                  <p className="text-xl font-bold text-white tabular-nums">
-                    {data.standing.correct_results}
-                  </p>
-                  <p className="text-[10px] text-slate-600">resultados</p>
                 </div>
               </div>
             ) : (
@@ -397,6 +421,8 @@ function BreakdownDetail({
 const SCENARIOS = [
   {
     label: 'Marcador exacto',
+    line1: 'Marcador',
+    line2: 'Exacto',
     prediction: '2 – 1',
     result: '2 – 1',
     points: 3,
@@ -406,6 +432,8 @@ const SCENARIOS = [
   },
   {
     label: 'Resultado correcto',
+    line1: 'Resultado',
+    line2: 'Correcto',
     prediction: '3 – 1',
     result: '2 – 1',
     points: 1,
@@ -415,6 +443,8 @@ const SCENARIOS = [
   },
   {
     label: 'Incorrecto',
+    line1: 'Incorrecto',
+    line2: '',
     prediction: '0 – 2',
     result: '2 – 1',
     points: 0,
@@ -491,7 +521,7 @@ function RulesModal({ onClose }: { onClose: () => void }) {
                     key={i}
                     onClick={() => setActiveScenario(i)}
                     className={cn(
-                      'py-2 px-1.5 rounded-xl border text-[10px] font-bold transition-all text-center leading-tight',
+                      'py-2.5 px-1.5 rounded-xl border text-[10px] font-bold transition-all text-center leading-tight',
                       activeScenario === i
                         ? sc.color === 'emerald'
                           ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400'
@@ -501,7 +531,8 @@ function RulesModal({ onClose }: { onClose: () => void }) {
                         : 'border-slate-800 text-slate-600 hover:border-slate-700 hover:text-slate-400'
                     )}
                   >
-                    {sc.label}
+                    <span className="block">{sc.line1}</span>
+                    {sc.line2 && <span className="block">{sc.line2}</span>}
                   </button>
                 ))}
               </div>
@@ -555,18 +586,29 @@ function RulesModal({ onClose }: { onClose: () => void }) {
               {/* Quick reference */}
               <div className="grid grid-cols-3 gap-2">
                 {SCENARIOS.map((sc, i) => (
-                  <div key={i} className="rounded-lg bg-slate-900 border border-slate-800 px-2 py-2 flex items-center gap-1.5">
+                  <div key={i} className={cn(
+                    'rounded-xl border py-2.5 px-2 flex flex-col items-center gap-1 text-center',
+                    sc.color === 'emerald' ? 'border-emerald-500/30 bg-emerald-500/5' :
+                    sc.color === 'blue' ? 'border-blue-500/30 bg-blue-500/5' :
+                    'border-slate-800 bg-slate-900/40'
+                  )}>
                     <sc.icon className={cn(
-                      'h-3.5 w-3.5 shrink-0',
+                      'h-4 w-4',
                       sc.color === 'emerald' ? 'text-emerald-400' : sc.color === 'blue' ? 'text-blue-400' : 'text-slate-600'
                     )} />
                     <span className={cn(
-                      'text-sm font-black tabular-nums',
+                      'text-2xl font-black tabular-nums',
                       sc.color === 'emerald' ? 'text-emerald-400' : sc.color === 'blue' ? 'text-blue-400' : 'text-slate-600'
                     )}>
                       +{sc.points}
                     </span>
-                    <span className="text-[10px] text-slate-600 truncate">{sc.label}</span>
+                    <span className={cn(
+                      'text-[10px] font-bold leading-tight',
+                      sc.color === 'emerald' ? 'text-emerald-400/70' : sc.color === 'blue' ? 'text-blue-400/70' : 'text-slate-600'
+                    )}>
+                      <span className="block">{sc.line1}</span>
+                      {sc.line2 && <span className="block">{sc.line2}</span>}
+                    </span>
                   </div>
                 ))}
               </div>
@@ -709,15 +751,19 @@ export function ParticipantBreakdown({ quinielaSlug, standings, currentUserId, i
                   <span className="flex-1 min-w-0 text-[10px] font-bold uppercase tracking-wider text-slate-600">
                     Participante
                   </span>
-                  <div className="w-20 shrink-0 text-[10px] font-bold uppercase tracking-wide text-slate-600 text-center leading-tight hidden sm:flex sm:flex-col sm:items-center sm:gap-0.5">
-                    <Target className="h-3 w-3 text-emerald-600" />
-                    <span>Marcador</span>
-                    <span>Exacto</span>
+                  <div className="w-20 shrink-0 hidden sm:flex sm:items-center sm:justify-center">
+                    <span className="inline-flex flex-col items-center gap-0.5 text-[10px] font-bold px-2 py-1 rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-emerald-500 leading-tight text-center">
+                      <Target className="h-3 w-3" />
+                      <span>Marcador</span>
+                      <span>Exacto</span>
+                    </span>
                   </div>
-                  <div className="w-20 shrink-0 text-[10px] font-bold uppercase tracking-wide text-slate-600 text-center leading-tight hidden sm:flex sm:flex-col sm:items-center sm:gap-0.5">
-                    <CheckCircle2 className="h-3 w-3 text-blue-700" />
-                    <span>Resultado</span>
-                    <span>Correcto</span>
+                  <div className="w-20 shrink-0 hidden sm:flex sm:items-center sm:justify-center">
+                    <span className="inline-flex flex-col items-center gap-0.5 text-[10px] font-bold px-2 py-1 rounded-lg border border-blue-500/30 bg-blue-500/10 text-blue-500 leading-tight text-center">
+                      <CheckCircle2 className="h-3 w-3" />
+                      <span>Resultado</span>
+                      <span>Correcto</span>
+                    </span>
                   </div>
                   <div className="w-16 shrink-0 text-[10px] font-bold uppercase tracking-wide text-slate-600 text-center leading-tight hidden sm:flex sm:flex-col sm:items-center sm:gap-0.5">
                     <span>%</span>
@@ -756,8 +802,8 @@ export function ParticipantBreakdown({ quinielaSlug, standings, currentUserId, i
                       <div className="flex-1 min-w-0 flex items-center gap-2">
                         <Avatar className="h-7 w-7 shrink-0 ring-1 ring-slate-700/40">
                           <AvatarImage src={s.user.avatar_url ?? undefined} />
-                          <AvatarFallback className="bg-slate-800 text-white text-xs font-bold">
-                            {s.user.name.charAt(0).toUpperCase()}
+                          <AvatarFallback className="p-0 overflow-hidden">
+                            <FootballAvatar userId={s.user.id} name={s.user.name} />
                           </AvatarFallback>
                         </Avatar>
                         <div className="min-w-0">
