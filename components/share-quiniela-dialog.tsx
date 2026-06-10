@@ -105,7 +105,7 @@ function ShareCard({
     },
     {
       emoji: '⚡',
-      label1: '%', label2: 'Aciertos',
+      label1: 'Precisión', label2: '',
       value: accuracy !== null ? `${accuracy}%` : '—',
       sub: 'precisión',
       accent: 'rgba(255,255,255,0.65)',

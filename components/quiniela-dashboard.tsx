@@ -276,7 +276,7 @@ function MyStatsCard({
         <div className="px-2 py-3 flex flex-col gap-1.5">
           <div className="flex items-center gap-1">
             <Percent className="h-3 w-3 text-slate-400 shrink-0" />
-            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wide leading-tight">%<br />Aciertos</span>
+            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wide leading-tight">Precisión</span>
           </div>
           <p className="text-xl font-black text-white tabular-nums leading-none">
             {precision !== null ? precision : '—'}
