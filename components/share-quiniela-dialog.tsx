@@ -14,6 +14,9 @@ import {
   Check,
   Loader2,
   MessageCircle,
+  Target,
+  CheckCircle2,
+  Percent,
 } from 'lucide-react';
 
 function IconX({ className }: { className?: string }) {
@@ -86,30 +89,30 @@ function ShareCard({
 
   const stats = [
     {
-      emoji: '🎯',
-      label1: 'Marcador', label2: 'Exacto',
+      Icon: Target,
+      labels: ['Marcador', 'Exacto'],
       value: String(standing.exact_scores),
       sub: `+${standing.exact_scores * 3} pts`,
       accent: '#34d399',
       bg: 'rgba(52,211,153,0.08)',
-      border: 'rgba(52,211,153,0.22)',
+      border: 'rgba(52,211,153,0.20)',
     },
     {
-      emoji: '✓',
-      label1: 'Resultado', label2: 'Correcto',
+      Icon: CheckCircle2,
+      labels: ['Resultado', 'Correcto'],
       value: String(standing.correct_results),
       sub: `+${standing.correct_results} pts`,
       accent: '#60a5fa',
       bg: 'rgba(96,165,250,0.08)',
-      border: 'rgba(96,165,250,0.22)',
+      border: 'rgba(96,165,250,0.20)',
     },
     {
-      emoji: '⚡',
-      label1: 'Precisión', label2: '',
+      Icon: Percent,
+      labels: ['Precisión'],
       value: accuracy !== null ? `${accuracy}%` : '—',
-      sub: 'precisión',
-      accent: 'rgba(255,255,255,0.65)',
-      bg: 'rgba(255,255,255,0.05)',
+      sub: 'de aciertos',
+      accent: 'rgba(255,255,255,0.55)',
+      bg: 'rgba(255,255,255,0.04)',
       border: 'rgba(255,255,255,0.10)',
     },
   ];
@@ -176,15 +179,25 @@ function ShareCard({
           <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)', fontWeight: '500' }}>puntos totales</p>
         </div>
 
-        {/* Stats row */}
-        <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
-          {stats.map(({ emoji, label1, label2, value, sub, accent, bg, border }) => (
-            <div key={label1} style={{ flex: 1, textAlign: 'center', background: bg, border: `1px solid ${border}`, borderRadius: '14px', padding: '12px 8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
-              <span style={{ fontSize: '15px', lineHeight: 1 }}>{emoji}</span>
-              <p style={{ fontSize: '9px', color: 'rgba(255,255,255,0.35)', lineHeight: '1.3', marginTop: '3px' }}>{label1}</p>
-              <p style={{ fontSize: '9px', color: 'rgba(255,255,255,0.35)', lineHeight: '1.3' }}>{label2}</p>
-              <p style={{ fontSize: '24px', fontWeight: '800', color: accent, lineHeight: '1', marginTop: '5px' }}>{value}</p>
-              <p style={{ fontSize: '9px', color: accent, opacity: 0.75, fontWeight: '600', marginTop: '2px' }}>{sub}</p>
+        {/* Stats row — mismo estilo que el dashboard */}
+        <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
+          {stats.map(({ Icon, labels, value, sub, accent, bg, border }) => (
+            <div key={labels[0]} style={{ flex: 1, background: bg, border: `1px solid ${border}`, borderRadius: '14px', padding: '12px 10px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              {/* Icon + label */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <Icon size={12} color={accent} strokeWidth={2.5} />
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  {labels.map((line) => (
+                    <span key={line} style={{ fontSize: '8px', fontWeight: '700', color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: '0.4px', lineHeight: '1.3' }}>
+                      {line}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              {/* Value */}
+              <p style={{ fontSize: '26px', fontWeight: '900', color: '#ffffff', lineHeight: '1', letterSpacing: '-0.5px', margin: '0' }}>{value}</p>
+              {/* Sub */}
+              <p style={{ fontSize: '10px', fontWeight: '700', color: accent, lineHeight: '1', margin: '0' }}>{sub}</p>
             </div>
           ))}
         </div>
