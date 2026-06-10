@@ -24,14 +24,6 @@ function IconX({ className }: { className?: string }) {
   );
 }
 
-function IconFacebook({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-    </svg>
-  );
-}
-
 function IconInstagram({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="currentColor">
@@ -40,36 +32,31 @@ function IconInstagram({ className }: { className?: string }) {
   );
 }
 
+const APP_DOMAIN = 'matchpick-web-production.up.railway.app';
+const APP_URL = `https://${APP_DOMAIN}`;
+
 // ── rank colors ────────────────────────────────────────────────────────────
 
 function getRankStyle(rank: number) {
   if (rank === 1) return {
-    accent: '#F59E0B',
-    glow: 'rgba(245,158,11,0.18)',
+    accent: '#F59E0B', glow: 'rgba(245,158,11,0.18)',
     bg: 'linear-gradient(145deg, #1a1100 0%, #0d0d0d 45%, #180f00 100%)',
-    badge: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
-    label: '🥇',
+    badge: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)', label: '🥇',
   };
   if (rank === 2) return {
-    accent: '#94A3B8',
-    glow: 'rgba(148,163,184,0.15)',
+    accent: '#94A3B8', glow: 'rgba(148,163,184,0.15)',
     bg: 'linear-gradient(145deg, #111827 0%, #0d0d0d 45%, #1a1f2e 100%)',
-    badge: 'linear-gradient(135deg, #94A3B8 0%, #64748B 100%)',
-    label: '🥈',
+    badge: 'linear-gradient(135deg, #94A3B8 0%, #64748B 100%)', label: '🥈',
   };
   if (rank === 3) return {
-    accent: '#F97316',
-    glow: 'rgba(249,115,22,0.15)',
+    accent: '#F97316', glow: 'rgba(249,115,22,0.15)',
     bg: 'linear-gradient(145deg, #1a0d00 0%, #0d0d0d 45%, #1a0d00 100%)',
-    badge: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
-    label: '🥉',
+    badge: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)', label: '🥉',
   };
   return {
-    accent: '#10B981',
-    glow: 'rgba(16,185,129,0.13)',
+    accent: '#10B981', glow: 'rgba(16,185,129,0.13)',
     bg: 'linear-gradient(145deg, #071a0e 0%, #0a0f0d 45%, #071a0e 100%)',
-    badge: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
-    label: `#${rank}`,
+    badge: 'linear-gradient(135deg, #10B981 0%, #059669 100%)', label: `#${rank}`,
   };
 }
 
@@ -80,7 +67,7 @@ function ordinalLabel(rank: number) {
   return `${rank}° lugar`;
 }
 
-// ── Share card template (rendered off-screen for capture) ──────────────────
+// ── Share card ─────────────────────────────────────────────────────────────
 
 function ShareCard({
   cardRef,
@@ -93,257 +80,144 @@ function ShareCard({
 }) {
   const s = getRankStyle(standing.rank);
   const initial = standing.user.name.charAt(0).toUpperCase();
+  const accuracy = standing.predictions_made > 0
+    ? Math.round(((standing.exact_scores + standing.correct_results) / standing.predictions_made) * 100)
+    : null;
+
+  const stats = [
+    {
+      emoji: '🎯',
+      label1: 'Marcador', label2: 'Exacto',
+      value: String(standing.exact_scores),
+      sub: `+${standing.exact_scores * 3} pts`,
+      accent: '#34d399',
+      bg: 'rgba(52,211,153,0.08)',
+      border: 'rgba(52,211,153,0.22)',
+    },
+    {
+      emoji: '✓',
+      label1: 'Resultado', label2: 'Correcto',
+      value: String(standing.correct_results),
+      sub: `+${standing.correct_results} pts`,
+      accent: '#60a5fa',
+      bg: 'rgba(96,165,250,0.08)',
+      border: 'rgba(96,165,250,0.22)',
+    },
+    {
+      emoji: '⚡',
+      label1: '%', label2: 'Aciertos',
+      value: accuracy !== null ? `${accuracy}%` : '—',
+      sub: 'precisión',
+      accent: 'rgba(255,255,255,0.65)',
+      bg: 'rgba(255,255,255,0.05)',
+      border: 'rgba(255,255,255,0.10)',
+    },
+  ];
 
   return (
     <div
       ref={cardRef}
       style={{
-        width: '400px',
-        height: '711px',
+        width: '400px', height: '711px',
         background: s.bg,
         fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-        position: 'relative',
-        overflow: 'hidden',
-        display: 'flex',
-        flexDirection: 'column',
-        padding: '0',
-        flexShrink: 0,
+        position: 'relative', overflow: 'hidden',
+        display: 'flex', flexDirection: 'column',
+        padding: '0', flexShrink: 0,
       }}
     >
-      {/* Ambient glow — top right */}
-      <div style={{
-        position: 'absolute', top: '-100px', right: '-80px',
-        width: '340px', height: '340px', borderRadius: '50%',
-        background: `radial-gradient(circle, ${s.glow} 0%, transparent 70%)`,
-        pointerEvents: 'none',
-      }} />
-      {/* Ambient glow — bottom left */}
-      <div style={{
-        position: 'absolute', bottom: '-120px', left: '-100px',
-        width: '380px', height: '380px', borderRadius: '50%',
-        background: `radial-gradient(circle, ${s.glow} 0%, transparent 70%)`,
-        pointerEvents: 'none',
-      }} />
-      {/* Subtle grid */}
-      <div style={{
-        position: 'absolute', inset: 0,
-        backgroundImage: `linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px)`,
-        backgroundSize: '40px 40px',
-        pointerEvents: 'none',
-      }} />
+      {/* Glows */}
+      <div style={{ position: 'absolute', top: '-100px', right: '-80px', width: '340px', height: '340px', borderRadius: '50%', background: `radial-gradient(circle, ${s.glow} 0%, transparent 70%)`, pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', bottom: '-120px', left: '-100px', width: '380px', height: '380px', borderRadius: '50%', background: `radial-gradient(circle, ${s.glow} 0%, transparent 70%)`, pointerEvents: 'none' }} />
+      {/* Grid */}
+      <div style={{ position: 'absolute', inset: 0, backgroundImage: `linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px)`, backgroundSize: '40px 40px', pointerEvents: 'none' }} />
 
       {/* ── Header ── */}
-      <div style={{
-        padding: '28px 28px 0',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        position: 'relative',
-        zIndex: 1,
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <div style={{
-            width: '32px', height: '32px', borderRadius: '8px',
-            background: s.badge,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '18px', lineHeight: 1,
-          }}>
-            ⚽
-          </div>
-          <span style={{
-            fontSize: '18px', fontWeight: '800', color: '#ffffff',
-            letterSpacing: '-0.5px',
-          }}>
-            Match<span style={{ color: s.accent }}>Pick</span>
-          </span>
-        </div>
-        <span style={{
-          fontSize: '11px', fontWeight: '600', color: s.accent,
-          background: `${s.glow}`,
-          border: `1px solid ${s.accent}40`,
-          padding: '4px 10px', borderRadius: '20px',
-          letterSpacing: '0.5px',
-        }}>
-          {quiniela.tournament.name}
+      <div style={{ padding: '28px 28px 0', display: 'flex', alignItems: 'center', position: 'relative', zIndex: 1 }}>
+        <span style={{ fontSize: '20px', fontWeight: '800', color: '#ffffff', letterSpacing: '-0.5px' }}>
+          Match<span style={{ color: s.accent }}>Pick</span>
         </span>
       </div>
 
-      {/* ── Main rank section ── */}
-      <div style={{
-        flex: 1, display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'center',
-        padding: '24px 28px', position: 'relative', zIndex: 1,
-        gap: '0',
-      }}>
+      {/* ── Main ── */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px 28px', position: 'relative', zIndex: 1 }}>
         {/* Rank badge */}
-        <div style={{
-          width: '100px', height: '100px', borderRadius: '50%',
-          background: s.badge,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          marginBottom: '16px',
-          boxShadow: `0 0 40px ${s.glow}, 0 8px 32px rgba(0,0,0,0.4)`,
-        }}>
-          <span style={{ fontSize: '48px', lineHeight: 1 }}>{s.label}</span>
+        <div style={{ width: '96px', height: '96px', borderRadius: '50%', background: s.badge, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '14px', boxShadow: `0 0 40px ${s.glow}, 0 8px 32px rgba(0,0,0,0.4)` }}>
+          <span style={{ fontSize: '46px', lineHeight: 1 }}>{s.label}</span>
         </div>
 
-        {/* "Estoy en el" label */}
-        <p style={{
-          fontSize: '14px', color: 'rgba(255,255,255,0.5)',
-          fontWeight: '500', marginBottom: '6px', letterSpacing: '0.5px',
-        }}>
-          Estoy en el
-        </p>
+        <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)', fontWeight: '500', marginBottom: '5px', letterSpacing: '0.5px' }}>Estoy en el</p>
 
-        {/* Rank */}
-        <p style={{
-          fontSize: '52px', fontWeight: '900', color: '#ffffff',
-          lineHeight: '1', letterSpacing: '-2px', marginBottom: '6px',
-        }}>
+        <p style={{ fontSize: '50px', fontWeight: '900', color: '#ffffff', lineHeight: '1', letterSpacing: '-2px', marginBottom: '5px' }}>
           {ordinalLabel(standing.rank)}
         </p>
 
-        {/* Of N players */}
-        <p style={{
-          fontSize: '14px', color: s.accent, fontWeight: '600',
-          marginBottom: '28px',
-        }}>
+        <p style={{ fontSize: '13px', color: s.accent, fontWeight: '600', marginBottom: '22px' }}>
           de {quiniela.participants_count} jugadores
         </p>
 
         {/* User chip */}
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: '12px',
-          background: 'rgba(255,255,255,0.06)',
-          border: '1px solid rgba(255,255,255,0.1)',
-          borderRadius: '50px', padding: '8px 18px 8px 8px',
-          marginBottom: '28px',
-        }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '50px', padding: '7px 16px 7px 7px', marginBottom: '22px' }}>
           {standing.user.avatar_url ? (
-            <img
-              src={standing.user.avatar_url}
-              alt={standing.user.name}
-              style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover' }}
-              crossOrigin="anonymous"
-            />
+            <img src={standing.user.avatar_url} alt={standing.user.name} style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }} crossOrigin="anonymous" />
           ) : (
-            <div style={{
-              width: '36px', height: '36px', borderRadius: '50%',
-              background: s.badge,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '16px', fontWeight: '700', color: '#fff',
-            }}>
+            <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: s.badge, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: '700', color: '#fff' }}>
               {initial}
             </div>
           )}
-          <span style={{ fontSize: '15px', fontWeight: '600', color: '#fff' }}>
-            {standing.user.name}
-          </span>
+          <span style={{ fontSize: '14px', fontWeight: '600', color: '#fff' }}>{standing.user.name}</span>
         </div>
 
-        {/* Points */}
-        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-          <p style={{
-            fontSize: '72px', fontWeight: '900', color: '#ffffff',
-            lineHeight: '1', letterSpacing: '-3px',
-          }}>
+        {/* Total points */}
+        <div style={{ textAlign: 'center', marginBottom: '22px' }}>
+          <p style={{ fontSize: '68px', fontWeight: '900', color: '#ffffff', lineHeight: '1', letterSpacing: '-3px' }}>
             {standing.total_points}
           </p>
-          <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.4)', fontWeight: '500' }}>
-            puntos totales
-          </p>
+          <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)', fontWeight: '500' }}>puntos totales</p>
         </div>
 
         {/* Stats row */}
-        <div style={{
-          display: 'flex', gap: '12px', marginBottom: '0',
-        }}>
-          {[
-            { value: standing.exact_scores, label: 'exactos', accent: '#34d399', bg: 'rgba(52,211,153,0.12)', border: 'rgba(52,211,153,0.22)' },
-            { value: standing.correct_results, label: 'correctos', accent: '#60a5fa', bg: 'rgba(96,165,250,0.12)', border: 'rgba(96,165,250,0.22)' },
-            { value: standing.predictions_made, label: 'pronósticos', accent: 'rgba(255,255,255,0.6)', bg: 'rgba(255,255,255,0.05)', border: 'rgba(255,255,255,0.10)' },
-          ].map(({ value, label, accent, bg, border }) => (
-            <div key={label} style={{
-              textAlign: 'center',
-              background: bg,
-              border: `1px solid ${border}`,
-              borderRadius: '12px', padding: '10px 16px',
-              minWidth: '88px',
-            }}>
-              <p style={{ fontSize: '22px', fontWeight: '800', color: accent, lineHeight: 1 }}>
-                {value}
-              </p>
-              <p style={{ fontSize: '10px', color: 'rgba(255,255,255,0.35)', marginTop: '5px' }}>
-                {label}
-              </p>
+        <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
+          {stats.map(({ emoji, label1, label2, value, sub, accent, bg, border }) => (
+            <div key={label1} style={{ flex: 1, textAlign: 'center', background: bg, border: `1px solid ${border}`, borderRadius: '14px', padding: '12px 8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
+              <span style={{ fontSize: '15px', lineHeight: 1 }}>{emoji}</span>
+              <p style={{ fontSize: '9px', color: 'rgba(255,255,255,0.35)', lineHeight: '1.3', marginTop: '3px' }}>{label1}</p>
+              <p style={{ fontSize: '9px', color: 'rgba(255,255,255,0.35)', lineHeight: '1.3' }}>{label2}</p>
+              <p style={{ fontSize: '24px', fontWeight: '800', color: accent, lineHeight: '1', marginTop: '5px' }}>{value}</p>
+              <p style={{ fontSize: '9px', color: accent, opacity: 0.75, fontWeight: '600', marginTop: '2px' }}>{sub}</p>
             </div>
           ))}
         </div>
       </div>
 
       {/* ── Footer ── */}
-      <div style={{
-        padding: '18px 28px 24px',
-        borderTop: '1px solid rgba(255,255,255,0.07)',
-        position: 'relative', zIndex: 1,
-      }}>
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        }}>
-          <div>
-            <p style={{
-              fontSize: '11px', color: 'rgba(255,255,255,0.35)',
-              fontWeight: '500', marginBottom: '3px',
-            }}>
-              Quiniela
-            </p>
-            <p style={{
-              fontSize: '14px', color: '#ffffff', fontWeight: '700',
-              maxWidth: '220px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-            }}>
-              {quiniela.name}
-            </p>
-          </div>
-          <div style={{
-            background: s.badge,
-            borderRadius: '8px', padding: '8px 14px',
-            fontSize: '11px', fontWeight: '700', color: '#fff',
-            letterSpacing: '0.5px',
-            boxShadow: `0 2px 12px ${s.glow}`,
-          }}>
-            matchpick.app
-          </div>
+      <div style={{ padding: '16px 28px 22px', borderTop: '1px solid rgba(255,255,255,0.07)', position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div>
+          <p style={{ fontSize: '10px', color: 'rgba(255,255,255,0.3)', fontWeight: '500', marginBottom: '2px' }}>Quiniela</p>
+          <p style={{ fontSize: '13px', color: '#ffffff', fontWeight: '700', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {quiniela.name}
+          </p>
+        </div>
+        <div style={{ background: s.badge, borderRadius: '8px', padding: '6px 10px', fontSize: '9px', fontWeight: '700', color: '#fff', letterSpacing: '0.3px', boxShadow: `0 2px 12px ${s.glow}`, maxWidth: '140px', textAlign: 'center' }}>
+          {APP_DOMAIN}
         </div>
       </div>
     </div>
   );
 }
 
-// ── Platform share buttons ─────────────────────────────────────────────────
+// ── Platform buttons ───────────────────────────────────────────────────────
 
 const PLATFORMS = [
   {
-    key: 'whatsapp',
-    label: 'WhatsApp',
-    icon: MessageCircle,
+    key: 'whatsapp', label: 'WhatsApp', icon: MessageCircle,
     color: 'bg-green-700/20 border-green-700/40 text-green-400 hover:bg-green-700/30',
-    buildUrl: (text: string) =>
-      `https://wa.me/?text=${encodeURIComponent(text)}`,
+    buildUrl: (text: string) => `https://wa.me/?text=${encodeURIComponent(text)}`,
   },
   {
-    key: 'twitter',
-    label: 'X / Twitter',
-    icon: IconX,
+    key: 'twitter', label: 'X / Twitter', icon: IconX,
     color: 'bg-slate-700/30 border-slate-600 text-slate-300 hover:bg-slate-700/50',
-    buildUrl: (text: string) =>
-      `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`,
-  },
-  {
-    key: 'facebook',
-    label: 'Facebook',
-    icon: IconFacebook,
-    color: 'bg-blue-900/20 border-blue-700/30 text-blue-400 hover:bg-blue-900/30',
-    buildUrl: (_text: string, url: string) =>
-      `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`,
+    buildUrl: (text: string) => `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`,
   },
 ];
 
@@ -363,17 +237,18 @@ export function ShareQuinielaDialog({ open, onClose, quiniela, standing }: Props
 
   if (!standing) return null;
 
-  const shareText = `¡Estoy en el ${ordinalLabel(standing.rank)} de ${quiniela.participants_count} jugadores en la quiniela "${quiniela.name}" del ${quiniela.tournament.name}! ⚽ Juega conmigo en matchpick.app`;
+  const shareText = `¡Estoy en el ${ordinalLabel(standing.rank)} de ${quiniela.participants_count} jugadores en la quiniela "${quiniela.name}" del ${quiniela.tournament.name}! ⚽ Juega conmigo en ${APP_URL}`;
+  const pageUrl = typeof window !== 'undefined' ? window.location.href : APP_URL;
+
+  const generateImage = async () => {
+    if (!cardRef.current) throw new Error('No ref');
+    return toPng(cardRef.current, { pixelRatio: 2, cacheBust: true, skipFonts: true });
+  };
 
   const handleDownload = async () => {
-    if (!cardRef.current) return;
     setDownloading(true);
     try {
-      const dataUrl = await toPng(cardRef.current, {
-        pixelRatio: 2,
-        cacheBust: true,
-        skipFonts: true,
-      });
+      const dataUrl = await generateImage();
       const link = document.createElement('a');
       link.href = dataUrl;
       link.download = `matchpick-${quiniela.slug}.png`;
@@ -386,25 +261,32 @@ export function ShareQuinielaDialog({ open, onClose, quiniela, standing }: Props
     }
   };
 
-  const handleNativeShare = async () => {
-    if (!navigator.share) {
-      handleCopyText();
-      return;
-    }
-    try {
-      await navigator.share({ text: shareText });
-    } catch {
-      // User cancelled
-    }
-  };
-
   const handleInstagramShare = async () => {
-    await handleDownload();
-    const isMobile = typeof navigator !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-    if (isMobile) {
-      setTimeout(() => { window.open('instagram://app', '_blank'); }, 800);
-    } else {
-      setTimeout(() => { window.open('https://www.instagram.com/', '_blank'); }, 800);
+    setDownloading(true);
+    try {
+      const dataUrl = await generateImage();
+      const blob = await fetch(dataUrl).then(r => r.blob());
+      const file = new File([blob], 'matchpick-posicion.png', { type: 'image/png' });
+
+      if (typeof navigator !== 'undefined' && navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], title: 'Mi posición en MatchPick' });
+      } else {
+        const link = document.createElement('a');
+        link.href = dataUrl;
+        link.download = 'matchpick-posicion.png';
+        link.click();
+        toast.success('Imagen descargada — ábrela desde Instagram Stories');
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        setTimeout(() => {
+          window.open(isMobile ? 'instagram://story-camera' : 'https://www.instagram.com/', '_blank');
+        }, 1000);
+      }
+    } catch (err) {
+      if (err instanceof Error && err.name !== 'AbortError') {
+        toast.error('No se pudo compartir. Descarga la imagen manualmente.');
+      }
+    } finally {
+      setDownloading(false);
     }
   };
 
@@ -415,101 +297,100 @@ export function ShareQuinielaDialog({ open, onClose, quiniela, standing }: Props
     setTimeout(() => setCopied(false), 2500);
   };
 
-  const pageUrl = typeof window !== 'undefined' ? window.location.href : 'https://matchpick.app';
+  const handleNativeShare = async () => {
+    if (!navigator.share) { handleCopyText(); return; }
+    try { await navigator.share({ text: shareText, url: pageUrl }); } catch { /* cancelled */ }
+  };
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent
-        className="bg-slate-950 border-slate-800 sm:max-w-lg p-0 overflow-hidden"
-        showCloseButton
-      >
-        <div className="p-5 pb-0">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-white">
-              <Share2 className="h-4 w-4 text-emerald-400" />
-              Compartir mi posición
-            </DialogTitle>
-          </DialogHeader>
-        </div>
+      <DialogContent className="bg-slate-950 border-slate-800 sm:max-w-lg p-0">
+        {/* Scrollable inner container */}
+        <div className="overflow-y-auto max-h-[calc(100dvh-4rem)]">
+          <div className="p-5 pb-0">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-white">
+                <Share2 className="h-4 w-4 text-emerald-400" />
+                Compartir mi posición
+              </DialogTitle>
+            </DialogHeader>
+          </div>
 
-        {/* Card preview — horizontally scrollable on small screens */}
-        <div className="overflow-x-auto px-5 py-4">
-          <div className="flex justify-center">
-            {/* Scale down the 400×711 card to fit the dialog */}
-            <div style={{ transform: 'scale(0.72)', transformOrigin: 'top center', height: '511px' }}>
-              <ShareCard cardRef={cardRef} quiniela={quiniela} standing={standing} />
+          {/* Card preview */}
+          <div className="overflow-x-auto px-5 py-4">
+            <div className="flex justify-center">
+              <div style={{ transform: 'scale(0.72)', transformOrigin: 'top center', height: '511px' }}>
+                <ShareCard cardRef={cardRef} quiniela={quiniela} standing={standing} />
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Actions */}
-        <div className="px-5 pb-5 space-y-4">
-          {/* Primary: download */}
-          <Button
-            onClick={handleDownload}
-            disabled={downloading}
-            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white h-11 text-sm font-semibold"
-          >
-            {downloading
-              ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Generando imagen...</>
-              : <><Download className="h-4 w-4 mr-2" />Descargar imagen (Stories / Feed)</>
-            }
-          </Button>
-
-          {/* Platform buttons */}
-          <div className="grid grid-cols-2 gap-2">
-            {PLATFORMS.map(({ key, label, icon: Icon, color, buildUrl }) => (
-              <a
-                key={key}
-                href={buildUrl(shareText, pageUrl)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={cn(
-                  'flex flex-col items-center gap-1.5 py-2.5 rounded-xl border text-xs font-medium transition-all',
-                  color
-                )}
-              >
-                <Icon className="h-4 w-4" />
-                {label}
-              </a>
-            ))}
-            <button
-              onClick={handleInstagramShare}
-              disabled={downloading}
-              className="flex flex-col items-center gap-1.5 py-2.5 rounded-xl border text-xs font-medium transition-all bg-pink-900/20 border-pink-700/30 text-pink-400 hover:bg-pink-900/30 disabled:opacity-50"
-            >
-              <IconInstagram className="h-4 w-4" />
-              Instagram
-            </button>
-          </div>
-
-          {/* Secondary: copy text + native share */}
-          <div className="flex gap-2">
+          {/* Actions */}
+          <div className="px-5 pb-6 space-y-3">
+            {/* Download */}
             <Button
-              variant="outline"
-              onClick={handleCopyText}
-              className="flex-1 border-slate-700 text-slate-300 hover:text-white"
+              onClick={handleDownload}
+              disabled={downloading}
+              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white h-11 text-sm font-semibold"
             >
-              {copied
-                ? <><Check className="h-4 w-4 mr-2 text-emerald-400" />Copiado</>
-                : <><Copy className="h-4 w-4 mr-2" />Copiar texto</>
+              {downloading
+                ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Generando imagen...</>
+                : <><Download className="h-4 w-4 mr-2" />Descargar imagen</>
               }
             </Button>
-            {typeof window !== 'undefined' && 'share' in navigator && (
+
+            {/* Social platforms */}
+            <div className="grid grid-cols-3 gap-2">
+              {PLATFORMS.map(({ key, label, icon: Icon, color, buildUrl }) => (
+                <a
+                  key={key}
+                  href={buildUrl(shareText)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={cn('flex flex-col items-center gap-1.5 py-3 rounded-xl border text-xs font-medium transition-all', color)}
+                >
+                  <Icon className="h-4 w-4" />
+                  {label}
+                </a>
+              ))}
+              <button
+                onClick={handleInstagramShare}
+                disabled={downloading}
+                className="flex flex-col items-center gap-1.5 py-3 rounded-xl border text-xs font-medium transition-all bg-pink-900/20 border-pink-700/30 text-pink-400 hover:bg-pink-900/30 disabled:opacity-50"
+              >
+                <IconInstagram className="h-4 w-4" />
+                Instagram
+              </button>
+            </div>
+
+            {/* Copy / Native share */}
+            <div className="flex gap-2">
               <Button
                 variant="outline"
-                onClick={handleNativeShare}
+                onClick={handleCopyText}
                 className="flex-1 border-slate-700 text-slate-300 hover:text-white"
               >
-                <Share2 className="h-4 w-4 mr-2" />
-                Compartir
+                {copied
+                  ? <><Check className="h-4 w-4 mr-2 text-emerald-400" />Copiado</>
+                  : <><Copy className="h-4 w-4 mr-2" />Copiar texto</>
+                }
               </Button>
-            )}
-          </div>
+              {typeof window !== 'undefined' && 'share' in navigator && (
+                <Button
+                  variant="outline"
+                  onClick={handleNativeShare}
+                  className="flex-1 border-slate-700 text-slate-300 hover:text-white"
+                >
+                  <Share2 className="h-4 w-4 mr-2" />
+                  Compartir
+                </Button>
+              )}
+            </div>
 
-          <p className="text-center text-[11px] text-slate-600">
-            Instagram descarga la imagen automáticamente y abre la app para publicarla
-          </p>
+            <p className="text-center text-[11px] text-slate-600">
+              Instagram descarga la imagen y abre la cámara de Stories
+            </p>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
