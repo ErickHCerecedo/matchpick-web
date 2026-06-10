@@ -184,9 +184,9 @@ function ShareCard({
           {stats.map(({ Icon, labels, value, sub, accent, bg, border }) => (
             <div key={labels[0]} style={{ flex: 1, background: bg, border: `1px solid ${border}`, borderRadius: '14px', padding: '12px 10px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
               {/* Icon + label */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '5px', minHeight: '22px' }}>
                 <Icon size={12} color={accent} strokeWidth={2.5} />
-                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                   {labels.map((line) => (
                     <span key={line} style={{ fontSize: '8px', fontWeight: '700', color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: '0.4px', lineHeight: '1.3' }}>
                       {line}
