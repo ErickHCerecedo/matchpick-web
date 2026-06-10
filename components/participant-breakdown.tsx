@@ -428,6 +428,12 @@ function RulesModal({ onClose }: { onClose: () => void }) {
   const [activeScenario, setActiveScenario] = useState(0);
   const s = SCENARIOS[activeScenario];
 
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prev; };
+  }, []);
+
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
       {/* Backdrop */}
