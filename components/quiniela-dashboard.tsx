@@ -7,7 +7,7 @@ import { cn, formatMatchDate } from '@/lib/utils';
 import { groupByDate, toLocalDateKey, todayKey } from '@/lib/date-utils';
 import type { Standing, RoundWithMatches, Match } from '@/types';
 import {
-  Trophy, Target, Clock, TrendingUp,
+  Trophy, Target, CheckCircle2, Clock, TrendingUp,
   Crown, Star, ArrowRight, CalendarCheck, Share2, Pencil,
   Zap, Percent,
 } from 'lucide-react';
@@ -254,27 +254,34 @@ function MyStatsCard({
 
       {/* Stats grid */}
       <div className="grid grid-cols-3 mt-4 border border-slate-800 rounded-lg overflow-hidden divide-x divide-slate-800">
-        <div className="px-3 py-3 text-center">
-          <p className="text-lg font-bold text-white tabular-nums">{myStanding.exact_scores}</p>
-          <p className="text-xs text-slate-400 mt-1">Marcador exacto</p>
-          <p className="text-[10px] text-slate-600 mt-0.5">+3 puntos</p>
+        {/* Marcador Exacto */}
+        <div className="px-2 py-3 flex flex-col gap-1.5">
+          <div className="flex items-center gap-1">
+            <Target className="h-3 w-3 text-emerald-400 shrink-0" />
+            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wide leading-tight">Marcador<br />Exacto</span>
+          </div>
+          <p className="text-xl font-black text-white tabular-nums leading-none">{myStanding.exact_scores}</p>
+          <p className="text-emerald-400 text-[10px] font-bold tabular-nums">+{myStanding.exact_scores * 3} pts</p>
         </div>
-        <div className="px-3 py-3 text-center">
-          <p className="text-lg font-bold text-white tabular-nums">{myStanding.correct_results}</p>
-          <p className="text-xs text-slate-400 mt-1">Ganador correcto</p>
-          <p className="text-[10px] text-slate-600 mt-0.5">+1 punto</p>
+        {/* Resultado Correcto */}
+        <div className="px-2 py-3 flex flex-col gap-1.5">
+          <div className="flex items-center gap-1">
+            <CheckCircle2 className="h-3 w-3 text-blue-400 shrink-0" />
+            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wide leading-tight">Resultado<br />Correcto</span>
+          </div>
+          <p className="text-xl font-black text-white tabular-nums leading-none">{myStanding.correct_results}</p>
+          <p className="text-blue-400 text-[10px] font-bold tabular-nums">+{myStanding.correct_results} pts</p>
         </div>
-        <div className="px-3 py-3 text-center flex flex-col items-center justify-center">
-          {precision !== null ? (
-            <div className="flex items-baseline gap-0.5">
-              <p className="text-lg font-bold text-white tabular-nums">{precision}</p>
-              <Percent className="h-3.5 w-3.5 text-slate-400 mb-0.5" />
-            </div>
-          ) : (
-            <p className="text-lg font-bold text-slate-700">—</p>
-          )}
-          <p className="text-xs text-slate-400 mt-1">Precisión</p>
-          <p className="text-[10px] text-slate-600 mt-0.5">de aciertos</p>
+        {/* % Aciertos */}
+        <div className="px-2 py-3 flex flex-col gap-1.5">
+          <div className="flex items-center gap-1">
+            <Percent className="h-3 w-3 text-slate-400 shrink-0" />
+            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wide leading-tight">%<br />Aciertos</span>
+          </div>
+          <p className="text-xl font-black text-white tabular-nums leading-none">
+            {precision !== null ? precision : '—'}
+          </p>
+          <p className="text-slate-600 text-[10px] tabular-nums">{precision !== null ? 'precisión' : 'sin datos'}</p>
         </div>
       </div>
 

@@ -317,85 +317,63 @@ function BreakdownDetail({
               </div>
             </div>
 
-            {data.standing ? (
-              <div className="space-y-2 mt-1">
-                {/* 2-col grid — mismo estilo que el dashboard */}
-                <div className="grid grid-cols-2 border border-slate-800 rounded-lg overflow-hidden divide-x divide-slate-800">
-                  {/* Marcador Exacto */}
-                  <div className="px-3 py-3">
-                    <div className="flex items-center gap-1.5 mb-2">
-                      <Target className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide leading-tight">
-                        Marcador<br />Exacto
-                      </span>
+            {data.standing ? (() => {
+              const accuracy = data.standing.predictions_made > 0
+                ? Math.round(((data.standing.exact_scores + data.standing.correct_results) / data.standing.predictions_made) * 100)
+                : null;
+              return (
+                <div className="space-y-2 mt-1">
+                  {/* 3-col grid */}
+                  <div className="grid grid-cols-3 border border-slate-800 rounded-lg overflow-hidden divide-x divide-slate-800">
+                    {/* Marcador Exacto */}
+                    <div className="px-2 py-3 flex flex-col gap-1.5">
+                      <div className="flex items-center gap-1">
+                        <Target className="h-3 w-3 text-emerald-400 shrink-0" />
+                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wide leading-tight">Marcador<br />Exacto</span>
+                      </div>
+                      <p className="text-xl font-black text-white tabular-nums leading-none">{data.standing.exact_scores}</p>
+                      <p className="text-emerald-400 text-[10px] font-bold tabular-nums">+{data.standing.exact_scores * 3} pts</p>
                     </div>
-                    <div className="flex items-end justify-between">
-                      <div>
-                        <p className="text-2xl font-black text-white tabular-nums leading-none">{data.standing.exact_scores}</p>
-                        <p className="text-[10px] text-slate-600 mt-1">marcadores</p>
+                    {/* Resultado Correcto */}
+                    <div className="px-2 py-3 flex flex-col gap-1.5">
+                      <div className="flex items-center gap-1">
+                        <CheckCircle2 className="h-3 w-3 text-blue-400 shrink-0" />
+                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wide leading-tight">Resultado<br />Correcto</span>
                       </div>
-                      <div className="text-right">
-                        <p className="text-base font-bold text-emerald-400 tabular-nums leading-none">+{data.standing.exact_scores * 3}</p>
-                        <p className="text-[10px] text-slate-600 mt-1">puntos</p>
+                      <p className="text-xl font-black text-white tabular-nums leading-none">{data.standing.correct_results}</p>
+                      <p className="text-blue-400 text-[10px] font-bold tabular-nums">+{data.standing.correct_results} pts</p>
+                    </div>
+                    {/* % Aciertos */}
+                    <div className="px-2 py-3 flex flex-col gap-1.5">
+                      <div className="flex items-center gap-1">
+                        <Zap className="h-3 w-3 text-slate-400 shrink-0" />
+                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wide leading-tight">%<br />Aciertos</span>
                       </div>
+                      <p className="text-xl font-black text-white tabular-nums leading-none">
+                        {accuracy !== null ? accuracy : '—'}
+                      </p>
+                      <p className="text-slate-600 text-[10px] tabular-nums">{accuracy !== null ? 'precisión' : 'sin datos'}</p>
                     </div>
                   </div>
-                  {/* Resultado Correcto */}
-                  <div className="px-3 py-3">
-                    <div className="flex items-center gap-1.5 mb-2">
-                      <CheckCircle2 className="h-3.5 w-3.5 text-blue-400 shrink-0" />
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide leading-tight">
-                        Resultado<br />Correcto
-                      </span>
-                    </div>
-                    <div className="flex items-end justify-between">
+                  {/* Puntuación Total */}
+                  <div className="border border-slate-800 rounded-lg px-4 py-3 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Trophy className="h-4 w-4 text-slate-400 shrink-0" />
                       <div>
-                        <p className="text-2xl font-black text-white tabular-nums leading-none">{data.standing.correct_results}</p>
-                        <p className="text-[10px] text-slate-600 mt-1">resultados</p>
+                        <p className="text-xs font-bold text-white">Puntuación Total</p>
+                        <p className="text-[10px] text-slate-600">acumulado</p>
                       </div>
-                      <div className="text-right">
-                        <p className="text-base font-bold text-blue-400 tabular-nums leading-none">+{data.standing.correct_results}</p>
-                        <p className="text-[10px] text-slate-600 mt-1">puntos</p>
-                      </div>
+                    </div>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-3xl font-black text-white tabular-nums">{data.standing.total_points}</span>
+                      <span className="text-xs text-slate-500 font-medium">pts</span>
                     </div>
                   </div>
                 </div>
-                {/* Puntuación Total */}
-                <div className="border border-slate-800 rounded-lg px-4 py-3 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Trophy className="h-4 w-4 text-slate-400 shrink-0" />
-                    <div>
-                      <p className="text-xs font-bold text-white">Puntuación Total</p>
-                      <p className="text-[10px] text-slate-600">acumulado</p>
-                    </div>
-                  </div>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-3xl font-black text-white tabular-nums">{data.standing.total_points}</span>
-                    <span className="text-xs text-slate-500 font-medium">pts</span>
-                  </div>
-                </div>
-              </div>
-            ) : (
+              );
+            })() : (
               <p className="text-slate-500 text-xs text-center">Sin estadísticas aún.</p>
             )}
-          </div>
-
-          {/* Points formula legend */}
-          <div className="flex items-center gap-3 flex-wrap px-0.5">
-            <span className="flex items-center gap-1.5 text-[11px] text-slate-500">
-              <span className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/25">🎯 +3</span>
-              marcador exacto
-            </span>
-            <span className="text-slate-700">·</span>
-            <span className="flex items-center gap-1.5 text-[11px] text-slate-500">
-              <span className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-blue-500/15 text-blue-400 border border-blue-500/25">✓ +1</span>
-              resultado correcto
-            </span>
-            <span className="text-slate-700">·</span>
-            <span className="flex items-center gap-1.5 text-[11px] text-slate-500">
-              <span className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-slate-800 text-slate-500 border border-slate-700">✗ 0</span>
-              incorrecto
-            </span>
           </div>
 
           {/* Rounds */}
