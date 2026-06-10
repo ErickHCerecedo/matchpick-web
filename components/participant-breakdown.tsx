@@ -16,6 +16,8 @@ import {
   ChevronDown,
   ChevronRight,
   Minus,
+  Crown,
+  X,
 } from 'lucide-react';
 
 // ── Points badge ──────────────────────────────────────────────────────────────
@@ -25,20 +27,20 @@ function ScoreBadge({ score }: { score: BreakdownMatch['score'] }) {
   if (score.points === 3) {
     return (
       <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 shrink-0">
-        🎯 +3
+        <Target className="h-3 w-3" /> +3
       </span>
     );
   }
   if (score.points === 1) {
     return (
       <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-400 border border-blue-500/25 shrink-0">
-        ✓ +1
+        <CheckCircle2 className="h-3 w-3" /> +1
       </span>
     );
   }
   return (
     <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-800 text-slate-500 border border-slate-700 shrink-0">
-      ✗ 0
+      <X className="h-3 w-3" /> 0
     </span>
   );
 }
@@ -388,29 +390,10 @@ function BreakdownDetail({
 // ── Rank badge ────────────────────────────────────────────────────────────────
 
 function RankBadge({ rank }: { rank: number }) {
-  if (rank === 1)
-    return (
-      <span className="w-7 h-7 rounded-full bg-yellow-500/20 border border-yellow-500/40 flex items-center justify-center text-xs font-bold text-yellow-400 shrink-0">
-        1
-      </span>
-    );
-  if (rank === 2)
-    return (
-      <span className="w-7 h-7 rounded-full bg-slate-400/15 border border-slate-400/30 flex items-center justify-center text-xs font-bold text-slate-300 shrink-0">
-        2
-      </span>
-    );
-  if (rank === 3)
-    return (
-      <span className="w-7 h-7 rounded-full bg-orange-700/20 border border-orange-700/40 flex items-center justify-center text-xs font-bold text-orange-400 shrink-0">
-        3
-      </span>
-    );
-  return (
-    <span className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium text-slate-600 shrink-0">
-      {rank}
-    </span>
-  );
+  if (rank === 1) return <Crown className="h-5 w-5 text-yellow-400 shrink-0" />;
+  if (rank === 2) return <Crown className="h-5 w-5 text-slate-300 shrink-0" />;
+  if (rank === 3) return <Crown className="h-5 w-5 text-amber-600 shrink-0" />;
+  return <span className="text-xs font-medium text-slate-600 tabular-nums shrink-0">{rank}</span>;
 }
 
 // ── Main exported component ───────────────────────────────────────────────────
@@ -442,20 +425,20 @@ export function ParticipantBreakdown({ quinielaSlug, standings, currentUserId, i
             <div className="rounded-xl border border-slate-800 bg-slate-950 p-3.5 mb-4">
               <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-2.5">Cómo se calculan los puntos</p>
               <div className="grid grid-cols-3 gap-2">
-                <div className="rounded-lg bg-slate-900 border border-slate-800 px-2 py-2.5 flex flex-col items-center gap-0.5">
-                  <span className="text-lg leading-none">🎯</span>
+                <div className="rounded-lg bg-slate-900 border border-slate-800 px-2 py-2.5 flex flex-col items-center gap-1">
+                  <Target className="h-4 w-4 text-emerald-400" />
                   <span className="text-base font-bold text-emerald-400 tabular-nums leading-tight">+3</span>
-                  <span className="text-[10px] text-slate-500 text-center leading-tight mt-0.5">Marcador exacto</span>
+                  <span className="text-[10px] text-slate-500 text-center leading-tight">Marcador exacto</span>
                 </div>
-                <div className="rounded-lg bg-slate-900 border border-slate-800 px-2 py-2.5 flex flex-col items-center gap-0.5">
-                  <span className="text-base font-bold text-blue-400 leading-none">✓</span>
+                <div className="rounded-lg bg-slate-900 border border-slate-800 px-2 py-2.5 flex flex-col items-center gap-1">
+                  <CheckCircle2 className="h-4 w-4 text-blue-400" />
                   <span className="text-base font-bold text-blue-400 tabular-nums leading-tight">+1</span>
-                  <span className="text-[10px] text-slate-500 text-center leading-tight mt-0.5">Resultado correcto</span>
+                  <span className="text-[10px] text-slate-500 text-center leading-tight">Resultado correcto</span>
                 </div>
-                <div className="rounded-lg bg-slate-900 border border-slate-800 px-2 py-2.5 flex flex-col items-center gap-0.5">
-                  <span className="text-base font-bold text-slate-600 leading-none">✗</span>
+                <div className="rounded-lg bg-slate-900 border border-slate-800 px-2 py-2.5 flex flex-col items-center gap-1">
+                  <X className="h-4 w-4 text-slate-600" />
                   <span className="text-base font-bold text-slate-600 tabular-nums leading-tight">0</span>
-                  <span className="text-[10px] text-slate-500 text-center leading-tight mt-0.5">Incorrecto</span>
+                  <span className="text-[10px] text-slate-500 text-center leading-tight">Incorrecto</span>
                 </div>
               </div>
             </div>
@@ -474,13 +457,13 @@ export function ParticipantBreakdown({ quinielaSlug, standings, currentUserId, i
                   <span className="flex-1 min-w-0 text-[10px] font-bold uppercase tracking-wider text-slate-600">
                     Participante
                   </span>
+                  <span className="w-12 shrink-0 text-[10px] font-bold uppercase tracking-wider text-slate-600 text-center hidden sm:flex sm:items-center sm:justify-center sm:gap-1">
+                    <Target className="h-3 w-3" /> Exactas
+                  </span>
+                  <span className="w-14 shrink-0 text-[10px] font-bold uppercase tracking-wider text-slate-600 text-center hidden sm:flex sm:items-center sm:justify-center sm:gap-1">
+                    <CheckCircle2 className="h-3 w-3" /> Correctas
+                  </span>
                   <span className="w-12 shrink-0 text-[10px] font-bold uppercase tracking-wider text-slate-600 text-center hidden sm:block">
-                    Exactas
-                  </span>
-                  <span className="w-13 shrink-0 text-[10px] font-bold uppercase tracking-wider text-slate-600 text-center hidden sm:block">
-                    Correctas
-                  </span>
-                  <span className="w-14 shrink-0 text-[10px] font-bold uppercase tracking-wider text-slate-600 text-center hidden sm:block">
                     % Aciertos
                   </span>
                   <span className="w-14 shrink-0 text-[10px] font-bold uppercase tracking-wider text-slate-600 text-right">
@@ -531,18 +514,6 @@ export function ParticipantBreakdown({ quinielaSlug, standings, currentUserId, i
                               </span>
                             )}
                           </div>
-                          {/* Compact stats — mobile only */}
-                          <div className="flex items-center gap-1.5 mt-1 sm:hidden">
-                            <span className="inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/15">
-                              🎯 {s.exact_scores}
-                            </span>
-                            <span className="inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">
-                              ✓ {s.correct_results}
-                            </span>
-                            {accuracy !== null && (
-                              <span className="text-[10px] text-slate-500 tabular-nums">{accuracy}%</span>
-                            )}
-                          </div>
                         </div>
                       </div>
 
@@ -550,25 +521,22 @@ export function ParticipantBreakdown({ quinielaSlug, standings, currentUserId, i
                       <span className="w-12 shrink-0 text-center hidden sm:block">
                         <span className="text-sm font-bold text-white tabular-nums">{s.exact_scores}</span>
                       </span>
-                      <span className="w-13 shrink-0 text-center hidden sm:block">
+                      <span className="w-14 shrink-0 text-center hidden sm:block">
                         <span className="text-sm font-bold text-white tabular-nums">{s.correct_results}</span>
                       </span>
-                      <span className="w-14 shrink-0 text-center hidden sm:block">
+                      <span className="w-12 shrink-0 text-center hidden sm:block">
                         <span className="text-sm text-slate-400 tabular-nums">
                           {accuracy !== null ? `${accuracy}%` : '—'}
                         </span>
                       </span>
 
                       {/* Score — highlighted */}
-                      <div className="w-14 shrink-0 text-right">
-                        <p className={cn(
-                          'text-base font-bold tabular-nums leading-none',
-                          isMe ? 'text-emerald-400' : s.rank === 1 ? 'text-yellow-400' : 'text-white'
-                        )}>
-                          {s.total_points}
-                        </p>
-                        <p className="text-[10px] text-slate-600 mt-0.5">pts</p>
-                      </div>
+                      <span className={cn(
+                        'w-14 shrink-0 text-right text-base font-bold tabular-nums',
+                        isMe ? 'text-emerald-400' : s.rank === 1 ? 'text-yellow-400' : 'text-white'
+                      )}>
+                        {s.total_points}
+                      </span>
 
                       <ChevronRight className="w-4 h-4 shrink-0 text-slate-700 group-hover:text-slate-500 transition-colors" />
                     </motion.button>
