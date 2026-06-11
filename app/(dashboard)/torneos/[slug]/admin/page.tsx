@@ -326,10 +326,11 @@ export default function TorneoAdminPage() {
     setSaving(true);
     try {
       const isCustom = tournament!.is_custom;
+      const isAdmin  = !!user?.is_admin;
       const endpoint = isCustom
         ? `/tournaments/${slug}/rounds/${expandedRoundId}/matches/${matchId}`
         : `/admin/matches/${matchId}`;
-      const payload = isCustom
+      const payload = (isCustom || isAdmin) && editMatchForm.home_team_id
         ? {
             home_team_id: Number(editMatchForm.home_team_id),
             away_team_id: Number(editMatchForm.away_team_id),
@@ -337,11 +338,11 @@ export default function TorneoAdminPage() {
             venue: editMatchForm.venue || null,
           }
         : { scheduled_at: editMatchForm.scheduled_at, venue: editMatchForm.venue || null };
-      const res = await api.patch<ApiResponse<CustomMatch>>(endpoint, payload);
+      const res = await api.patch<ApiResponse<Partial<CustomMatch>>>(endpoint, payload);
       setMatchesByRound((prev) => ({
         ...prev,
         [expandedRoundId]: (prev[expandedRoundId] ?? []).map((m) =>
-          m.id === matchId ? res.data : m
+          m.id === matchId ? { ...m, ...res.data } : m
         ),
       }));
       setEditingMatchId(null);
@@ -822,7 +823,7 @@ export default function TorneoAdminPage() {
                                       /* ── Edit match inline ── */
                                       <div className="px-4 py-4 space-y-3 bg-slate-900/60">
                                         <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Editar partido</p>
-                                        {tournament.is_custom && (
+                                        {(tournament.is_custom || user?.is_admin) && (
                                           <div className="grid grid-cols-2 gap-2">
                                             <div className="space-y-1">
                                               <Label className="text-slate-400 text-xs">Local</Label>
