@@ -92,12 +92,15 @@ export interface Match {
   id: number;
   round: Round;
   home_team: Team | null;
+  home_placeholder: string | null;
   away_team: Team | null;
+  away_placeholder: string | null;
   scheduled_at: string;
   venue: string | null;
   status: 'scheduled' | 'in_progress' | 'finished' | 'cancelled';
   prediction_closes_at: string;
   is_prediction_open: boolean;
+  bracket_slot: number | null;
   my_prediction: Prediction | null;
   result: MatchResult | null;
 }
