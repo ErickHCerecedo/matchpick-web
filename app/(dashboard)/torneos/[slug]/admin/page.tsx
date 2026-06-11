@@ -17,9 +17,10 @@ import type { ApiResponse, Tournament, Round, CustomTeam, CustomMatch, MatchResu
 import {
   ArrowLeft, Plus, Trash2, Loader2, Users, CalendarDays, Trophy,
   Pencil, Check, X, Shield, ChevronRight, RefreshCw, Settings2, ImageIcon,
+  Calendar, MapPin, ChevronUp, ChevronDown, Play, Square,
 } from 'lucide-react';
 import { FlagPlaceholder } from '@/components/ui/flag-placeholder';
-import { cn } from '@/lib/utils';
+import { cn, formatMatchDateParts } from '@/lib/utils';
 import { toLocalDateKey, formatDateLabel, todayKey } from '@/lib/date-utils';
 
 // ── Helper sub-components ──────────────────────────────────────────────────
@@ -68,18 +69,20 @@ function TeamSelect({
   );
 }
 
-function MatchTeamFlag({ teamId, teams }: { teamId: number | undefined; teams: CustomTeam[] }) {
-  if (!teamId) return <FlagPlaceholder size="sm" />;
-  const team = teams.find((t) => t.id === teamId);
-  if (!team?.logo_url) return <FlagPlaceholder size="sm" />;
-  return (
-    <img
-      src={team.logo_url}
-      alt={team.short_name}
-      className="w-5 h-3.5 object-cover rounded-sm shrink-0"
-    />
-  );
-}
+
+const CARD_BG =
+  'https://res.cloudinary.com/dr0klvutj/image/upload/v1781001150/MatchPick/file_00000000042c71fb8d0d570a11881d55.png';
+
+const ADMIN_STATUS_LABELS: Record<string, string> = {
+  scheduled: 'Programado', in_progress: 'Jugando', finished: 'Finalizado', cancelled: 'Cancelado',
+};
+
+const ADMIN_STATUS_COLORS: Record<string, { dot: string; icon: string; badge: string; line: string }> = {
+  scheduled:   { dot: 'bg-emerald-400', icon: 'text-emerald-400', badge: 'border-emerald-600/40 text-emerald-400', line: 'bg-emerald-400/60' },
+  in_progress: { dot: 'bg-red-400',     icon: 'text-red-400',     badge: 'border-red-500/60 text-red-400',         line: 'bg-red-400/60'     },
+  finished:    { dot: 'bg-slate-500',   icon: 'text-slate-500',   badge: 'border-slate-600 text-slate-500',         line: 'bg-slate-600/60'   },
+  cancelled:   { dot: 'bg-slate-500',   icon: 'text-slate-500',   badge: 'border-slate-600 text-slate-500',         line: 'bg-slate-600/60'   },
+};
 
 // ── Page ───────────────────────────────────────────────────────────────────
 
@@ -859,162 +862,253 @@ export default function TorneoAdminPage() {
                 <motion.div key={adminDateKey}
                   initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0 }} transition={{ duration: 0.18 }}
-                  className="space-y-4">
+                  className="space-y-5">
                   {adminActiveDateMatches.map(([roundName, matches]) => (
-                    <div key={roundName} className="rounded-xl border border-slate-800 bg-slate-950 overflow-hidden">
-                      {/* Round separator */}
-                      <div className="flex items-center gap-3 px-4 py-2 bg-slate-900/80 border-b border-slate-800/60">
-                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{roundName}</span>
-                      </div>
+                    <div key={roundName} className="space-y-2">
+                      {/* Round label */}
+                      <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest px-0.5">{roundName}</p>
 
-                      {/* Matches */}
-                      <div className="divide-y divide-slate-800/50">
+                      {/* Cards grid */}
+                      <div className="grid gap-3 sm:grid-cols-2">
                         {matches.map((match) => {
                           const hasStarted = new Date(match.scheduled_at) <= new Date();
+                          const isEditingResult = resultMatchId === match.id;
+                          const isEditingMatch = editingMatchId === match.id;
+                          const { date, time } = formatMatchDateParts(match.scheduled_at);
+                          const sc = ADMIN_STATUS_COLORS[match.status] ?? ADMIN_STATUS_COLORS.scheduled;
+
                           return (
-                            <div key={match.id}>
-                              {editingMatchId === match.id ? (
-                                /* ── Edit form ── */
-                                <div className="px-4 py-4 space-y-3 bg-slate-900/60">
-                                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Editar partido</p>
-                                  {(tournament.is_custom || user?.is_admin) && (
-                                    <div className="grid grid-cols-2 gap-2">
-                                      <div className="space-y-1">
-                                        <Label className="text-slate-400 text-xs">Local</Label>
-                                        <TeamSelect value={editMatchForm.home_team_id} onChange={(v) => setEditMatchForm((p) => ({ ...p, home_team_id: v }))} teams={teams} excludeId={Number(editMatchForm.away_team_id)} />
-                                      </div>
-                                      <div className="space-y-1">
-                                        <Label className="text-slate-400 text-xs">Visitante</Label>
-                                        <TeamSelect value={editMatchForm.away_team_id} onChange={(v) => setEditMatchForm((p) => ({ ...p, away_team_id: v }))} teams={teams} excludeId={Number(editMatchForm.home_team_id)} />
-                                      </div>
-                                    </div>
-                                  )}
-                                  <div className="grid grid-cols-2 gap-2">
-                                    <div className="space-y-1">
-                                      <Label className="text-slate-400 text-xs">Fecha y hora <span className="text-slate-600">(hora México)</span></Label>
-                                      <Input type="datetime-local" value={editMatchForm.scheduled_at} onChange={(e) => setEditMatchForm((p) => ({ ...p, scheduled_at: e.target.value }))} className="bg-slate-950 border-slate-700 text-white text-sm" />
-                                    </div>
-                                    <div className="space-y-1">
-                                      <Label className="text-slate-400 text-xs">Sede</Label>
-                                      <Input placeholder="Estadio..." value={editMatchForm.venue} onChange={(e) => setEditMatchForm((p) => ({ ...p, venue: e.target.value }))} className="bg-slate-950 border-slate-700 text-white placeholder:text-slate-600 text-sm" />
-                                    </div>
+                            <div
+                              key={match.id}
+                              className={cn(
+                                'relative rounded-xl overflow-hidden border transition-all duration-200',
+                                match.status === 'in_progress'
+                                  ? 'border-red-500/40'
+                                  : match.status === 'finished'
+                                  ? 'border-slate-800'
+                                  : 'border-slate-700/60',
+                              )}
+                            >
+                              {/* Background */}
+                              <div className="absolute inset-0 z-0" style={{ backgroundImage: `url(${CARD_BG})`, backgroundSize: 'cover', backgroundPosition: 'center' }} />
+                              <div className="absolute inset-0 z-0 bg-slate-950/82" />
+
+                              {/* ── Card body ── */}
+                              <div className="relative z-10">
+
+                                {/* Date + status */}
+                                <div className="flex items-center justify-between gap-2 px-3 pt-3 pb-1 text-xs">
+                                  <div className="flex items-center gap-1.5 text-slate-400">
+                                    <Calendar className={cn('h-3.5 w-3.5 shrink-0', sc.icon)} />
+                                    <span className="font-medium">{date}</span>
+                                    <span className="text-slate-600">|</span>
+                                    <span className="text-slate-500">{time}</span>
                                   </div>
-                                  <div className="flex justify-end gap-1">
-                                    <button type="button" onClick={() => setEditingMatchId(null)} className="p-1.5 rounded text-slate-500 hover:text-white transition-colors"><X className="h-4 w-4" /></button>
-                                    <button type="button" onClick={() => handleUpdateMatch(match.id)} disabled={saving} className="p-1.5 rounded text-emerald-400 hover:text-emerald-300 transition-colors">
-                                      {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                                    </button>
-                                  </div>
+                                  <Badge variant="outline" className={cn('flex items-center gap-1 text-xs', sc.badge)}>
+                                    <span className={cn('w-1.5 h-1.5 rounded-full shrink-0', sc.dot, match.status === 'in_progress' && 'animate-pulse')} />
+                                    {ADMIN_STATUS_LABELS[match.status] ?? match.status}
+                                  </Badge>
                                 </div>
-                              ) : resultMatchId === match.id ? (
-                                /* ── Result form ── */
-                                <div className="px-4 py-4 space-y-3 bg-slate-900/60">
-                                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-                                    {match.result ? 'Editar resultado' : 'Ingresar resultado'}
-                                  </p>
-                                  <div className="flex items-center gap-3">
-                                    <span className="text-sm text-white font-medium flex-1 text-right truncate">
+
+                                {/* Teams + score/steppers */}
+                                <div className="flex items-center gap-2 px-3 py-2">
+                                  {/* Home */}
+                                  <div className="flex-1 flex flex-col items-center gap-1 min-w-0">
+                                    {match.home_team?.logo_url ? (
+                                      <img src={match.home_team.logo_url} alt="" className="w-10 h-7 object-cover rounded shadow-md" />
+                                    ) : (
+                                      <FlagPlaceholder size="md" />
+                                    )}
+                                    <span className="w-full text-[11px] font-semibold text-white text-center leading-tight truncate px-1 mt-0.5">
                                       {match.home_team?.name ?? match.home_placeholder ?? 'Local'}
                                     </span>
-                                    <div className="flex items-center gap-2 shrink-0">
-                                      <Input type="number" min={0} value={resultForm.home_score}
-                                        onChange={(e) => setResultForm((p) => ({ ...p, home_score: e.target.value }))}
-                                        className="w-14 text-center bg-slate-950 border-slate-700 text-white text-sm h-9" />
-                                      <span className="text-slate-500 font-bold">-</span>
-                                      <Input type="number" min={0} value={resultForm.away_score}
-                                        onChange={(e) => setResultForm((p) => ({ ...p, away_score: e.target.value }))}
-                                        className="w-14 text-center bg-slate-950 border-slate-700 text-white text-sm h-9" />
-                                    </div>
-                                    <span className="text-sm text-white font-medium flex-1 truncate">
+                                    <div className={cn('h-0.5 w-6 rounded-full', sc.line)} />
+                                  </div>
+
+                                  {/* Score / Steppers */}
+                                  <div className="shrink-0 flex items-center justify-center">
+                                    {isEditingResult ? (
+                                      <div className="flex items-center gap-1.5">
+                                        {/* Home stepper */}
+                                        <div className="flex flex-col items-center select-none">
+                                          <button type="button"
+                                            onClick={() => setResultForm((p) => ({ ...p, home_score: String(Math.min(99, Number(p.home_score || 0) + 1)) }))}
+                                            className="w-8 h-6 flex items-center justify-center bg-black/40 hover:bg-slate-700/80 border border-b-0 border-slate-700 rounded-t text-slate-400 hover:text-emerald-400 transition-colors">
+                                            <ChevronUp className="h-3 w-3" />
+                                          </button>
+                                          <div className="w-8 h-8 flex items-center justify-center border border-slate-700 bg-black/50 text-base font-bold text-white tabular-nums font-mono">
+                                            {resultForm.home_score !== '' ? resultForm.home_score : '—'}
+                                          </div>
+                                          <button type="button"
+                                            onClick={() => setResultForm((p) => ({ ...p, home_score: String(Math.max(0, Number(p.home_score || 0) - 1)) }))}
+                                            disabled={resultForm.home_score === '0' || resultForm.home_score === ''}
+                                            className="w-8 h-6 flex items-center justify-center bg-black/40 hover:bg-slate-700/80 border border-t-0 border-slate-700 rounded-b text-slate-400 hover:text-red-400 disabled:opacity-25 transition-colors">
+                                            <ChevronDown className="h-3 w-3" />
+                                          </button>
+                                        </div>
+                                        <span className="text-slate-500 font-bold">–</span>
+                                        {/* Away stepper */}
+                                        <div className="flex flex-col items-center select-none">
+                                          <button type="button"
+                                            onClick={() => setResultForm((p) => ({ ...p, away_score: String(Math.min(99, Number(p.away_score || 0) + 1)) }))}
+                                            className="w-8 h-6 flex items-center justify-center bg-black/40 hover:bg-slate-700/80 border border-b-0 border-slate-700 rounded-t text-slate-400 hover:text-emerald-400 transition-colors">
+                                            <ChevronUp className="h-3 w-3" />
+                                          </button>
+                                          <div className="w-8 h-8 flex items-center justify-center border border-slate-700 bg-black/50 text-base font-bold text-white tabular-nums font-mono">
+                                            {resultForm.away_score !== '' ? resultForm.away_score : '—'}
+                                          </div>
+                                          <button type="button"
+                                            onClick={() => setResultForm((p) => ({ ...p, away_score: String(Math.max(0, Number(p.away_score || 0) - 1)) }))}
+                                            disabled={resultForm.away_score === '0' || resultForm.away_score === ''}
+                                            className="w-8 h-6 flex items-center justify-center bg-black/40 hover:bg-slate-700/80 border border-t-0 border-slate-700 rounded-b text-slate-400 hover:text-red-400 disabled:opacity-25 transition-colors">
+                                            <ChevronDown className="h-3 w-3" />
+                                          </button>
+                                        </div>
+                                      </div>
+                                    ) : match.result ? (
+                                      <span className="text-xl font-bold text-white font-mono tabular-nums px-2">
+                                        {match.result.home_score} – {match.result.away_score}
+                                      </span>
+                                    ) : (
+                                      <span className="text-xs font-black tracking-widest text-white/80 bg-white/10 border border-white/20 rounded px-2 py-0.5 backdrop-blur-sm">
+                                        VS
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  {/* Away */}
+                                  <div className="flex-1 flex flex-col items-center gap-1 min-w-0">
+                                    {match.away_team?.logo_url ? (
+                                      <img src={match.away_team.logo_url} alt="" className="w-10 h-7 object-cover rounded shadow-md" />
+                                    ) : (
+                                      <FlagPlaceholder size="md" />
+                                    )}
+                                    <span className="w-full text-[11px] font-semibold text-white text-center leading-tight truncate px-1 mt-0.5">
                                       {match.away_team?.name ?? match.away_placeholder ?? 'Visitante'}
                                     </span>
+                                    <div className={cn('h-0.5 w-6 rounded-full', sc.line)} />
                                   </div>
-                                  <div className="flex justify-end gap-1">
-                                    <button type="button" onClick={() => setResultMatchId(null)} className="p-1.5 rounded text-slate-500 hover:text-white transition-colors"><X className="h-4 w-4" /></button>
+                                </div>
+
+                                {/* Venue */}
+                                {match.venue && (
+                                  <div className="flex items-center justify-center gap-1.5 text-[11px] text-slate-400 pb-2 px-3">
+                                    <MapPin className={cn('h-3 w-3 shrink-0', sc.icon)} />
+                                    <span className="truncate">{match.venue}</span>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* ── Edit match form (expands below card) ── */}
+                              <AnimatePresence initial={false}>
+                                {isEditingMatch && (
+                                  <motion.div
+                                    initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }}
+                                    exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.18 }}
+                                    className="relative z-10 overflow-hidden"
+                                  >
+                                    <div className="border-t border-slate-800/70 bg-slate-900/90 px-3 py-3 space-y-2.5">
+                                      <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Editar partido</p>
+                                      {(tournament.is_custom || user?.is_admin) && (
+                                        <div className="grid grid-cols-2 gap-2">
+                                          <div className="space-y-1">
+                                            <Label className="text-slate-400 text-xs">Local</Label>
+                                            <TeamSelect value={editMatchForm.home_team_id} onChange={(v) => setEditMatchForm((p) => ({ ...p, home_team_id: v }))} teams={teams} excludeId={Number(editMatchForm.away_team_id)} />
+                                          </div>
+                                          <div className="space-y-1">
+                                            <Label className="text-slate-400 text-xs">Visitante</Label>
+                                            <TeamSelect value={editMatchForm.away_team_id} onChange={(v) => setEditMatchForm((p) => ({ ...p, away_team_id: v }))} teams={teams} excludeId={Number(editMatchForm.home_team_id)} />
+                                          </div>
+                                        </div>
+                                      )}
+                                      <div className="grid grid-cols-2 gap-2">
+                                        <div className="space-y-1">
+                                          <Label className="text-slate-400 text-xs">Fecha y hora <span className="text-slate-600">(MX)</span></Label>
+                                          <Input type="datetime-local" value={editMatchForm.scheduled_at} onChange={(e) => setEditMatchForm((p) => ({ ...p, scheduled_at: e.target.value }))} className="bg-slate-950 border-slate-700 text-white text-xs h-8" />
+                                        </div>
+                                        <div className="space-y-1">
+                                          <Label className="text-slate-400 text-xs">Sede</Label>
+                                          <Input placeholder="Estadio..." value={editMatchForm.venue} onChange={(e) => setEditMatchForm((p) => ({ ...p, venue: e.target.value }))} className="bg-slate-950 border-slate-700 text-white placeholder:text-slate-600 text-xs h-8" />
+                                        </div>
+                                      </div>
+                                      <div className="flex justify-end gap-2">
+                                        <button type="button" onClick={() => setEditingMatchId(null)}
+                                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-slate-400 hover:text-white border border-slate-700 hover:border-slate-600 transition-colors">
+                                          <X className="h-3.5 w-3.5" />Cancelar
+                                        </button>
+                                        <button type="button" onClick={() => handleUpdateMatch(match.id)} disabled={saving}
+                                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/30 disabled:opacity-40 transition-colors">
+                                          {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                                          Guardar
+                                        </button>
+                                      </div>
+                                    </div>
+                                  </motion.div>
+                                )}
+                              </AnimatePresence>
+
+                              {/* ── Action bar ── */}
+                              <div className="relative z-10 flex items-center gap-1 px-2 py-2 border-t border-slate-800/50 bg-black/25">
+                                {isEditingResult ? (
+                                  <>
+                                    <button type="button" onClick={() => setResultMatchId(null)}
+                                      className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs text-slate-400 hover:text-white border border-slate-700 hover:border-slate-600 transition-colors">
+                                      <X className="h-3.5 w-3.5" />Cancelar
+                                    </button>
                                     <button type="button" onClick={() => handleSetResult(match)}
                                       disabled={savingResult || resultForm.home_score === '' || resultForm.away_score === ''}
-                                      className="p-1.5 rounded text-emerald-400 hover:text-emerald-300 transition-colors disabled:opacity-40">
-                                      {savingResult ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                                      className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/30 disabled:opacity-40 transition-colors">
+                                      {savingResult ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                                      Guardar resultado
                                     </button>
-                                  </div>
-                                </div>
-                              ) : (
-                                /* ── Match row ── */
-                                <div className="flex items-center gap-3 px-4 py-3 group hover:bg-slate-900/40 transition-colors">
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-1.5 min-w-0">
-                                      <MatchTeamFlag teamId={match.home_team?.id} teams={teams} />
-                                      <span className="text-sm font-semibold text-white truncate">
-                                        {match.home_team?.name ?? <span className="text-slate-500 italic text-xs">{match.home_placeholder ?? 'Por definir'}</span>}
-                                      </span>
-                                      {match.result ? (
-                                        <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 shrink-0 tabular-nums font-mono">
-                                          {match.result.home_score} - {match.result.away_score}
-                                        </span>
-                                      ) : (
-                                        <span className="text-slate-600 text-xs shrink-0 font-medium">vs</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    {/* Left: status controls */}
+                                    <div className="flex items-center gap-1 flex-1">
+                                      {user?.is_admin && match.status === 'scheduled' && hasStarted && (
+                                        <button onClick={() => handleUpdateStatus(match, 'in_progress')}
+                                          disabled={updatingStatusId === match.id}
+                                          className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/10 disabled:opacity-50 transition-colors">
+                                          {updatingStatusId === match.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Play className="h-3 w-3 fill-current" />}
+                                          Iniciar
+                                        </button>
                                       )}
-                                      <span className="text-sm font-semibold text-white truncate">
-                                        {match.away_team?.name ?? <span className="text-slate-500 italic text-xs">{match.away_placeholder ?? 'Por definir'}</span>}
-                                      </span>
-                                      <MatchTeamFlag teamId={match.away_team?.id} teams={teams} />
+                                      {user?.is_admin && match.status === 'in_progress' && (
+                                        <button onClick={() => handleUpdateStatus(match, 'finished')}
+                                          disabled={updatingStatusId === match.id}
+                                          className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold text-slate-300 border border-slate-600/50 hover:bg-slate-700/30 disabled:opacity-50 transition-colors">
+                                          {updatingStatusId === match.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Square className="h-3 w-3 fill-current" />}
+                                          Finalizar
+                                        </button>
+                                      )}
                                     </div>
-                                    <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-1.5">
-                                      <span>{new Date(match.scheduled_at).toLocaleString('es-MX', {
-                                        timeZone: 'America/Mexico_City',
-                                        hour: '2-digit', minute: '2-digit', hour12: true,
-                                      })}</span>
-                                      {match.venue && <><span className="text-slate-700">·</span><span className="text-slate-600 truncate">{match.venue}</span></>}
-                                      {match.status === 'in_progress' && (
-                                        <span className="flex items-center gap-1 text-[10px] font-semibold text-red-400 border border-red-500/40 px-1.5 py-0.5 rounded">
-                                          <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse shrink-0" />
-                                          Jugando
-                                        </span>
+                                    {/* Right: edit actions */}
+                                    <div className="flex items-center gap-0.5">
+                                      {hasStarted && (tournament.is_custom || user?.is_admin) && (
+                                        <button onClick={() => startSetResult(match)}
+                                          className={cn('p-1.5 rounded transition-colors', match.result ? 'text-emerald-500/60 hover:text-emerald-400' : 'text-amber-500 hover:text-amber-400')}
+                                          title={match.result ? 'Editar resultado' : 'Ingresar resultado'}>
+                                          <Trophy className="h-3.5 w-3.5" />
+                                        </button>
                                       )}
-                                    </p>
-                                  </div>
-                                  <div className="flex items-center gap-0.5 shrink-0 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                                    {user?.is_admin && match.status === 'scheduled' && hasStarted && (
-                                      <button
-                                        onClick={() => handleUpdateStatus(match, 'in_progress')}
-                                        disabled={updatingStatusId === match.id}
-                                        className="p-1.5 rounded text-slate-500 hover:text-emerald-400 transition-colors"
-                                        title="Iniciar partido">
-                                        {updatingStatusId === match.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <span className="text-[10px] font-bold">▶</span>}
-                                      </button>
-                                    )}
-                                    {user?.is_admin && match.status === 'in_progress' && (
-                                      <button
-                                        onClick={() => handleUpdateStatus(match, 'finished')}
-                                        disabled={updatingStatusId === match.id}
-                                        className="p-1.5 rounded text-slate-500 hover:text-red-400 transition-colors"
-                                        title="Finalizar partido">
-                                        {updatingStatusId === match.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <span className="text-[10px] font-bold">■</span>}
-                                      </button>
-                                    )}
-                                    {hasStarted && (tournament.is_custom || user?.is_admin) && (
-                                      <button onClick={() => startSetResult(match)}
-                                        className={cn('p-1.5 rounded transition-colors',
-                                          match.result ? 'text-slate-500 hover:text-emerald-400' : 'text-amber-500 hover:text-amber-400')}
-                                        title={match.result ? 'Editar resultado' : 'Ingresar resultado'}>
-                                        <Trophy className="h-3.5 w-3.5" />
-                                      </button>
-                                    )}
-                                    {(tournament.is_custom || user?.is_admin) && (
-                                      <button onClick={() => startEditMatch(match)}
-                                        className="p-1.5 rounded text-slate-500 hover:text-white transition-colors" title="Editar equipos, hora y sede">
-                                        <Pencil className="h-3.5 w-3.5" />
-                                      </button>
-                                    )}
-                                    {tournament.is_custom && (
-                                      <button onClick={() => handleRemoveMatch(match.id)}
-                                        className="p-1.5 rounded text-slate-600 hover:text-red-400 transition-colors" title="Eliminar">
-                                        <Trash2 className="h-3.5 w-3.5" />
-                                      </button>
-                                    )}
-                                  </div>
-                                </div>
-                              )}
+                                      {(tournament.is_custom || user?.is_admin) && (
+                                        <button onClick={() => { if (isEditingMatch) setEditingMatchId(null); else startEditMatch(match); }}
+                                          className={cn('p-1.5 rounded transition-colors', isEditingMatch ? 'text-emerald-400 bg-emerald-500/10' : 'text-slate-500 hover:text-white')}
+                                          title="Editar partido">
+                                          <Pencil className="h-3.5 w-3.5" />
+                                        </button>
+                                      )}
+                                      {tournament.is_custom && (
+                                        <button onClick={() => handleRemoveMatch(match.id)}
+                                          className="p-1.5 rounded text-slate-600 hover:text-red-400 transition-colors" title="Eliminar">
+                                          <Trash2 className="h-3.5 w-3.5" />
+                                        </button>
+                                      )}
+                                    </div>
+                                  </>
+                                )}
+                              </div>
                             </div>
                           );
                         })}

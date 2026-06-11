@@ -68,11 +68,25 @@ export interface CustomMatch {
   scheduled_at: string;
   venue: string | null;
   status: string;
-  home_team: { id: number; name: string; short_name: string } | null;
+  home_team: { id: number; name: string; short_name: string; logo_url?: string | null } | null;
   home_placeholder: string | null;
-  away_team: { id: number; name: string; short_name: string } | null;
+  away_team: { id: number; name: string; short_name: string; logo_url?: string | null } | null;
   away_placeholder: string | null;
   result: MatchResult | null;
+}
+
+export interface LiveMatch {
+  id: number;
+  scheduled_at: string;
+  venue: string | null;
+  status: 'in_progress';
+  tournament: { id: number; name: string; slug: string; logo_url: string | null };
+  round: { id: number; name: string };
+  home_team: { id: number; name: string; short_name: string; flag_url: string | null } | null;
+  home_placeholder: string | null;
+  away_team: { id: number; name: string; short_name: string; flag_url: string | null } | null;
+  away_placeholder: string | null;
+  result: { home_score: number; away_score: number } | null;
 }
 
 export interface MatchResult {
