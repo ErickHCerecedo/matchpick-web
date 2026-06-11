@@ -302,6 +302,10 @@ export default function TorneoAdminPage() {
           ...matchForm,
           home_team_id: Number(matchForm.home_team_id),
           away_team_id: Number(matchForm.away_team_id),
+          // datetime-local value is Mexico Central (UTC-6); convert to UTC for the backend.
+          scheduled_at: matchForm.scheduled_at
+            ? new Date(matchForm.scheduled_at + ':00-06:00').toISOString()
+            : matchForm.scheduled_at,
         }
       );
       setMatchesByRound((prev) => ({
@@ -332,14 +336,18 @@ export default function TorneoAdminPage() {
       const endpoint = isCustom
         ? `/tournaments/${slug}/rounds/${expandedRoundId}/matches/${matchId}`
         : `/admin/matches/${matchId}`;
+      // datetime-local value is in Mexico Central time (UTC-6); convert to UTC ISO for the backend.
+      const scheduledAtUTC = editMatchForm.scheduled_at
+        ? new Date(editMatchForm.scheduled_at + ':00-06:00').toISOString()
+        : editMatchForm.scheduled_at;
       const payload = (isCustom || isAdmin) && editMatchForm.home_team_id
         ? {
             home_team_id: Number(editMatchForm.home_team_id),
             away_team_id: Number(editMatchForm.away_team_id),
-            scheduled_at: editMatchForm.scheduled_at,
+            scheduled_at: scheduledAtUTC,
             venue: editMatchForm.venue || null,
           }
-        : { scheduled_at: editMatchForm.scheduled_at, venue: editMatchForm.venue || null };
+        : { scheduled_at: scheduledAtUTC, venue: editMatchForm.venue || null };
       const res = await api.patch<ApiResponse<Partial<CustomMatch>>>(endpoint, payload);
       setMatchesByRound((prev) => ({
         ...prev,
@@ -381,8 +389,10 @@ export default function TorneoAdminPage() {
 
   const startEditMatch = (match: CustomMatch) => {
     setEditingMatchId(match.id);
+    // Convert UTC → Mexico Central (UTC-6) for the datetime-local input.
+    // Hard-coded offset so it works regardless of the browser's system timezone.
     const d = new Date(match.scheduled_at);
-    const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000)
+    const local = new Date(d.getTime() - 6 * 60 * 60 * 1000)
       .toISOString()
       .slice(0, 16);
     setEditMatchForm({
@@ -920,6 +930,7 @@ export default function TorneoAdminPage() {
                                           </div>
                                           <p className="text-xs text-slate-500 mt-0.5">
                                             {new Date(match.scheduled_at).toLocaleString('es-MX', {
+                                              timeZone: 'America/Mexico_City',
                                               weekday: 'short', day: 'numeric', month: 'short',
                                               hour: '2-digit', minute: '2-digit',
                                             })}

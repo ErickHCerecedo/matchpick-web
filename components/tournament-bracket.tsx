@@ -179,9 +179,9 @@ function DetailCard({ match, isFinal = false }: { match: Match; isFinal?: boolea
       )}>
         <span className="text-[10px] text-slate-600 flex items-center gap-1.5">
           <CalendarDays className="h-3 w-3" />
-          {new Date(match.scheduled_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}
+          {new Date(match.scheduled_at).toLocaleDateString('es-MX', { timeZone: 'America/Mexico_City', day: 'numeric', month: 'short' })}
           {' · '}
-          {new Date(match.scheduled_at).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}
+          {new Date(match.scheduled_at).toLocaleTimeString('es-MX', { timeZone: 'America/Mexico_City', hour: '2-digit', minute: '2-digit' })}
         </span>
         {live && (
           <span className="flex items-center gap-1 text-[10px] font-bold text-red-400">
@@ -376,7 +376,7 @@ export function TournamentBracket({ rounds }: { rounds: RoundWithMatches[] }) {
             <div className="mt-5 pt-4 border-t border-slate-800/60 flex items-center gap-4">
               <div className="shrink-0">
                 <p className="text-[9px] font-bold text-slate-600 uppercase tracking-widest mb-1.5">
-                  3er Lugar · {new Date(thirdPlace.matches[0].scheduled_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}
+                  3er Lugar · {new Date(thirdPlace.matches[0].scheduled_at).toLocaleDateString('es-MX', { timeZone: 'America/Mexico_City', day: 'numeric', month: 'short' })}
                 </p>
                 <button
                   onClick={() => setActiveRoundId(thirdPlace.round.id)}

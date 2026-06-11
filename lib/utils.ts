@@ -5,9 +5,12 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+const MX_TZ = 'America/Mexico_City';
+
 export function formatMatchDate(dateStr: string): string {
   const date = new Date(dateStr);
   return date.toLocaleDateString('es-MX', {
+    timeZone: MX_TZ,
     weekday: 'short',
     month: 'short',
     day: 'numeric',
@@ -19,13 +22,13 @@ export function formatMatchDate(dateStr: string): string {
 export function formatMatchDateParts(dateStr: string): { date: string; time: string } {
   const d = new Date(dateStr);
   const date = d
-    .toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short' })
+    .toLocaleDateString('es-MX', { timeZone: MX_TZ, weekday: 'short', day: 'numeric', month: 'short' })
     .replace(/\.$/, '')
     .replace(/\.,/g, '')
     .replace(/,/g, '')
     .trim();
   const time = d
-    .toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: true })
+    .toLocaleTimeString('es-MX', { timeZone: MX_TZ, hour: '2-digit', minute: '2-digit', hour12: true })
     .toLowerCase()
     .trim();
   return { date, time };
