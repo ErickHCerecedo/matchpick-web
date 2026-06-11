@@ -516,17 +516,16 @@ export default function TorneoAdminPage() {
     }
   };
 
-  const handleUpdateStatus = async (match: CustomMatch, status: 'scheduled' | 'in_progress' | 'finished' | 'cancelled') => {
-    if (!expandedRoundId) return;
+  const handleUpdateStatus = async (match: CustomMatch, status: 'scheduled' | 'in_progress' | 'finished' | 'cancelled', roundId: number) => {
     setUpdatingStatusId(match.id);
     try {
       const endpoint = tournament!.is_custom
-        ? `/tournaments/${slug}/rounds/${expandedRoundId}/matches/${match.id}/status`
+        ? `/tournaments/${slug}/rounds/${roundId}/matches/${match.id}/status`
         : `/admin/matches/${match.id}/status`;
       await api.patch(endpoint, { status });
       setMatchesByRound((prev) => ({
         ...prev,
-        [expandedRoundId]: (prev[expandedRoundId] ?? []).map((m) =>
+        [roundId]: (prev[roundId] ?? []).map((m) =>
           m.id === match.id ? { ...m, status } : m
         ),
       }));
@@ -1070,7 +1069,7 @@ export default function TorneoAdminPage() {
                                     {/* Left: status controls */}
                                     <div className="flex items-center gap-1 flex-1">
                                       {(user?.is_admin || tournament.is_custom) && match.status === 'scheduled' && hasStarted && (
-                                        <button onClick={() => handleUpdateStatus(match, 'in_progress')}
+                                        <button onClick={() => handleUpdateStatus(match, 'in_progress', match.roundId)}
                                           disabled={updatingStatusId === match.id}
                                           className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/10 disabled:opacity-50 transition-colors">
                                           {updatingStatusId === match.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Play className="h-3 w-3 fill-current" />}
@@ -1078,7 +1077,7 @@ export default function TorneoAdminPage() {
                                         </button>
                                       )}
                                       {(user?.is_admin || tournament.is_custom) && match.status === 'in_progress' && (
-                                        <button onClick={() => handleUpdateStatus(match, 'finished')}
+                                        <button onClick={() => handleUpdateStatus(match, 'finished', match.roundId)}
                                           disabled={updatingStatusId === match.id}
                                           className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold text-slate-300 border border-slate-600/50 hover:bg-slate-700/30 disabled:opacity-50 transition-colors">
                                           {updatingStatusId === match.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Square className="h-3 w-3 fill-current" />}
