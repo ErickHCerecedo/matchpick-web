@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
-import { cn, formatMatchDate } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import { api } from '@/lib/api';
 import type { Standing, ApiResponse, ParticipantBreakdownData, BreakdownMatch } from '@/types';
 import { FlagPlaceholder } from '@/components/ui/flag-placeholder';
@@ -13,10 +13,7 @@ import {
   Trophy,
   Target,
   CheckCircle2,
-  Lock,
-  ChevronDown,
   ChevronRight,
-  Minus,
   Crown,
   X,
   HelpCircle,
@@ -65,197 +62,69 @@ function MatchRow({ match }: { match: BreakdownMatch }) {
   const hasPred   = !!match.prediction;
 
   return (
-    <>
-      {/* ── Mobile card (hidden md+) ── */}
-      <div className={cn(
-        'md:hidden relative rounded-xl border overflow-hidden transition-all',
-        match.status === 'in_progress' ? 'border-emerald-500/30' :
-        match.status === 'finished'    ? 'border-slate-700/60'   : 'border-slate-800',
-      )}>
-        <div className={cn('p-3.5', isFuture && 'select-none')}>
-          <div className="flex items-center justify-between mb-2.5">
-            <span className="text-[11px] text-slate-600">{formatMatchDate(match.scheduled_at)}</span>
-            {match.status === 'in_progress' && <span className="text-[10px] font-semibold text-emerald-400">🔴 EN VIVO</span>}
-            {match.status === 'finished'    && <span className="text-[10px] text-slate-600">Finalizado</span>}
-            {isFuture && <span className="flex items-center gap-1 text-[10px] text-slate-700"><Lock className="h-2.5 w-2.5" />Pendiente</span>}
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="flex-1 flex items-center gap-2 min-w-0">
-              <TeamFlag team={match.home_team} />
-              <span className="text-sm font-medium text-white truncate">{match.home_team?.name ?? 'Por definir'}</span>
-            </div>
-            <div className="shrink-0 text-center min-w-13">
-              {hasResult
-                ? <span className="font-bold text-white text-base font-mono">{match.result!.home_score} – {match.result!.away_score}</span>
-                : <span className="text-slate-600 text-xs font-medium">vs</span>
-              }
-            </div>
-            <div className="flex-1 flex items-center gap-2 justify-end min-w-0">
-              <span className="text-sm font-medium text-white truncate text-right">{match.away_team?.name ?? 'Por definir'}</span>
-              <TeamFlag team={match.away_team} />
-            </div>
-          </div>
-          <div className={cn('mt-3 pt-3 border-t border-slate-800/70', isFuture && 'blur-sm pointer-events-none')}>
-            {isFuture ? (
-              <span className="text-xs text-slate-500">Pronóstico: — – —</span>
-            ) : hasPred ? (
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-slate-500">Pronóstico:</span>
-                  <span className="text-xs font-bold font-mono text-slate-300">{match.prediction!.home_score} – {match.prediction!.away_score}</span>
-                </div>
-                <ScoreBadge score={match.score} />
-              </div>
-            ) : (
-              <div className="flex items-center gap-1.5">
-                <Minus className="h-3 w-3 text-slate-600" />
-                <span className="text-xs text-slate-600">Sin pronóstico</span>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* ── Desktop table row (hidden mobile) ── */}
-      <div className={cn(
-        'hidden md:flex items-center border-b border-slate-800/40 last:border-b-0 transition-colors group',
-        match.status === 'finished' ? 'hover:bg-slate-900/50' : 'hover:bg-slate-900/20',
-        isFuture && 'opacity-45',
-      )}>
-        {/* Partido — flex-1 */}
-        <div className="flex-1 flex items-center gap-1 min-w-0 px-3 py-2.5">
-          <div className="flex items-center gap-1.5 flex-1 justify-end min-w-0">
-            <span className={cn('text-xs font-semibold truncate text-right', hasResult && match.result!.winner === 'home' ? 'text-white' : 'text-slate-400')}>
-              {match.home_team?.short_name ?? match.home_team?.name ?? 'TBD'}
-            </span>
-            <TeamFlag team={match.home_team} />
-          </div>
-          <span className="text-[10px] text-slate-700 shrink-0 w-5 text-center font-medium">vs</span>
-          <div className="flex items-center gap-1.5 flex-1 min-w-0">
-            <TeamFlag team={match.away_team} />
-            <span className={cn('text-xs font-semibold truncate', hasResult && match.result!.winner === 'away' ? 'text-white' : 'text-slate-400')}>
-              {match.away_team?.short_name ?? match.away_team?.name ?? 'TBD'}
-            </span>
-          </div>
-        </div>
-
-        {/* Resultado real — w-20 */}
-        <div className="w-20 shrink-0 text-center px-2 py-2.5">
-          {hasResult ? (
-            <span className="text-sm font-bold text-white tabular-nums font-mono tracking-tight">
-              {match.result!.home_score}–{match.result!.away_score}
-            </span>
-          ) : (
-            <span className="text-slate-700 text-xs">–</span>
-          )}
-        </div>
-
-        {/* Tu pronóstico — w-20 */}
-        <div className="w-20 shrink-0 text-center px-2 py-2.5">
-          {isFuture ? (
-            <span className="text-slate-700 text-xs">—</span>
-          ) : hasPred ? (
-            <span className={cn(
-              'text-sm font-semibold tabular-nums font-mono tracking-tight',
-              match.score?.points === 3 ? 'text-emerald-400' :
-              match.score?.points === 1 ? 'text-blue-400'    : 'text-slate-500',
-            )}>
-              {match.prediction!.home_score}–{match.prediction!.away_score}
-            </span>
-          ) : (
-            <span className="text-slate-600 text-xs">–</span>
-          )}
-        </div>
-
-        {/* Puntos — w-16 */}
-        <div className="w-16 shrink-0 flex justify-center px-2 py-2.5">
-          {!isFuture && hasPred && match.score
-            ? <ScoreBadge score={match.score} />
-            : <span className="text-slate-700 text-xs">—</span>
-          }
-        </div>
-      </div>
-    </>
-  );
-}
-
-// ── Round section ─────────────────────────────────────────────────────────────
-
-function RoundSection({
-  name,
-  matches,
-  defaultOpen,
-}: {
-  name: string;
-  matches: BreakdownMatch[];
-  defaultOpen: boolean;
-}) {
-  const [open, setOpen] = useState(defaultOpen);
-  const startedCount = matches.filter((m) => m.has_started).length;
-  const totalPts = matches.reduce((sum, m) => sum + (m.score?.points ?? 0), 0);
-
-  return (
-    <div>
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center justify-between gap-3 py-2.5 group"
-      >
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="text-xs font-bold uppercase tracking-widest text-slate-400 group-hover:text-white transition-colors truncate">
-            {name}
+    <div className={cn(
+      'flex items-center border-b border-slate-800/40 last:border-b-0 transition-colors hover:bg-slate-900/40',
+      match.status === 'in_progress' && 'bg-emerald-500/5',
+      isFuture && 'opacity-50',
+    )}>
+      {/* Partido — flex-1 */}
+      <div className="flex-1 flex items-center gap-0.5 min-w-0 px-3 py-2.5">
+        <div className="flex items-center gap-1.5 flex-1 justify-end min-w-0">
+          <span className={cn(
+            'text-xs font-semibold truncate text-right',
+            hasResult && match.result!.winner === 'home' ? 'text-white' : 'text-slate-400',
+          )}>
+            {match.home_team?.short_name ?? match.home_team?.name ?? 'TBD'}
           </span>
-          {startedCount > 0 && (
-            <span className="text-[10px] text-slate-600">
-              {startedCount}/{matches.length}
-            </span>
-          )}
+          <TeamFlag team={match.home_team} />
         </div>
-        <div className="flex items-center gap-2.5 shrink-0">
-          {startedCount > 0 && (
-            <span className="text-xs font-bold text-emerald-400">{totalPts} pts</span>
-          )}
-          {open ? (
-            <ChevronDown className="h-3.5 w-3.5 text-slate-600" />
-          ) : (
-            <ChevronRight className="h-3.5 w-3.5 text-slate-600" />
-          )}
+        <span className="text-[9px] text-slate-700 shrink-0 w-5 text-center font-medium">vs</span>
+        <div className="flex items-center gap-1.5 flex-1 min-w-0">
+          <TeamFlag team={match.away_team} />
+          <span className={cn(
+            'text-xs font-semibold truncate',
+            hasResult && match.result!.winner === 'away' ? 'text-white' : 'text-slate-400',
+          )}>
+            {match.away_team?.short_name ?? match.away_team?.name ?? 'TBD'}
+          </span>
         </div>
-      </button>
+      </div>
 
-      <AnimatePresence initial={false}>
-        {open && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.18, ease: 'easeInOut' }}
-            className="overflow-hidden"
-          >
-            {/* Desktop table header */}
-            <div className="hidden md:flex items-center border border-slate-800/60 rounded-t-lg bg-slate-900/60 mb-0">
-              <div className="flex-1 px-3 py-2 text-[9px] font-bold uppercase tracking-widest text-slate-600 text-center">
-                Partido
-              </div>
-              <div className="w-20 shrink-0 px-2 py-2 text-[9px] font-bold uppercase tracking-widest text-slate-600 text-center">
-                Resultado
-              </div>
-              <div className="w-20 shrink-0 px-2 py-2 text-[9px] font-bold uppercase tracking-widest text-slate-600 text-center">
-                Pronóstico
-              </div>
-              <div className="w-16 shrink-0 px-2 py-2 text-[9px] font-bold uppercase tracking-widest text-slate-600 text-center">
-                Pts
-              </div>
-            </div>
-
-            {/* Mobile: card list / Desktop: table rows */}
-            <div className="space-y-2 pb-3 md:space-y-0 md:pb-0 md:border md:border-t-0 md:border-slate-800/60 md:rounded-b-lg md:overflow-hidden">
-              {matches.map((match) => (
-                <MatchRow key={match.id} match={match} />
-              ))}
-            </div>
-          </motion.div>
+      {/* Resultado real — w-16 */}
+      <div className="w-16 shrink-0 text-center px-1.5 py-2.5">
+        {hasResult ? (
+          <span className="text-sm font-bold text-white tabular-nums font-mono tracking-tight">
+            {match.result!.home_score}–{match.result!.away_score}
+          </span>
+        ) : (
+          <span className="text-slate-700 text-xs">–</span>
         )}
-      </AnimatePresence>
+      </div>
+
+      {/* Tu pronóstico — w-16 */}
+      <div className="w-16 shrink-0 text-center px-1.5 py-2.5">
+        {isFuture ? (
+          <span className="text-slate-700 text-xs">—</span>
+        ) : hasPred ? (
+          <span className={cn(
+            'text-sm font-semibold tabular-nums font-mono tracking-tight',
+            match.score?.points === 3 ? 'text-emerald-400' :
+            match.score?.points === 1 ? 'text-blue-400'    : 'text-slate-500',
+          )}>
+            {match.prediction!.home_score}–{match.prediction!.away_score}
+          </span>
+        ) : (
+          <span className="text-slate-600 text-xs">–</span>
+        )}
+      </div>
+
+      {/* Puntos — w-14 */}
+      <div className="w-14 shrink-0 flex justify-center px-1.5 py-2.5">
+        {!isFuture && hasPred && match.score
+          ? <ScoreBadge score={match.score} />
+          : <span className="text-slate-700 text-xs">—</span>
+        }
+      </div>
     </div>
   );
 }
@@ -386,37 +255,35 @@ function BreakdownDetail({
           </div>
         );
 
-        const roundsSection = (
-          <div className="divide-y divide-slate-800/60">
-            {data.rounds
-              .filter((r) => r.matches.length > 0)
-              .map((r, idx) => (
-                <RoundSection
-                  key={r.round.id}
-                  name={r.round.name}
-                  matches={r.matches}
-                  defaultOpen={idx === 0 || r.matches.some((m) => m.has_started)}
-                />
-              ))}
-          </div>
-        );
+        const allMatches = data.rounds
+          .filter((r) => r.matches.length > 0)
+          .flatMap((r) => r.matches);
 
         return (
-          <>
-            {/* Mobile: stacked */}
-            <div className="md:hidden space-y-5">
-              {statsCard}
-              {roundsSection}
-            </div>
+          <div className="space-y-5">
+            {statsCard}
 
-            {/* Desktop: 2-col layout */}
-            <div className="hidden md:grid md:grid-cols-[1fr_300px] md:gap-6 md:items-start">
-              {/* Left col: rounds table */}
-              <div>{roundsSection}</div>
-              {/* Right col: stats sticky */}
-              <div className="sticky top-4">{statsCard}</div>
+            <div className="rounded-xl border border-slate-800 bg-slate-950 overflow-hidden">
+              {/* Table header */}
+              <div className="flex items-center border-b border-slate-800 bg-slate-900/60">
+                <div className="flex-1 px-3 py-2 text-[9px] font-bold uppercase tracking-widest text-slate-600 text-center">
+                  Partido
+                </div>
+                <div className="w-16 shrink-0 px-1.5 py-2 text-[9px] font-bold uppercase tracking-widest text-slate-600 text-center">
+                  Result.
+                </div>
+                <div className="w-16 shrink-0 px-1.5 py-2 text-[9px] font-bold uppercase tracking-widest text-slate-600 text-center">
+                  Pronóst.
+                </div>
+                <div className="w-14 shrink-0 px-1.5 py-2 text-[9px] font-bold uppercase tracking-widest text-slate-600 text-center">
+                  Pts
+                </div>
+              </div>
+              {allMatches.map((match) => (
+                <MatchRow key={match.id} match={match} />
+              ))}
             </div>
-          </>
+          </div>
         );
       })()}
     </motion.div>
