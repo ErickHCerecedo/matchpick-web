@@ -19,6 +19,7 @@ import { Home, Trophy, LogOut, Shield, UserCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import { useSiteConfig } from '@/contexts/SiteConfigContext';
+import { LiveMatchesWidget } from '@/components/live-matches-widget';
 
 type NavItem = { href: string; label: string; icon: React.ElementType };
 
@@ -208,6 +209,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </motion.div>
         </div>
       </main>
+
+      {/* Live matches floating widget */}
+      <LiveMatchesWidget />
 
       {/* Mobile bottom nav */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-slate-900 border-t border-slate-800 flex z-50">
