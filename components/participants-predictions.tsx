@@ -5,14 +5,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn, formatMatchDateParts } from '@/lib/utils';
 import { groupByDate, formatDateLabel, toLocalDateKey, todayKey } from '@/lib/date-utils';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
 import type { RoundWithMatches, Prediction, ApiResponse, Match } from '@/types';
-import { Lock, Eye, ChevronDown, RefreshCw, Pencil, Check, Calendar, MapPin } from 'lucide-react';
+import { Lock, Eye, ChevronDown, RefreshCw, Calendar, MapPin } from 'lucide-react';
 import { FlagPlaceholder } from '@/components/ui/flag-placeholder';
 
 const CARD_BG =
@@ -20,7 +19,7 @@ const CARD_BG =
 
 const RESULT_STATUS_LABELS: Record<string, string> = {
   scheduled:   'Programado',
-  in_progress: 'En vivo',
+  in_progress: 'Jugando',
   finished:    'Finalizado',
   cancelled:   'Cancelado',
 };
@@ -48,90 +47,23 @@ function pointsBadge(points: number | null | undefined) {
   return null;
 }
 
-// ── Inline result form ─────────────────────────────────────────────────────
-
-function ResultForm({
-  match,
-  quinielaSlug,
-  onSaved,
-}: {
-  match: Match;
-  quinielaSlug: string;
-  onSaved: () => void;
-}) {
-  const [home, setHome] = useState(match.result?.home_score?.toString() ?? '');
-  const [away, setAway] = useState(match.result?.away_score?.toString() ?? '');
-  const [saving, setSaving] = useState(false);
-
-  const handleSave = async () => {
-    const h = parseInt(home);
-    const a = parseInt(away);
-    if (isNaN(h) || isNaN(a)) { toast.error('Ingresa marcadores válidos'); return; }
-    setSaving(true);
-    try {
-      const res = await api.post<{ message: string }>(
-        `/quinielas/${quinielaSlug}/matches/${match.id}/result`,
-        { home_score: h, away_score: a }
-      );
-      toast.success(res.message ?? 'Resultado guardado');
-      onSaved();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Error al guardar resultado');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <div className="flex items-center gap-2 px-4 py-3 bg-slate-950/90 border-t border-slate-800/60">
-      <span className="text-xs text-slate-400 shrink-0">
-        {match.result ? 'Editar resultado:' : 'Ingresar resultado:'}
-      </span>
-      <Input
-        type="number" min="0" max="99" value={home}
-        onChange={(e) => setHome(e.target.value.replace(/\D/g, ''))}
-        className="w-14 h-8 text-center bg-slate-950 border-slate-700 text-white text-sm p-1"
-        placeholder="0"
-      />
-      <span className="text-slate-500 font-bold text-sm">–</span>
-      <Input
-        type="number" min="0" max="99" value={away}
-        onChange={(e) => setAway(e.target.value.replace(/\D/g, ''))}
-        className="w-14 h-8 text-center bg-slate-950 border-slate-700 text-white text-sm p-1"
-        placeholder="0"
-      />
-      <Button
-        size="sm" onClick={handleSave}
-        disabled={saving || home === '' || away === ''}
-        className="h-8 bg-emerald-500 hover:bg-emerald-600 text-white text-xs px-3 ml-1"
-      >
-        {saving ? <RefreshCw className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
-        <span className="ml-1">Guardar</span>
-      </Button>
-    </div>
-  );
-}
-
 // ── Match card ─────────────────────────────────────────────────────────────
 
 function MatchResultCard({
   match,
   quinielaSlug,
   currentUserId,
-  isAdmin,
   onResultUpdated,
 }: {
   match: Match;
   quinielaSlug: string;
   currentUserId?: number;
-  isAdmin?: boolean;
   onResultUpdated?: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [predictions, setPredictions] = useState<Prediction[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showResultForm, setShowResultForm] = useState(false);
 
   const matchHasStarted = new Date(match.scheduled_at) <= new Date();
   const sc = RESULT_STATUS_COLORS[match.status] ?? RESULT_STATUS_COLORS.finished;
@@ -157,11 +89,6 @@ function MatchResultCard({
     }
   }, [expanded, matchHasStarted, predictions, quinielaSlug, match.id]);
 
-  const handleResultSaved = useCallback(() => {
-    setShowResultForm(false);
-    setPredictions(null);
-    onResultUpdated?.();
-  }, [onResultUpdated]);
 
   return (
     <div
@@ -204,7 +131,7 @@ function MatchResultCard({
           </div>
           <div className="flex items-center gap-2">
             <Badge variant="outline" className={cn('text-xs flex items-center gap-1', sc.badge)}>
-              <span className={cn('w-1.5 h-1.5 rounded-full shrink-0', sc.dot)} />
+              <span className={cn('w-1.5 h-1.5 rounded-full shrink-0', sc.dot, match.status === 'in_progress' && 'animate-pulse')} />
               {RESULT_STATUS_LABELS[match.status] ?? match.status}
             </Badge>
             {matchHasStarted ? (
@@ -278,34 +205,6 @@ function MatchResultCard({
           </p>
         )}
       </button>
-
-      {/* Admin result toggle */}
-      {isAdmin && matchHasStarted && (
-        <div className="relative z-10 flex justify-end px-4 py-2 border-t border-slate-800/50">
-          <button
-            onClick={() => setShowResultForm((v) => !v)}
-            className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-emerald-400 transition-colors"
-          >
-            <Pencil className="h-3 w-3" />
-            {match.result ? 'Editar resultado' : 'Ingresar resultado'}
-          </button>
-        </div>
-      )}
-
-      <AnimatePresence initial={false}>
-        {isAdmin && showResultForm && (
-          <motion.div
-            key="result-form"
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.15 }}
-            className="relative z-10 overflow-hidden"
-          >
-            <ResultForm match={match} quinielaSlug={quinielaSlug} onSaved={handleResultSaved} />
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* Expanded predictions */}
       <AnimatePresence initial={false}>
@@ -569,7 +468,6 @@ export function ParticipantsPredictions({
                       match={match}
                       quinielaSlug={quinielaSlug}
                       currentUserId={currentUserId}
-                      isAdmin={isAdmin}
                       onResultUpdated={onResultUpdated}
                     />
                   ))}

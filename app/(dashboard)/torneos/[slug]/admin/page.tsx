@@ -118,6 +118,7 @@ export default function TorneoAdminPage() {
   const [savingResult, setSavingResult] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [updatingStatusId, setUpdatingStatusId] = useState<number | null>(null);
 
   // Calendar date-strip state
   const [activeTab, setActiveTab] = useState('teams');
@@ -500,7 +501,7 @@ export default function TorneoAdminPage() {
       setMatchesByRound((prev) => ({
         ...prev,
         [expandedRoundId]: (prev[expandedRoundId] ?? []).map((m) =>
-          m.id === match.id ? { ...m, result: res.data, status: 'finished' } : m
+          m.id === match.id ? { ...m, result: res.data, status: m.status === 'in_progress' ? 'in_progress' : 'finished' } : m
         ),
       }));
       setResultMatchId(null);
@@ -509,6 +510,25 @@ export default function TorneoAdminPage() {
       toast.error(err instanceof Error ? err.message : 'Error al guardar resultado');
     } finally {
       setSavingResult(false);
+    }
+  };
+
+  const handleUpdateStatus = async (match: CustomMatch, status: 'scheduled' | 'in_progress' | 'finished' | 'cancelled') => {
+    if (!expandedRoundId) return;
+    setUpdatingStatusId(match.id);
+    try {
+      await api.patch(`/admin/matches/${match.id}/status`, { status });
+      setMatchesByRound((prev) => ({
+        ...prev,
+        [expandedRoundId]: (prev[expandedRoundId] ?? []).map((m) =>
+          m.id === match.id ? { ...m, status } : m
+        ),
+      }));
+      toast.success(status === 'in_progress' ? 'Partido iniciado.' : 'Partido finalizado.');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Error al actualizar estado');
+    } finally {
+      setUpdatingStatusId(null);
     }
   };
 
@@ -945,10 +965,33 @@ export default function TorneoAdminPage() {
                                         hour: '2-digit', minute: '2-digit', hour12: true,
                                       })}</span>
                                       {match.venue && <><span className="text-slate-700">·</span><span className="text-slate-600 truncate">{match.venue}</span></>}
-                                      {match.status === 'in_progress' && <span className="text-emerald-400 font-semibold text-[10px]">🔴 EN VIVO</span>}
+                                      {match.status === 'in_progress' && (
+                                        <span className="flex items-center gap-1 text-[10px] font-semibold text-red-400 border border-red-500/40 px-1.5 py-0.5 rounded">
+                                          <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse shrink-0" />
+                                          Jugando
+                                        </span>
+                                      )}
                                     </p>
                                   </div>
                                   <div className="flex items-center gap-0.5 shrink-0 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                                    {user?.is_admin && match.status === 'scheduled' && hasStarted && (
+                                      <button
+                                        onClick={() => handleUpdateStatus(match, 'in_progress')}
+                                        disabled={updatingStatusId === match.id}
+                                        className="p-1.5 rounded text-slate-500 hover:text-emerald-400 transition-colors"
+                                        title="Iniciar partido">
+                                        {updatingStatusId === match.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <span className="text-[10px] font-bold">▶</span>}
+                                      </button>
+                                    )}
+                                    {user?.is_admin && match.status === 'in_progress' && (
+                                      <button
+                                        onClick={() => handleUpdateStatus(match, 'finished')}
+                                        disabled={updatingStatusId === match.id}
+                                        className="p-1.5 rounded text-slate-500 hover:text-red-400 transition-colors"
+                                        title="Finalizar partido">
+                                        {updatingStatusId === match.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <span className="text-[10px] font-bold">■</span>}
+                                      </button>
+                                    )}
                                     {hasStarted && (tournament.is_custom || user?.is_admin) && (
                                       <button onClick={() => startSetResult(match)}
                                         className={cn('p-1.5 rounded transition-colors',

@@ -21,7 +21,7 @@ interface Props {
 
 const STATUS_LABELS: Record<Match['status'], string> = {
   scheduled: 'Programado',
-  in_progress: 'En vivo',
+  in_progress: 'Jugando',
   finished: 'Finalizado',
   cancelled: 'Cancelado',
 };
@@ -140,7 +140,7 @@ export function MatchCard({ match, prediction, onChange, readOnly, isSaved }: Pr
               </span>
             )}
             <Badge variant="outline" className={cn('text-xs flex items-center gap-1', sc.badge)}>
-              <span className={cn('w-1.5 h-1.5 rounded-full shrink-0', sc.dot)} />
+              <span className={cn('w-1.5 h-1.5 rounded-full shrink-0', sc.dot, match.status === 'in_progress' && 'animate-pulse')} />
               {STATUS_LABELS[match.status]}
             </Badge>
           </div>
