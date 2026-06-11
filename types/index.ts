@@ -68,8 +68,10 @@ export interface CustomMatch {
   scheduled_at: string;
   venue: string | null;
   status: string;
-  home_team: { id: number; name: string; short_name: string };
-  away_team: { id: number; name: string; short_name: string };
+  home_team: { id: number; name: string; short_name: string } | null;
+  home_placeholder: string | null;
+  away_team: { id: number; name: string; short_name: string } | null;
+  away_placeholder: string | null;
   result: MatchResult | null;
 }
 

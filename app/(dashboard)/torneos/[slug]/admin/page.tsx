@@ -383,8 +383,8 @@ export default function TorneoAdminPage() {
       .toISOString()
       .slice(0, 16);
     setEditMatchForm({
-      home_team_id: String(match.home_team.id),
-      away_team_id: String(match.away_team.id),
+      home_team_id: match.home_team ? String(match.home_team.id) : '',
+      away_team_id: match.away_team ? String(match.away_team.id) : '',
       scheduled_at: local,
       venue: match.venue ?? '',
     });
@@ -858,7 +858,9 @@ export default function TorneoAdminPage() {
                                           {match.result ? 'Editar resultado' : 'Ingresar resultado'}
                                         </p>
                                         <div className="flex items-center gap-3">
-                                          <span className="text-sm text-white font-medium flex-1 text-right truncate">{match.home_team.name}</span>
+                                          <span className="text-sm text-white font-medium flex-1 text-right truncate">
+                                            {match.home_team?.name ?? match.home_placeholder ?? 'Local'}
+                                          </span>
                                           <div className="flex items-center gap-2 shrink-0">
                                             <Input
                                               type="number"
@@ -876,7 +878,9 @@ export default function TorneoAdminPage() {
                                               className="w-14 text-center bg-slate-950 border-slate-700 text-white text-sm h-9"
                                             />
                                           </div>
-                                          <span className="text-sm text-white font-medium flex-1 truncate">{match.away_team.name}</span>
+                                          <span className="text-sm text-white font-medium flex-1 truncate">
+                                            {match.away_team?.name ?? match.away_placeholder ?? 'Visitante'}
+                                          </span>
                                         </div>
                                         <div className="flex justify-end gap-1">
                                           <button type="button" onClick={() => setResultMatchId(null)} className="p-1.5 rounded text-slate-500 hover:text-white transition-colors"><X className="h-4 w-4" /></button>
@@ -895,8 +899,10 @@ export default function TorneoAdminPage() {
                                       <div className="flex items-center gap-3 px-4 py-3 group">
                                         <div className="flex-1 min-w-0">
                                           <div className="flex items-center gap-1.5 min-w-0">
-                                            <MatchTeamFlag teamId={match.home_team.id} teams={teams} />
-                                            <span className="text-sm font-medium text-white truncate">{match.home_team.name}</span>
+                                            {match.home_team && <MatchTeamFlag teamId={match.home_team.id} teams={teams} />}
+                                            <span className="text-sm font-medium text-white truncate">
+                                              {match.home_team?.name ?? <span className="text-slate-500 italic text-xs">{match.home_placeholder ?? 'Por definir'}</span>}
+                                            </span>
                                             {match.result ? (
                                               <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 shrink-0 tabular-nums">
                                                 {match.result.home_score} – {match.result.away_score}
@@ -904,8 +910,10 @@ export default function TorneoAdminPage() {
                                             ) : (
                                               <span className="text-slate-600 text-xs shrink-0 font-medium">vs</span>
                                             )}
-                                            <span className="text-sm font-medium text-white truncate">{match.away_team.name}</span>
-                                            <MatchTeamFlag teamId={match.away_team.id} teams={teams} />
+                                            <span className="text-sm font-medium text-white truncate">
+                                              {match.away_team?.name ?? <span className="text-slate-500 italic text-xs">{match.away_placeholder ?? 'Por definir'}</span>}
+                                            </span>
+                                            {match.away_team && <MatchTeamFlag teamId={match.away_team.id} teams={teams} />}
                                           </div>
                                           <p className="text-xs text-slate-500 mt-0.5">
                                             {new Date(match.scheduled_at).toLocaleString('es-MX', {
