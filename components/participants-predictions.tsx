@@ -13,6 +13,7 @@ import { api } from '@/lib/api';
 import { toast } from 'sonner';
 import type { RoundWithMatches, Prediction, ApiResponse, Match } from '@/types';
 import { Lock, Eye, ChevronDown, RefreshCw, Pencil, Check, Calendar, MapPin } from 'lucide-react';
+import { FlagPlaceholder } from '@/components/ui/flag-placeholder';
 
 const CARD_BG =
   'https://res.cloudinary.com/dr0klvutj/image/upload/v1781001150/MatchPick/file_00000000042c71fb8d0d570a11881d55.png';
@@ -221,7 +222,7 @@ function MatchResultCard({
             {match.home_team?.flag_url ? (
               <img src={match.home_team.flag_url} alt="" className="w-12 h-8 object-cover rounded shadow-md" />
             ) : (
-              <div className="w-12 h-8 rounded bg-slate-800/60 border border-slate-700" />
+              <FlagPlaceholder size="lg" />
             )}
             <span className="w-full text-[11px] font-semibold text-white text-center leading-tight truncate px-1 mt-0.5">
               {match.home_team?.name ?? 'TBD'}
@@ -247,7 +248,7 @@ function MatchResultCard({
             {match.away_team?.flag_url ? (
               <img src={match.away_team.flag_url} alt="" className="w-12 h-8 object-cover rounded shadow-md" />
             ) : (
-              <div className="w-12 h-8 rounded bg-slate-800/60 border border-slate-700" />
+              <FlagPlaceholder size="lg" />
             )}
             <span className="w-full text-[11px] font-semibold text-white text-center leading-tight truncate px-1 mt-0.5">
               {match.away_team?.name ?? 'TBD'}
