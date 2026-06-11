@@ -703,22 +703,22 @@ export function ParticipantBreakdown({ quinielaSlug, standings, currentUserId, i
                     Participante
                   </span>
                   <div className="w-20 shrink-0 hidden sm:flex sm:items-center sm:justify-center">
-                    <span className="inline-flex flex-col items-center gap-0.5 text-[10px] font-bold px-2 py-1 rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-emerald-500 leading-tight text-center">
-                      <Target className="h-3 w-3" />
-                      <span>Marcador</span>
-                      <span>Exacto</span>
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-slate-500 uppercase tracking-wide leading-tight text-center">
+                      <Target className="h-3 w-3 shrink-0" />
+                      <span>Marcador<br />Exacto</span>
                     </span>
                   </div>
                   <div className="w-20 shrink-0 hidden sm:flex sm:items-center sm:justify-center">
-                    <span className="inline-flex flex-col items-center gap-0.5 text-[10px] font-bold px-2 py-1 rounded-lg border border-blue-500/30 bg-blue-500/10 text-blue-500 leading-tight text-center">
-                      <CheckCircle2 className="h-3 w-3" />
-                      <span>Resultado</span>
-                      <span>Correcto</span>
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-slate-500 uppercase tracking-wide leading-tight text-center">
+                      <CheckCircle2 className="h-3 w-3 shrink-0" />
+                      <span>Resultado<br />Correcto</span>
                     </span>
                   </div>
-                  <div className="w-16 shrink-0 text-[10px] font-bold uppercase tracking-wide text-slate-600 text-center leading-tight hidden sm:flex sm:flex-col sm:items-center sm:gap-0.5">
-                    <span>%</span>
-                    <span>Aciertos</span>
+                  <div className="w-16 shrink-0 hidden sm:flex sm:items-center sm:justify-center">
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-slate-500 uppercase tracking-wide leading-tight">
+                      <Percent className="h-3 w-3 shrink-0" />
+                      <span>Precisión</span>
+                    </span>
                   </div>
                   <span className="w-16 shrink-0 text-[10px] font-bold uppercase tracking-wider text-slate-600 text-right">
                     Puntaje

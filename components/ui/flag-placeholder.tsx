@@ -1,8 +1,9 @@
 import { cn } from '@/lib/utils';
 
-type Size = 'sm' | 'md' | 'lg';
+type Size = 'xs' | 'sm' | 'md' | 'lg';
 
 const SIZE: Record<Size, { wrapper: string; text: string }> = {
+  xs:  { wrapper: 'w-4 h-3',    text: 'text-[6px]'  },
   sm:  { wrapper: 'w-5 h-3.5',  text: 'text-[7px]'  },
   md:  { wrapper: 'w-7 h-5',    text: 'text-[9px]'  },
   lg:  { wrapper: 'w-12 h-8',   text: 'text-[11px]' },

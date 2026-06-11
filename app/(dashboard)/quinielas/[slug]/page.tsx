@@ -283,48 +283,45 @@ export default function QuinielaPage() {
             currentUserId={user?.id}
             invitePanel={
               quiniela.my_role === 'admin' ? (
-                <div className="rounded-xl border border-slate-800 bg-slate-950 p-4 space-y-3">
-                  <div className="flex items-center gap-2.5">
-                    <div className="p-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 shrink-0">
-                      <UserPlus className="h-3.5 w-3.5 text-emerald-400" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-white">Invitar participantes</p>
-                      <p className="text-xs text-slate-500">Comparte el enlace con tus amigos</p>
-                    </div>
+                <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-slate-800 bg-slate-950">
+                  <div className="p-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 shrink-0">
+                    <UserPlus className="h-3 w-3 text-emerald-400" />
                   </div>
+                  <span className="text-xs font-medium text-slate-400 shrink-0">Invitar</span>
                   {inviteLink ? (
-                    <div className="flex gap-2">
+                    <>
                       <input
                         readOnly
                         value={inviteLink}
-                        className="flex-1 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 text-xs px-3 py-2 truncate focus:outline-none"
+                        className="flex-1 min-w-0 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 text-xs px-2.5 py-1.5 truncate focus:outline-none"
                       />
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={handleCopyLink}
-                        className="border-slate-700 text-slate-300 hover:text-emerald-400 hover:border-emerald-500/40 shrink-0"
+                        className="border-slate-700 text-slate-300 hover:text-emerald-400 hover:border-emerald-500/40 shrink-0 h-7 px-2.5"
                       >
-                        {copied ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
+                        {copied
+                          ? <Check className="h-3.5 w-3.5 text-emerald-400" />
+                          : <Copy className="h-3.5 w-3.5" />
+                        }
                       </Button>
-                    </div>
+                    </>
                   ) : (
                     <Button
                       size="sm"
                       onClick={handleGenerateInvite}
                       disabled={generatingInvite}
-                      className="bg-emerald-500 hover:bg-emerald-600 text-white w-full"
+                      className="ml-auto shrink-0 h-7 text-xs bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/30 hover:border-emerald-500/50"
                     >
-                      {generatingInvite ? (
-                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      ) : (
-                        <Link2 className="h-4 w-4 mr-2" />
-                      )}
-                      Generar enlace de invitación
+                      {generatingInvite
+                        ? <Loader2 className="h-3 w-3 animate-spin mr-1.5" />
+                        : <Link2 className="h-3 w-3 mr-1.5" />
+                      }
+                      Generar enlace
                     </Button>
                   )}
-                  <p className="text-[11px] text-slate-600">El enlace expira en 7 días.</p>
+                  <span className="text-[10px] text-slate-700 shrink-0">7 días</span>
                 </div>
               ) : undefined
             }

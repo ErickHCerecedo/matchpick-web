@@ -11,6 +11,7 @@ import {
   Star, ArrowRight, CalendarCheck, Share2, Pencil,
   Zap, Percent,
 } from 'lucide-react';
+import { FlagPlaceholder } from '@/components/ui/flag-placeholder';
 
 // ── helpers ────────────────────────────────────────────────────────────────
 
@@ -503,9 +504,10 @@ function UpcomingMatches({
                   {/* Teams + meta */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
-                      {match.home_team?.flag_url && (
-                        <img src={match.home_team.flag_url} alt="" className="w-4 h-3 object-cover rounded-xs shrink-0" />
-                      )}
+                      {match.home_team?.flag_url
+                        ? <img src={match.home_team.flag_url} alt="" className="w-4 h-3 object-cover rounded-xs shrink-0" />
+                        : <FlagPlaceholder size="xs" />
+                      }
                       <span className="text-xs font-semibold text-white truncate">
                         {match.home_team?.short_name ?? '?'}
                       </span>
@@ -513,9 +515,10 @@ function UpcomingMatches({
                       <span className="text-xs font-semibold text-white truncate">
                         {match.away_team?.short_name ?? '?'}
                       </span>
-                      {match.away_team?.flag_url && (
-                        <img src={match.away_team.flag_url} alt="" className="w-4 h-3 object-cover rounded-xs shrink-0" />
-                      )}
+                      {match.away_team?.flag_url
+                        ? <img src={match.away_team.flag_url} alt="" className="w-4 h-3 object-cover rounded-xs shrink-0" />
+                        : <FlagPlaceholder size="xs" />
+                      }
                     </div>
                     <p className="text-[10px] text-slate-600 mt-1">
                       {formatMatchDate(match.scheduled_at)} · {roundName}
@@ -615,13 +618,10 @@ function RecentResults({ rounds }: { rounds: RoundWithMatches[] }) {
               <div key={match.id} className="px-4 py-3 space-y-1.5">
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                    {match.home_team?.flag_url && (
-                      <img
-                        src={match.home_team.flag_url}
-                        alt=""
-                        className="w-4 h-3 object-cover rounded-xs shrink-0"
-                      />
-                    )}
+                    {match.home_team?.flag_url
+                      ? <img src={match.home_team.flag_url} alt="" className="w-4 h-3 object-cover rounded-xs shrink-0" />
+                      : <FlagPlaceholder size="xs" />
+                    }
                     <span className="text-xs font-semibold text-white truncate">
                       {match.home_team?.short_name ?? '?'}
                     </span>
@@ -631,13 +631,10 @@ function RecentResults({ rounds }: { rounds: RoundWithMatches[] }) {
                     <span className="text-xs font-semibold text-white truncate">
                       {match.away_team?.short_name ?? '?'}
                     </span>
-                    {match.away_team?.flag_url && (
-                      <img
-                        src={match.away_team.flag_url}
-                        alt=""
-                        className="w-4 h-3 object-cover rounded-xs shrink-0"
-                      />
-                    )}
+                    {match.away_team?.flag_url
+                      ? <img src={match.away_team.flag_url} alt="" className="w-4 h-3 object-cover rounded-xs shrink-0" />
+                      : <FlagPlaceholder size="xs" />
+                    }
                   </div>
                   <PointsBadge points={pred.points} />
                 </div>
