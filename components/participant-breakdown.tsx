@@ -261,7 +261,7 @@ function BreakdownDetail({
 
         return (
           <div className="space-y-5">
-            {statsCard}
+            <div className="md:w-1/2">{statsCard}</div>
 
             <div className="rounded-xl border border-slate-800 bg-slate-950 overflow-hidden">
               {/* Table header */}
