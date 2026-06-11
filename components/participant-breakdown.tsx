@@ -26,35 +26,6 @@ import {
   Percent,
 } from 'lucide-react';
 
-// ── Football avatar ───────────────────────────────────────────────────────────
-
-const JERSEY_PALETTES = [
-  { shirt: '#10b981', trim: '#065f46', bg: '#022c22' },
-  { shirt: '#3b82f6', trim: '#1d4ed8', bg: '#172554' },
-  { shirt: '#ef4444', trim: '#991b1b', bg: '#450a0a' },
-  { shirt: '#f59e0b', trim: '#b45309', bg: '#451a03' },
-  { shirt: '#8b5cf6', trim: '#6d28d9', bg: '#2e1065' },
-  { shirt: '#06b6d4', trim: '#0e7490', bg: '#083344' },
-  { shirt: '#f97316', trim: '#c2410c', bg: '#431407' },
-  { shirt: '#84cc16', trim: '#4d7c0f', bg: '#1a2e05' },
-];
-
-function FootballAvatar({ userId, name }: { userId: number; name: string }) {
-  const hash = Math.abs((userId * 31) + (name.charCodeAt(0) || 0)) % JERSEY_PALETTES.length;
-  const p = JERSEY_PALETTES[hash];
-  const num = (userId % 99) + 1;
-  return (
-    <svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
-      <circle cx="20" cy="20" r="20" fill={p.bg} />
-      <path d="M13 17 L11 22 L14 23 L14 33 L26 33 L26 23 L29 22 L27 17 L23 15 Q20 13 17 15 Z" fill={p.shirt} />
-      <path d="M13 17 L11 22 L14 23 L14 19 Z" fill={p.trim} />
-      <path d="M27 17 L29 22 L26 23 L26 19 Z" fill={p.trim} />
-      <path d="M17 15 L20 19 L23 15 Q20 13 17 15 Z" fill={p.bg} />
-      <text x="20" y="29" textAnchor="middle" fill="white" fontSize="9" fontWeight="bold" fontFamily="monospace">{num}</text>
-    </svg>
-  );
-}
-
 // ── Points badge ──────────────────────────────────────────────────────────────
 
 function ScoreBadge({ score }: { score: BreakdownMatch['score'] }) {
@@ -308,8 +279,8 @@ function BreakdownDetail({
             <div className="flex items-center gap-3">
               <Avatar className="h-12 w-12">
                 <AvatarImage src={data.user.avatar_url ?? undefined} />
-                <AvatarFallback className="p-0 overflow-hidden">
-                  <FootballAvatar userId={userId} name={data.user.name} />
+                <AvatarFallback className="bg-slate-700 text-white text-sm font-bold">
+                  {data.user.name.charAt(0).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
               <div>
@@ -782,8 +753,8 @@ export function ParticipantBreakdown({ quinielaSlug, standings, currentUserId, i
                       <div className="flex-1 min-w-0 flex items-center gap-2">
                         <Avatar className="h-7 w-7 shrink-0 ring-1 ring-slate-700/40">
                           <AvatarImage src={s.user.avatar_url ?? undefined} />
-                          <AvatarFallback className="p-0 overflow-hidden">
-                            <FootballAvatar userId={s.user.id} name={s.user.name} />
+                          <AvatarFallback className="bg-slate-700 text-white text-[10px] font-bold">
+                            {s.user.name.charAt(0).toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
                         <div className="min-w-0">
