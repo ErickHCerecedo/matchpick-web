@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { FlagPlaceholder } from '@/components/ui/flag-placeholder';
 import { cn } from '@/lib/utils';
+import { toLocalDateKey, formatDateLabel, todayKey } from '@/lib/date-utils';
 
 // ── Helper sub-components ──────────────────────────────────────────────────
 
@@ -116,8 +117,13 @@ export default function TorneoAdminPage() {
   const [resultForm, setResultForm] = useState({ home_score: '', away_score: '' });
   const [savingResult, setSavingResult] = useState(false);
   const [syncing, setSyncing] = useState(false);
-
   const [saving, setSaving] = useState(false);
+
+  // Calendar date-strip state
+  const [activeTab, setActiveTab] = useState('teams');
+  const [adminDateKey, setAdminDateKey] = useState('');
+  const adminDateRef = useRef<HTMLButtonElement | null>(null);
+  const [calendarLoaded, setCalendarLoaded] = useState(false);
 
   // Config state (custom tournament settings)
   const [configName, setConfigName] = useState('');
@@ -184,6 +190,71 @@ export default function TorneoAdminPage() {
       setLoadingRoundId(null);
     }
   };
+
+  // ── Calendar: load all rounds when tab becomes active ─────────────────
+
+  useEffect(() => {
+    if (activeTab !== 'calendar' || calendarLoaded || rounds.length === 0 || !slug) return;
+    setCalendarLoaded(true);
+    Promise.all(
+      rounds
+        .filter((r) => matchesByRound[r.id] === undefined)
+        .map((r) =>
+          api.get<ApiResponse<CustomMatch[]>>(`/tournaments/${slug}/rounds/${r.id}/matches`)
+            .then((res) => ({ roundId: r.id, matches: res.data }))
+            .catch(() => ({ roundId: r.id, matches: [] as CustomMatch[] }))
+        )
+    ).then((results) => {
+      setMatchesByRound((prev) => {
+        const next = { ...prev };
+        results.forEach(({ roundId, matches }) => { next[roundId] = matches; });
+        return next;
+      });
+    });
+  }, [activeTab, calendarLoaded, rounds, slug]);
+
+  // Tag each match with its round info and build date groups
+  type AdminMatch = CustomMatch & { roundId: number; roundName: string };
+
+  const adminDateGroups = useMemo(() => {
+    const byDate = new Map<string, AdminMatch[]>();
+    for (const round of rounds) {
+      for (const m of (matchesByRound[round.id] ?? [])) {
+        const key = m.scheduled_at ? toLocalDateKey(m.scheduled_at) : 'sin-fecha';
+        if (!byDate.has(key)) byDate.set(key, []);
+        byDate.get(key)!.push({ ...m, roundId: round.id, roundName: round.name });
+      }
+    }
+    return new Map([...byDate.entries()].sort((a, b) => a[0].localeCompare(b[0])));
+  }, [rounds, matchesByRound]);
+
+  const adminSortedDateKeys = useMemo(() => [...adminDateGroups.keys()], [adminDateGroups]);
+
+  // Init active date to today (or first available)
+  useEffect(() => {
+    if (adminSortedDateKeys.length === 0) return;
+    setAdminDateKey((prev) => {
+      if (prev && adminDateGroups.has(prev)) return prev;
+      const today = todayKey();
+      return adminDateGroups.has(today) ? today : adminSortedDateKeys[0];
+    });
+  }, [adminSortedDateKeys]);
+
+  // Scroll active date pill into view
+  useEffect(() => {
+    adminDateRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+  }, [adminDateKey]);
+
+  // Matches for active date, grouped by round
+  const adminActiveDateMatches = useMemo(() => {
+    const matches = adminDateGroups.get(adminDateKey) ?? [];
+    const byRound = new Map<string, AdminMatch[]>();
+    for (const m of matches) {
+      if (!byRound.has(m.roundName)) byRound.set(m.roundName, []);
+      byRound.get(m.roundName)!.push(m);
+    }
+    return [...byRound.entries()];
+  }, [adminDateKey, adminDateGroups]);
 
   // ── Teams ──────────────────────────────────────────────────────────────
 
@@ -530,7 +601,7 @@ export default function TorneoAdminPage() {
       </div>
 
       {/* ── Tabs ── */}
-      <Tabs defaultValue="teams">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className={cn('!grid w-full !h-auto bg-slate-900 border border-slate-700/60 p-1 gap-1 rounded-xl mb-1', tournament.is_custom ? 'grid-cols-3' : 'grid-cols-2')}>
           <TabsTrigger
             value="teams"
@@ -703,367 +774,299 @@ export default function TorneoAdminPage() {
         </TabsContent>
 
         {/* ════════════════════ CALENDARIO ════════════════════ */}
-        <TabsContent value="calendar" className="mt-4">
+        <TabsContent value="calendar" className="mt-4 space-y-4">
+
+          {/* Sync button */}
           {!tournament.is_custom && user?.is_admin && (
-            <div className="flex justify-end mb-3">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={handleSync}
-                disabled={syncing}
-                className="border-slate-600 text-slate-300 hover:text-white text-xs h-8 gap-1.5"
-              >
+            <div className="flex justify-end">
+              <Button size="sm" variant="outline" onClick={handleSync} disabled={syncing}
+                className="border-slate-600 text-slate-300 hover:text-white text-xs h-8 gap-1.5">
                 {syncing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
                 Sincronizar API
               </Button>
             </div>
           )}
 
-          {rounds.length === 0 ? (
-            /* ── Empty state ── */
+          {/* Loading skeleton */}
+          {!calendarLoaded ? (
+            <div className="space-y-2">
+              {[0, 1, 2].map((i) => <Skeleton key={i} className="h-16 bg-slate-800 rounded-xl" />)}
+            </div>
+          ) : adminSortedDateKeys.length === 0 ? (
             <div className="text-center py-14 rounded-xl border border-dashed border-slate-700">
               <CalendarDays className="h-10 w-10 text-slate-700 mx-auto mb-3" />
-              <p className="text-slate-500 text-sm font-medium">Sin jornadas</p>
-              <p className="text-slate-600 text-xs mt-1">Agrega la primera jornada para comenzar a cargar partidos.</p>
+              <p className="text-slate-500 text-sm font-medium">Sin partidos en el calendario</p>
             </div>
           ) : (
-            /* ── Accordion ── */
-            <div className="rounded-xl border border-slate-800 overflow-hidden divide-y divide-slate-800">
-              {rounds.map((round) => {
-                const isExpanded = expandedRoundId === round.id;
-                const isLoading = loadingRoundId === round.id;
-                const roundMatches = matchesByRound[round.id] ?? [];
-
-                return (
-                  <div key={round.id}>
-                    {/* ── Round header ── */}
-                    <div
+            <>
+              {/* Date strip */}
+              <div className="flex gap-2 overflow-x-auto scrollbar-none pb-1">
+                {adminSortedDateKeys.map((dateKey) => {
+                  const { weekday, day, month } = formatDateLabel(dateKey);
+                  const isActiveDate = adminDateKey === dateKey;
+                  const isToday = dateKey === todayKey();
+                  const count = adminDateGroups.get(dateKey)!.length;
+                  return (
+                    <button
+                      key={dateKey}
+                      ref={isActiveDate ? adminDateRef : undefined}
+                      onClick={() => setAdminDateKey(dateKey)}
                       className={cn(
-                        'flex items-center gap-3 px-4 py-3.5 transition-colors',
-                        isExpanded ? 'bg-slate-800/60' : 'bg-slate-900 hover:bg-slate-800/30'
+                        'shrink-0 flex flex-col items-center px-3 py-2.5 rounded-xl border text-center min-w-[3.875rem] transition-all',
+                        isActiveDate
+                          ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400'
+                          : isToday
+                          ? 'border-emerald-500/50 bg-emerald-500/5 text-emerald-300 hover:bg-emerald-500/10'
+                          : 'border-slate-700 text-slate-400 hover:border-slate-500 hover:text-white'
                       )}
                     >
-                      {/* Expand toggle */}
-                      <button
-                        onClick={() => handleExpandRound(round.id)}
-                        className="flex-1 flex items-center gap-3 text-left min-w-0"
-                      >
-                        <ChevronRight
-                          className={cn(
-                            'h-4 w-4 text-slate-500 shrink-0 transition-transform duration-200',
-                            isExpanded && 'rotate-90'
-                          )}
-                        />
-                        <span
-                          className={cn(
-                            'text-sm font-semibold truncate',
-                            isExpanded ? 'text-white' : 'text-slate-300'
-                          )}
-                        >
-                          {round.name}
-                        </span>
+                      <span className="text-[10px] uppercase tracking-wide leading-none mb-1 font-semibold">
+                        {isToday ? 'Hoy' : weekday}
+                      </span>
+                      <span className="text-xl font-bold leading-none">{day}</span>
+                      <span className="text-[10px] uppercase tracking-wide leading-none mt-1">{month}</span>
+                      <span className={cn('text-[9px] font-semibold mt-2 leading-none tabular-nums',
+                        isActiveDate ? 'text-emerald-300/70' : 'text-slate-600')}>
+                        {count} {count === 1 ? 'ptdo' : 'ptdos'}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
 
-                        {isLoading ? (
-                          <Loader2 className="h-3.5 w-3.5 text-slate-600 animate-spin shrink-0" />
-                        ) : round.matches_count > 0 ? (
-                          <span
-                            className={cn(
-                              'text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0 tabular-nums',
-                              isExpanded
-                                ? 'bg-emerald-500/20 text-emerald-400'
-                                : 'bg-slate-800 text-slate-500'
-                            )}
-                          >
-                            {round.matches_count}
-                          </span>
-                        ) : (
-                          <span className="text-[10px] text-slate-700 shrink-0">vacía</span>
-                        )}
-                      </button>
+              {/* Match list for selected date */}
+              <AnimatePresence mode="wait">
+                <motion.div key={adminDateKey}
+                  initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }} transition={{ duration: 0.18 }}
+                  className="space-y-4">
+                  {adminActiveDateMatches.map(([roundName, matches]) => (
+                    <div key={roundName} className="rounded-xl border border-slate-800 bg-slate-950 overflow-hidden">
+                      {/* Round separator */}
+                      <div className="flex items-center gap-3 px-4 py-2 bg-slate-900/80 border-b border-slate-800/60">
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{roundName}</span>
+                      </div>
 
-                      {/* Delete round */}
-                      {tournament.is_custom && (
-                        <button
-                          onClick={() => handleRemoveRound(round.id)}
-                          className="p-1.5 rounded-lg text-slate-700 hover:text-red-400 hover:bg-red-400/10 transition-colors shrink-0"
-                          title="Eliminar jornada"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      )}
-                    </div>
-
-                    {/* ── Expanded content ── */}
-                    <AnimatePresence initial={false}>
-                      {isExpanded && (
-                        <motion.div
-                          key={`content-${round.id}`}
-                          initial={{ height: 0, opacity: 0 }}
-                          animate={{ height: 'auto', opacity: 1 }}
-                          exit={{ height: 0, opacity: 0 }}
-                          transition={{ duration: 0.2, ease: 'easeInOut' }}
-                          className="overflow-hidden"
-                        >
-                          <div className="bg-slate-950/40 border-t border-slate-800/60">
-                            {/* Match list */}
-                            {isLoading ? (
-                              <div className="px-4 py-4 space-y-2">
-                                {[0, 1, 2].map((i) => (
-                                  <Skeleton key={i} className="h-12 bg-slate-800 rounded-lg" />
-                                ))}
-                              </div>
-                            ) : roundMatches.length === 0 && !showMatchForm ? (
-                              <div className="flex flex-col items-center gap-2 py-8 text-center px-4">
-                                <p className="text-slate-600 text-sm">Sin partidos en esta jornada.</p>
-                                {tournament.is_custom && teams.length >= 2 && (
-                                  <button
-                                    onClick={() => setShowMatchForm(true)}
-                                    className="text-xs text-emerald-500 hover:text-emerald-400 transition-colors flex items-center gap-1"
-                                  >
-                                    <Plus className="h-3.5 w-3.5" />
-                                    Agregar primer partido
-                                  </button>
-                                )}
-                              </div>
-                            ) : (
-                              <div className="divide-y divide-slate-800/50">
-                                {roundMatches.map((match) => {
-                                  const hasStarted = new Date(match.scheduled_at) <= new Date();
-                                  return (
-                                  <div key={match.id}>
-                                    {editingMatchId === match.id ? (
-                                      /* ── Edit match inline ── */
-                                      <div className="px-4 py-4 space-y-3 bg-slate-900/60">
-                                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Editar partido</p>
-                                        {(tournament.is_custom || user?.is_admin) && (
-                                          <div className="grid grid-cols-2 gap-2">
-                                            <div className="space-y-1">
-                                              <Label className="text-slate-400 text-xs">Local</Label>
-                                              <TeamSelect value={editMatchForm.home_team_id} onChange={(v) => setEditMatchForm((p) => ({ ...p, home_team_id: v }))} teams={teams} excludeId={Number(editMatchForm.away_team_id)} />
-                                            </div>
-                                            <div className="space-y-1">
-                                              <Label className="text-slate-400 text-xs">Visitante</Label>
-                                              <TeamSelect value={editMatchForm.away_team_id} onChange={(v) => setEditMatchForm((p) => ({ ...p, away_team_id: v }))} teams={teams} excludeId={Number(editMatchForm.home_team_id)} />
-                                            </div>
-                                          </div>
-                                        )}
-                                        <div className="grid grid-cols-2 gap-2">
-                                          <div className="space-y-1">
-                                            <Label className="text-slate-400 text-xs">Fecha y hora</Label>
-                                            <Input type="datetime-local" value={editMatchForm.scheduled_at} onChange={(e) => setEditMatchForm((p) => ({ ...p, scheduled_at: e.target.value }))} className="bg-slate-950 border-slate-700 text-white text-sm" />
-                                          </div>
-                                          <div className="space-y-1">
-                                            <Label className="text-slate-400 text-xs">Sede</Label>
-                                            <Input placeholder="Estadio..." value={editMatchForm.venue} onChange={(e) => setEditMatchForm((p) => ({ ...p, venue: e.target.value }))} className="bg-slate-950 border-slate-700 text-white placeholder:text-slate-600 text-sm" />
-                                          </div>
-                                        </div>
-                                        <div className="flex justify-end gap-1">
-                                          <button type="button" onClick={() => setEditingMatchId(null)} className="p-1.5 rounded text-slate-500 hover:text-white transition-colors"><X className="h-4 w-4" /></button>
-                                          <button type="button" onClick={() => handleUpdateMatch(match.id)} disabled={saving} className="p-1.5 rounded text-emerald-400 hover:text-emerald-300 transition-colors">
-                                            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                                          </button>
-                                        </div>
-                                      </div>
-                                    ) : resultMatchId === match.id ? (
-                                      /* ── Result entry inline ── */
-                                      <div className="px-4 py-4 space-y-3 bg-slate-900/60">
-                                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-                                          {match.result ? 'Editar resultado' : 'Ingresar resultado'}
-                                        </p>
-                                        <div className="flex items-center gap-3">
-                                          <span className="text-sm text-white font-medium flex-1 text-right truncate">
-                                            {match.home_team?.name ?? match.home_placeholder ?? 'Local'}
-                                          </span>
-                                          <div className="flex items-center gap-2 shrink-0">
-                                            <Input
-                                              type="number"
-                                              min={0}
-                                              value={resultForm.home_score}
-                                              onChange={(e) => setResultForm((p) => ({ ...p, home_score: e.target.value }))}
-                                              className="w-14 text-center bg-slate-950 border-slate-700 text-white text-sm h-9"
-                                            />
-                                            <span className="text-slate-500 font-bold">-</span>
-                                            <Input
-                                              type="number"
-                                              min={0}
-                                              value={resultForm.away_score}
-                                              onChange={(e) => setResultForm((p) => ({ ...p, away_score: e.target.value }))}
-                                              className="w-14 text-center bg-slate-950 border-slate-700 text-white text-sm h-9"
-                                            />
-                                          </div>
-                                          <span className="text-sm text-white font-medium flex-1 truncate">
-                                            {match.away_team?.name ?? match.away_placeholder ?? 'Visitante'}
-                                          </span>
-                                        </div>
-                                        <div className="flex justify-end gap-1">
-                                          <button type="button" onClick={() => setResultMatchId(null)} className="p-1.5 rounded text-slate-500 hover:text-white transition-colors"><X className="h-4 w-4" /></button>
-                                          <button
-                                            type="button"
-                                            onClick={() => handleSetResult(match)}
-                                            disabled={savingResult || resultForm.home_score === '' || resultForm.away_score === ''}
-                                            className="p-1.5 rounded text-emerald-400 hover:text-emerald-300 transition-colors disabled:opacity-40"
-                                          >
-                                            {savingResult ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                                          </button>
-                                        </div>
-                                      </div>
-                                    ) : (
-                                      /* ── Match row ── */
-                                      <div className="flex items-center gap-3 px-4 py-3 group">
-                                        <div className="flex-1 min-w-0">
-                                          <div className="flex items-center gap-1.5 min-w-0">
-                                            <MatchTeamFlag teamId={match.home_team?.id} teams={teams} />
-                                            <span className="text-sm font-medium text-white truncate">
-                                              {match.home_team?.name ?? <span className="text-slate-500 italic text-xs">{match.home_placeholder ?? 'Por definir'}</span>}
-                                            </span>
-                                            {match.result ? (
-                                              <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 shrink-0 tabular-nums">
-                                                {match.result.home_score} – {match.result.away_score}
-                                              </span>
-                                            ) : (
-                                              <span className="text-slate-600 text-xs shrink-0 font-medium">vs</span>
-                                            )}
-                                            <span className="text-sm font-medium text-white truncate">
-                                              {match.away_team?.name ?? <span className="text-slate-500 italic text-xs">{match.away_placeholder ?? 'Por definir'}</span>}
-                                            </span>
-                                            <MatchTeamFlag teamId={match.away_team?.id} teams={teams} />
-                                          </div>
-                                          <p className="text-xs text-slate-500 mt-0.5">
-                                            {new Date(match.scheduled_at).toLocaleString('es-MX', {
-                                              timeZone: 'America/Mexico_City',
-                                              weekday: 'short', day: 'numeric', month: 'short',
-                                              hour: '2-digit', minute: '2-digit',
-                                            })}
-                                            {match.venue && <> · <span className="text-slate-600">{match.venue}</span></>}
-                                          </p>
-                                        </div>
-                                        <div className="flex items-center gap-0.5 shrink-0">
-                                          {hasStarted && (tournament.is_custom || user?.is_admin) && (
-                                            <button
-                                              onClick={() => startSetResult(match)}
-                                              className={cn(
-                                                'p-1.5 rounded transition-colors',
-                                                match.result
-                                                  ? 'text-slate-500 hover:text-emerald-400'
-                                                  : 'text-amber-500 hover:text-amber-400 md:opacity-0 md:group-hover:opacity-100'
-                                              )}
-                                              title={match.result ? 'Editar resultado' : 'Ingresar resultado'}
-                                            >
-                                              <Trophy className="h-3.5 w-3.5" />
-                                            </button>
-                                          )}
-                                          {(tournament.is_custom || user?.is_admin) && (
-                                            <div className="flex items-center gap-0.5 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                                              <button onClick={() => startEditMatch(match)} className="p-1.5 rounded text-slate-500 hover:text-white transition-colors" title="Editar"><Pencil className="h-3.5 w-3.5" /></button>
-                                              {tournament.is_custom && (
-                                                <button onClick={() => handleRemoveMatch(match.id)} className="p-1.5 rounded text-slate-600 hover:text-red-400 transition-colors" title="Eliminar"><Trash2 className="h-3.5 w-3.5" /></button>
-                                              )}
-                                            </div>
-                                          )}
-                                        </div>
-                                      </div>
-                                    )}
-                                  </div>
-                                  );
-                                })}
-                              </div>
-                            )}
-
-                            {/* ── Add match form ── */}
-                            <AnimatePresence initial={false}>
-                              {showMatchForm && tournament.is_custom && (
-                                <motion.form
-                                  key="match-form"
-                                  initial={{ height: 0, opacity: 0 }}
-                                  animate={{ height: 'auto', opacity: 1 }}
-                                  exit={{ height: 0, opacity: 0 }}
-                                  transition={{ duration: 0.18 }}
-                                  onSubmit={handleAddMatch}
-                                  className="overflow-hidden"
-                                >
-                                  <div className="px-4 pb-4 pt-3 space-y-3 border-t border-slate-800/60 bg-slate-900/40">
-                                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Nuevo partido</p>
+                      {/* Matches */}
+                      <div className="divide-y divide-slate-800/50">
+                        {matches.map((match) => {
+                          const hasStarted = new Date(match.scheduled_at) <= new Date();
+                          return (
+                            <div key={match.id}>
+                              {editingMatchId === match.id ? (
+                                /* ── Edit form ── */
+                                <div className="px-4 py-4 space-y-3 bg-slate-900/60">
+                                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Editar partido</p>
+                                  {(tournament.is_custom || user?.is_admin) && (
                                     <div className="grid grid-cols-2 gap-2">
                                       <div className="space-y-1">
                                         <Label className="text-slate-400 text-xs">Local</Label>
-                                        <TeamSelect value={matchForm.home_team_id} onChange={(v) => setMatchForm((p) => ({ ...p, home_team_id: v }))} teams={teams} excludeId={Number(matchForm.away_team_id)} />
+                                        <TeamSelect value={editMatchForm.home_team_id} onChange={(v) => setEditMatchForm((p) => ({ ...p, home_team_id: v }))} teams={teams} excludeId={Number(editMatchForm.away_team_id)} />
                                       </div>
                                       <div className="space-y-1">
                                         <Label className="text-slate-400 text-xs">Visitante</Label>
-                                        <TeamSelect value={matchForm.away_team_id} onChange={(v) => setMatchForm((p) => ({ ...p, away_team_id: v }))} teams={teams} excludeId={Number(matchForm.home_team_id)} />
+                                        <TeamSelect value={editMatchForm.away_team_id} onChange={(v) => setEditMatchForm((p) => ({ ...p, away_team_id: v }))} teams={teams} excludeId={Number(editMatchForm.home_team_id)} />
                                       </div>
                                     </div>
-                                    <div className="grid grid-cols-2 gap-2">
-                                      <div className="space-y-1">
-                                        <Label className="text-slate-400 text-xs">Fecha y hora</Label>
-                                        <Input type="datetime-local" value={matchForm.scheduled_at} onChange={(e) => setMatchForm((p) => ({ ...p, scheduled_at: e.target.value }))} className="bg-slate-950 border-slate-700 text-white text-sm" required />
-                                      </div>
-                                      <div className="space-y-1">
-                                        <Label className="text-slate-400 text-xs">Sede <span className="text-slate-600">(opcional)</span></Label>
-                                        <Input placeholder="Estadio..." value={matchForm.venue} onChange={(e) => setMatchForm((p) => ({ ...p, venue: e.target.value }))} className="bg-slate-950 border-slate-700 text-white placeholder:text-slate-600 text-sm" />
-                                      </div>
+                                  )}
+                                  <div className="grid grid-cols-2 gap-2">
+                                    <div className="space-y-1">
+                                      <Label className="text-slate-400 text-xs">Fecha y hora <span className="text-slate-600">(hora México)</span></Label>
+                                      <Input type="datetime-local" value={editMatchForm.scheduled_at} onChange={(e) => setEditMatchForm((p) => ({ ...p, scheduled_at: e.target.value }))} className="bg-slate-950 border-slate-700 text-white text-sm" />
                                     </div>
-                                    <div className="flex justify-end gap-2">
-                                      <Button type="button" variant="ghost" size="sm" onClick={() => setShowMatchForm(false)} className="text-slate-400 hover:text-white text-xs">Cancelar</Button>
-                                      <Button type="submit" size="sm" disabled={saving} className="bg-emerald-500 hover:bg-emerald-600 text-white text-xs">
-                                        {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <Plus className="h-3.5 w-3.5 mr-1" />}
-                                        Guardar partido
-                                      </Button>
+                                    <div className="space-y-1">
+                                      <Label className="text-slate-400 text-xs">Sede</Label>
+                                      <Input placeholder="Estadio..." value={editMatchForm.venue} onChange={(e) => setEditMatchForm((p) => ({ ...p, venue: e.target.value }))} className="bg-slate-950 border-slate-700 text-white placeholder:text-slate-600 text-sm" />
                                     </div>
                                   </div>
-                                </motion.form>
+                                  <div className="flex justify-end gap-1">
+                                    <button type="button" onClick={() => setEditingMatchId(null)} className="p-1.5 rounded text-slate-500 hover:text-white transition-colors"><X className="h-4 w-4" /></button>
+                                    <button type="button" onClick={() => handleUpdateMatch(match.id)} disabled={saving} className="p-1.5 rounded text-emerald-400 hover:text-emerald-300 transition-colors">
+                                      {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : resultMatchId === match.id ? (
+                                /* ── Result form ── */
+                                <div className="px-4 py-4 space-y-3 bg-slate-900/60">
+                                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                                    {match.result ? 'Editar resultado' : 'Ingresar resultado'}
+                                  </p>
+                                  <div className="flex items-center gap-3">
+                                    <span className="text-sm text-white font-medium flex-1 text-right truncate">
+                                      {match.home_team?.name ?? match.home_placeholder ?? 'Local'}
+                                    </span>
+                                    <div className="flex items-center gap-2 shrink-0">
+                                      <Input type="number" min={0} value={resultForm.home_score}
+                                        onChange={(e) => setResultForm((p) => ({ ...p, home_score: e.target.value }))}
+                                        className="w-14 text-center bg-slate-950 border-slate-700 text-white text-sm h-9" />
+                                      <span className="text-slate-500 font-bold">-</span>
+                                      <Input type="number" min={0} value={resultForm.away_score}
+                                        onChange={(e) => setResultForm((p) => ({ ...p, away_score: e.target.value }))}
+                                        className="w-14 text-center bg-slate-950 border-slate-700 text-white text-sm h-9" />
+                                    </div>
+                                    <span className="text-sm text-white font-medium flex-1 truncate">
+                                      {match.away_team?.name ?? match.away_placeholder ?? 'Visitante'}
+                                    </span>
+                                  </div>
+                                  <div className="flex justify-end gap-1">
+                                    <button type="button" onClick={() => setResultMatchId(null)} className="p-1.5 rounded text-slate-500 hover:text-white transition-colors"><X className="h-4 w-4" /></button>
+                                    <button type="button" onClick={() => handleSetResult(match)}
+                                      disabled={savingResult || resultForm.home_score === '' || resultForm.away_score === ''}
+                                      className="p-1.5 rounded text-emerald-400 hover:text-emerald-300 transition-colors disabled:opacity-40">
+                                      {savingResult ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                /* ── Match row ── */
+                                <div className="flex items-center gap-3 px-4 py-3 group hover:bg-slate-900/40 transition-colors">
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-1.5 min-w-0">
+                                      <MatchTeamFlag teamId={match.home_team?.id} teams={teams} />
+                                      <span className="text-sm font-semibold text-white truncate">
+                                        {match.home_team?.name ?? <span className="text-slate-500 italic text-xs">{match.home_placeholder ?? 'Por definir'}</span>}
+                                      </span>
+                                      {match.result ? (
+                                        <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 shrink-0 tabular-nums font-mono">
+                                          {match.result.home_score} - {match.result.away_score}
+                                        </span>
+                                      ) : (
+                                        <span className="text-slate-600 text-xs shrink-0 font-medium">vs</span>
+                                      )}
+                                      <span className="text-sm font-semibold text-white truncate">
+                                        {match.away_team?.name ?? <span className="text-slate-500 italic text-xs">{match.away_placeholder ?? 'Por definir'}</span>}
+                                      </span>
+                                      <MatchTeamFlag teamId={match.away_team?.id} teams={teams} />
+                                    </div>
+                                    <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-1.5">
+                                      <span>{new Date(match.scheduled_at).toLocaleString('es-MX', {
+                                        timeZone: 'America/Mexico_City',
+                                        hour: '2-digit', minute: '2-digit', hour12: true,
+                                      })}</span>
+                                      {match.venue && <><span className="text-slate-700">·</span><span className="text-slate-600 truncate">{match.venue}</span></>}
+                                      {match.status === 'in_progress' && <span className="text-emerald-400 font-semibold text-[10px]">🔴 EN VIVO</span>}
+                                    </p>
+                                  </div>
+                                  <div className="flex items-center gap-0.5 shrink-0 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                                    {hasStarted && (tournament.is_custom || user?.is_admin) && (
+                                      <button onClick={() => startSetResult(match)}
+                                        className={cn('p-1.5 rounded transition-colors',
+                                          match.result ? 'text-slate-500 hover:text-emerald-400' : 'text-amber-500 hover:text-amber-400')}
+                                        title={match.result ? 'Editar resultado' : 'Ingresar resultado'}>
+                                        <Trophy className="h-3.5 w-3.5" />
+                                      </button>
+                                    )}
+                                    {(tournament.is_custom || user?.is_admin) && (
+                                      <button onClick={() => startEditMatch(match)}
+                                        className="p-1.5 rounded text-slate-500 hover:text-white transition-colors" title="Editar equipos, hora y sede">
+                                        <Pencil className="h-3.5 w-3.5" />
+                                      </button>
+                                    )}
+                                    {tournament.is_custom && (
+                                      <button onClick={() => handleRemoveMatch(match.id)}
+                                        className="p-1.5 rounded text-slate-600 hover:text-red-400 transition-colors" title="Eliminar">
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
                               )}
-                            </AnimatePresence>
-
-                            {/* ── Add match trigger ── */}
-                            {tournament.is_custom && teams.length >= 2 && !showMatchForm && roundMatches.length > 0 && (
-                              <div className="px-4 py-2.5 border-t border-slate-800/40">
-                                <button
-                                  onClick={() => { setShowMatchForm(true); setEditingMatchId(null); }}
-                                  className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-emerald-400 transition-colors"
-                                >
-                                  <Plus className="h-3.5 w-3.5" />
-                                  Agregar partido
-                                </button>
-                              </div>
-                            )}
-
-                            {tournament.is_custom && teams.length < 2 && (
-                              <div className="px-4 py-3 border-t border-slate-800/40">
-                                <p className="text-xs text-amber-500/80 text-center">
-                                  Necesitas al menos 2 equipos para agregar partidos.
-                                </p>
-                              </div>
-                            )}
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
-                );
-              })}
-            </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </motion.div>
+              </AnimatePresence>
+            </>
           )}
 
-          {/* ── Add round — persistent input at bottom ── */}
-          {tournament.is_custom && (
-            <form onSubmit={handleAddRound} className="mt-3 flex gap-2">
-              <Input
-                ref={roundInputRef}
-                placeholder="Nueva jornada... (ej: Grupo A, Semifinal)"
-                value={roundNameInput}
-                onChange={(e) => setRoundNameInput(e.target.value)}
-                className="bg-slate-900 border-slate-700 text-white placeholder:text-slate-600 text-sm h-9 focus:border-emerald-500/60"
-              />
-              <Button
-                type="submit"
-                size="sm"
-                disabled={saving || !roundNameInput.trim()}
-                className="bg-emerald-500 hover:bg-emerald-600 disabled:opacity-40 text-white h-9 px-3 shrink-0"
-              >
-                {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
-              </Button>
-            </form>
+          {/* Custom: Gestionar jornadas (collapsed section) */}
+          {tournament.is_custom && calendarLoaded && (
+            <div className="pt-2 border-t border-slate-800/60 space-y-3">
+              <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Gestionar jornadas</p>
+              <div className="rounded-xl border border-slate-800 overflow-hidden divide-y divide-slate-800">
+                {rounds.map((round) => {
+                  const isExpanded = expandedRoundId === round.id;
+                  const isLoading = loadingRoundId === round.id;
+                  const roundMatches = matchesByRound[round.id] ?? [];
+                  return (
+                    <div key={round.id}>
+                      <div className={cn('flex items-center gap-3 px-4 py-3 transition-colors',
+                        isExpanded ? 'bg-slate-800/60' : 'bg-slate-900 hover:bg-slate-800/30')}>
+                        <button onClick={() => handleExpandRound(round.id)}
+                          className="flex-1 flex items-center gap-2.5 text-left min-w-0">
+                          <ChevronRight className={cn('h-3.5 w-3.5 text-slate-500 shrink-0 transition-transform', isExpanded && 'rotate-90')} />
+                          <span className={cn('text-xs font-semibold truncate', isExpanded ? 'text-white' : 'text-slate-400')}>{round.name}</span>
+                          {isLoading ? <Loader2 className="h-3 w-3 text-slate-600 animate-spin shrink-0" />
+                            : <span className="text-[10px] text-slate-600 shrink-0">{round.matches_count} partidos</span>}
+                        </button>
+                        <button onClick={() => handleRemoveRound(round.id)}
+                          className="p-1.5 rounded text-slate-700 hover:text-red-400 hover:bg-red-400/10 transition-colors shrink-0">
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      </div>
+                      <AnimatePresence initial={false}>
+                        {isExpanded && (
+                          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.18 }} className="overflow-hidden">
+                            <div className="bg-slate-950/40 border-t border-slate-800/60 divide-y divide-slate-800/50">
+                              {roundMatches.map((match) => (
+                                <div key={match.id} className="flex items-center justify-between px-4 py-2.5 group">
+                                  <span className="text-xs text-slate-400 truncate flex-1 min-w-0">
+                                    {match.home_team?.name ?? match.home_placeholder ?? '?'} vs {match.away_team?.name ?? match.away_placeholder ?? '?'}
+                                  </span>
+                                  <button onClick={() => handleRemoveMatch(match.id)}
+                                    className="p-1 rounded text-slate-700 hover:text-red-400 transition-colors shrink-0 opacity-0 group-hover:opacity-100">
+                                    <Trash2 className="h-3 w-3" />
+                                  </button>
+                                </div>
+                              ))}
+                              {teams.length >= 2 && (
+                                showMatchForm && expandedRoundId === round.id ? (
+                                  <form onSubmit={handleAddMatch} className="px-4 py-3 space-y-2.5 bg-slate-900/40">
+                                    <div className="grid grid-cols-2 gap-2">
+                                      <TeamSelect value={matchForm.home_team_id} onChange={(v) => setMatchForm((p) => ({ ...p, home_team_id: v }))} teams={teams} excludeId={Number(matchForm.away_team_id)} />
+                                      <TeamSelect value={matchForm.away_team_id} onChange={(v) => setMatchForm((p) => ({ ...p, away_team_id: v }))} teams={teams} excludeId={Number(matchForm.home_team_id)} />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2">
+                                      <Input type="datetime-local" value={matchForm.scheduled_at} onChange={(e) => setMatchForm((p) => ({ ...p, scheduled_at: e.target.value }))} className="bg-slate-950 border-slate-700 text-white text-xs h-8" required />
+                                      <Input placeholder="Estadio..." value={matchForm.venue} onChange={(e) => setMatchForm((p) => ({ ...p, venue: e.target.value }))} className="bg-slate-950 border-slate-700 text-white placeholder:text-slate-600 text-xs h-8" />
+                                    </div>
+                                    <div className="flex justify-end gap-1">
+                                      <Button type="button" variant="ghost" size="sm" onClick={() => setShowMatchForm(false)} className="h-7 text-xs text-slate-400">Cancelar</Button>
+                                      <Button type="submit" size="sm" disabled={saving} className="h-7 text-xs bg-emerald-500 hover:bg-emerald-600 text-white">
+                                        {saving ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Plus className="h-3 w-3 mr-1" />}Guardar
+                                      </Button>
+                                    </div>
+                                  </form>
+                                ) : (
+                                  <button onClick={() => { setExpandedRoundId(round.id); setShowMatchForm(true); }}
+                                    className="w-full flex items-center justify-center gap-1.5 py-2.5 text-xs text-slate-600 hover:text-emerald-400 transition-colors">
+                                    <Plus className="h-3.5 w-3.5" />Agregar partido
+                                  </button>
+                                )
+                              )}
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  );
+                })}
+              </div>
+              <form onSubmit={handleAddRound} className="flex gap-2">
+                <Input ref={roundInputRef} placeholder="Nueva jornada..." value={roundNameInput}
+                  onChange={(e) => setRoundNameInput(e.target.value)}
+                  className="bg-slate-900 border-slate-700 text-white placeholder:text-slate-600 text-sm h-9 focus:border-emerald-500/60" />
+                <Button type="submit" size="sm" disabled={saving || !roundNameInput.trim()}
+                  className="bg-emerald-500 hover:bg-emerald-600 disabled:opacity-40 text-white h-9 px-3 shrink-0">
+                  {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+                </Button>
+              </form>
+            </div>
           )}
         </TabsContent>
         {/* ════════════════════ CONFIGURACIÓN ════════════════════ */}

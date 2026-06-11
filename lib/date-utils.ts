@@ -6,8 +6,8 @@ export type DateEntry = { match: Match; roundName: string };
 // Using slice(0,10) on the raw UTC string would shift matches to the wrong day for
 // timezones behind UTC (e.g. Mexico City, UTC-6).
 export function toLocalDateKey(dateStr: string): string {
-  const d = new Date(dateStr);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  // en-CA returns YYYY-MM-DD; timeZone ensures evening UTC matches land on the correct Mexico date
+  return new Date(dateStr).toLocaleDateString('en-CA', { timeZone: 'America/Mexico_City' });
 }
 
 export function groupByDate(rounds: RoundWithMatches[]): Map<string, DateEntry[]> {
