@@ -90,19 +90,19 @@ function MatchRow({ match }: { match: BreakdownMatch }) {
         </div>
       </div>
 
-      {/* Resultado real — w-16 */}
-      <div className="w-16 shrink-0 text-center px-1.5 py-2.5">
+      {/* Resultado real — w-20 */}
+      <div className="w-20 shrink-0 text-center px-1.5 py-2.5">
         {hasResult ? (
           <span className="text-sm font-bold text-white tabular-nums font-mono tracking-tight">
-            {match.result!.home_score}–{match.result!.away_score}
+            {match.result!.home_score} - {match.result!.away_score}
           </span>
         ) : (
           <span className="text-slate-700 text-xs">–</span>
         )}
       </div>
 
-      {/* Tu pronóstico — w-16 */}
-      <div className="w-16 shrink-0 text-center px-1.5 py-2.5">
+      {/* Tu pronóstico — w-20 */}
+      <div className="w-20 shrink-0 text-center px-1.5 py-2.5">
         {isFuture ? (
           <span className="text-slate-700 text-xs">—</span>
         ) : hasPred ? (
@@ -111,7 +111,7 @@ function MatchRow({ match }: { match: BreakdownMatch }) {
             match.score?.points === 3 ? 'text-emerald-400' :
             match.score?.points === 1 ? 'text-blue-400'    : 'text-slate-500',
           )}>
-            {match.prediction!.home_score}–{match.prediction!.away_score}
+            {match.prediction!.home_score} - {match.prediction!.away_score}
           </span>
         ) : (
           <span className="text-slate-600 text-xs">–</span>
@@ -255,9 +255,7 @@ function BreakdownDetail({
           </div>
         );
 
-        const allMatches = data.rounds
-          .filter((r) => r.matches.length > 0)
-          .flatMap((r) => r.matches);
+        const activeRounds = data.rounds.filter((r) => r.matches.length > 0);
 
         return (
           <div className="space-y-5">
@@ -269,18 +267,28 @@ function BreakdownDetail({
                 <div className="flex-1 px-3 py-2 text-[9px] font-bold uppercase tracking-widest text-slate-600 text-center">
                   Partido
                 </div>
-                <div className="w-16 shrink-0 px-1.5 py-2 text-[9px] font-bold uppercase tracking-widest text-slate-600 text-center">
-                  Result.
+                <div className="w-20 shrink-0 px-1.5 py-2 text-[9px] font-bold uppercase tracking-widest text-slate-600 text-center">
+                  Resultado
                 </div>
-                <div className="w-16 shrink-0 px-1.5 py-2 text-[9px] font-bold uppercase tracking-widest text-slate-600 text-center">
-                  Pronóst.
+                <div className="w-20 shrink-0 px-1.5 py-2 text-[9px] font-bold uppercase tracking-widest text-slate-600 text-center">
+                  Pronóstico
                 </div>
                 <div className="w-14 shrink-0 px-1.5 py-2 text-[9px] font-bold uppercase tracking-widest text-slate-600 text-center">
                   Pts
                 </div>
               </div>
-              {allMatches.map((match) => (
-                <MatchRow key={match.id} match={match} />
+              {/* Rounds with separator rows */}
+              {activeRounds.map((r) => (
+                <div key={r.round.id}>
+                  <div className="flex items-center gap-3 px-3 py-1.5 bg-slate-900/80 border-b border-slate-800/60">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                      {r.round.name}
+                    </span>
+                  </div>
+                  {r.matches.map((match) => (
+                    <MatchRow key={match.id} match={match} />
+                  ))}
+                </div>
               ))}
             </div>
           </div>
