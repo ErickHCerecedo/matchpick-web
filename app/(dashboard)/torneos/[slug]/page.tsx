@@ -17,7 +17,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import {
   groupByDate,
   formatDateLabel,
-  formatFullDate,
   todayKey,
   toLocalDateKey,
 } from '@/lib/date-utils';
@@ -153,14 +152,13 @@ export default function TorneoDetailPage() {
   }
 
   const today = todayKey();
-  const hasToday = sortedDateKeys.includes(today);
   const isActive = tournament.is_active;
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-5">
 
       {/* ── Tournament hero ───────────────────────────────────────────── */}
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center gap-3 flex-1 min-w-0">
           {tournament.logo_url && (
             <img
@@ -209,7 +207,7 @@ export default function TorneoDetailPage() {
           <button
             onClick={handleSync}
             disabled={syncing}
-            className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-white border border-slate-700 hover:border-slate-500 rounded-lg px-3 py-2 transition-colors shrink-0 disabled:opacity-50"
+            className="self-start md:self-auto flex items-center gap-1.5 text-xs text-slate-400 hover:text-white border border-slate-700 hover:border-slate-500 rounded-lg px-3 py-2 transition-colors shrink-0 disabled:opacity-50"
           >
             <RefreshCw className={cn('h-3.5 w-3.5', syncing && 'animate-spin')} />
             {syncing ? 'Sincronizando…' : 'Sincronizar resultados'}
@@ -245,19 +243,6 @@ export default function TorneoDetailPage() {
 
         {/* ── Calendar tab ─────────────────────────────────────────── */}
         <TabsContent value="calendar" className="space-y-4 mt-4">
-
-          {/* "Ir a hoy" shortcut */}
-          {hasToday && activeDateKey !== today && (
-            <div className="flex justify-end">
-              <button
-                onClick={() => setActiveDateKey(today)}
-                className="text-xs text-emerald-400 hover:text-emerald-300 font-medium transition-colors flex items-center gap-1"
-              >
-                Ir a hoy
-                <span aria-hidden>→</span>
-              </button>
-            </div>
-          )}
 
           {/* Date strip */}
           {sortedDateKeys.length > 0 && (
@@ -316,12 +301,6 @@ export default function TorneoDetailPage() {
                 transition={{ duration: 0.18 }}
                 className="space-y-5"
               >
-                {activeDateKey && (
-                  <p className="text-sm text-slate-500 capitalize">
-                    {formatFullDate(activeDateKey)}
-                  </p>
-                )}
-
                 {activeDateMatches.map(([roundName, matches]) => (
                   <div key={roundName} className="space-y-3">
                     <div className="flex items-center gap-3">
@@ -331,9 +310,11 @@ export default function TorneoDetailPage() {
                       </span>
                       <span className="h-px flex-1 bg-slate-800" />
                     </div>
-                    {matches.map((match) => (
-                      <MatchCard key={match.id} match={match} prediction={null} readOnly />
-                    ))}
+                    <div className="grid gap-3 md:grid-cols-2">
+                      {matches.map((match) => (
+                        <MatchCard key={match.id} match={match} prediction={null} readOnly />
+                      ))}
+                    </div>
                   </div>
                 ))}
               </motion.div>
