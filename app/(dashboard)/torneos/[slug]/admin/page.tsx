@@ -402,16 +402,14 @@ export default function TorneoAdminPage() {
     }
   };
 
-  const handleUpdateMatch = async (matchId: number) => {
-    if (!expandedRoundId) return;
+  const handleUpdateMatch = async (matchId: number, roundId: number) => {
     setSaving(true);
     try {
       const isCustom = tournament!.is_custom;
       const isAdmin  = !!user?.is_admin;
       const endpoint = isCustom
-        ? `/tournaments/${slug}/rounds/${expandedRoundId}/matches/${matchId}`
+        ? `/tournaments/${slug}/rounds/${roundId}/matches/${matchId}`
         : `/admin/matches/${matchId}`;
-      // datetime-local value is in Mexico Central time (UTC-6); convert to UTC ISO for the backend.
       const scheduledAtUTC = editMatchForm.scheduled_at
         ? new Date(editMatchForm.scheduled_at + ':00-06:00').toISOString()
         : editMatchForm.scheduled_at;
@@ -426,7 +424,7 @@ export default function TorneoAdminPage() {
       const res = await api.patch<ApiResponse<Partial<CustomMatch>>>(endpoint, payload);
       setMatchesByRound((prev) => ({
         ...prev,
-        [expandedRoundId]: (prev[expandedRoundId] ?? []).map((m) =>
+        [roundId]: (prev[roundId] ?? []).map((m) =>
           m.id === matchId ? { ...m, ...res.data } : m
         ),
       }));
@@ -439,19 +437,18 @@ export default function TorneoAdminPage() {
     }
   };
 
-  const handleRemoveMatch = async (matchId: number) => {
-    if (!expandedRoundId) return;
+  const handleRemoveMatch = async (matchId: number, roundId: number) => {
     try {
       await api.delete(
-        `/tournaments/${slug}/rounds/${expandedRoundId}/matches/${matchId}`
+        `/tournaments/${slug}/rounds/${roundId}/matches/${matchId}`
       );
       setMatchesByRound((prev) => ({
         ...prev,
-        [expandedRoundId]: (prev[expandedRoundId] ?? []).filter((m) => m.id !== matchId),
+        [roundId]: (prev[roundId] ?? []).filter((m) => m.id !== matchId),
       }));
       setRounds((prev) =>
         prev.map((r) =>
-          r.id === expandedRoundId
+          r.id === roundId
             ? { ...r, matches_count: Math.max(0, r.matches_count - 1) }
             : r
         )
@@ -490,12 +487,11 @@ export default function TorneoAdminPage() {
     setShowMatchForm(false);
   };
 
-  const handleSetResult = async (match: CustomMatch) => {
-    if (!expandedRoundId) return;
+  const handleSetResult = async (match: AdminMatch) => {
     setSavingResult(true);
     try {
       const endpoint = tournament!.is_custom
-        ? `/tournaments/${slug}/rounds/${expandedRoundId}/matches/${match.id}/result`
+        ? `/tournaments/${slug}/rounds/${match.roundId}/matches/${match.id}/result`
         : `/admin/matches/${match.id}/results`;
       const res = await api.post<ApiResponse<MatchResult>>(endpoint, {
         home_score: Number(resultForm.home_score),
@@ -503,7 +499,7 @@ export default function TorneoAdminPage() {
       });
       setMatchesByRound((prev) => ({
         ...prev,
-        [expandedRoundId]: (prev[expandedRoundId] ?? []).map((m) =>
+        [match.roundId]: (prev[match.roundId] ?? []).map((m) =>
           m.id === match.id ? { ...m, result: res.data, status: m.status === 'in_progress' ? 'in_progress' : 'finished' } : m
         ),
       }));
@@ -1038,7 +1034,7 @@ export default function TorneoAdminPage() {
                                           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-slate-400 hover:text-white border border-slate-700 hover:border-slate-600 transition-colors">
                                           <X className="h-3.5 w-3.5" />Cancelar
                                         </button>
-                                        <button type="button" onClick={() => handleUpdateMatch(match.id)} disabled={saving}
+                                        <button type="button" onClick={() => handleUpdateMatch(match.id, match.roundId)} disabled={saving}
                                           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/30 disabled:opacity-40 transition-colors">
                                           {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
                                           Guardar
@@ -1102,7 +1098,7 @@ export default function TorneoAdminPage() {
                                         </button>
                                       )}
                                       {tournament.is_custom && (
-                                        <button onClick={() => handleRemoveMatch(match.id)}
+                                        <button onClick={() => handleRemoveMatch(match.id, match.roundId)}
                                           className="p-1.5 rounded text-slate-600 hover:text-red-400 transition-colors" title="Eliminar">
                                           <Trash2 className="h-3.5 w-3.5" />
                                         </button>
@@ -1157,7 +1153,7 @@ export default function TorneoAdminPage() {
                                   <span className="text-xs text-slate-400 truncate flex-1 min-w-0">
                                     {match.home_team?.name ?? match.home_placeholder ?? '?'} vs {match.away_team?.name ?? match.away_placeholder ?? '?'}
                                   </span>
-                                  <button onClick={() => handleRemoveMatch(match.id)}
+                                  <button onClick={() => handleRemoveMatch(match.id, round.id)}
                                     className="p-1 rounded text-slate-700 hover:text-red-400 transition-colors shrink-0 opacity-0 group-hover:opacity-100">
                                     <Trash2 className="h-3 w-3" />
                                   </button>
