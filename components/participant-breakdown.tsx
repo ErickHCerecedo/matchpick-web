@@ -7,6 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { cn, formatMatchDate } from '@/lib/utils';
 import { api } from '@/lib/api';
 import type { Standing, ApiResponse, ParticipantBreakdownData, BreakdownMatch } from '@/types';
+import { FlagPlaceholder } from '@/components/ui/flag-placeholder';
 import {
   ArrowLeft,
   Trophy,
@@ -53,102 +54,128 @@ function ScoreBadge({ score }: { score: BreakdownMatch['score'] }) {
 
 // ── Match row ─────────────────────────────────────────────────────────────────
 
+function TeamFlag({ team }: { team: BreakdownMatch['home_team'] }) {
+  if (team?.flag_url) return <img src={team.flag_url} alt="" className="w-5 h-3.5 object-cover rounded-xs shrink-0" />;
+  return <FlagPlaceholder size="sm" />;
+}
+
 function MatchRow({ match }: { match: BreakdownMatch }) {
-  const isFuture = !match.has_started;
+  const isFuture  = !match.has_started;
+  const hasResult = !!match.result;
+  const hasPred   = !!match.prediction;
 
   return (
-    <div
-      className={cn(
-        'relative rounded-xl border overflow-hidden transition-all',
-        match.status === 'in_progress'
-          ? 'border-emerald-500/30'
-          : match.status === 'finished'
-          ? 'border-slate-700/60'
-          : 'border-slate-800'
-      )}
-    >
-      <div className={cn('p-3.5', isFuture && 'select-none')}>
-        {/* Date row */}
-        <div className="flex items-center justify-between mb-2.5">
-          <span className="text-[11px] text-slate-600">{formatMatchDate(match.scheduled_at)}</span>
-          {match.status === 'in_progress' && (
-            <span className="text-[10px] font-semibold text-emerald-400 tracking-wide">🔴 EN VIVO</span>
-          )}
-          {match.status === 'finished' && (
-            <span className="text-[10px] text-slate-600 tracking-wide">Finalizado</span>
-          )}
-          {isFuture && (
-            <span className="flex items-center gap-1 text-[10px] text-slate-700">
-              <Lock className="h-2.5 w-2.5" />
-              Pendiente
-            </span>
-          )}
-        </div>
-
-        {/* Teams + official result */}
-        <div className="flex items-center gap-2">
-          <div className="flex-1 flex items-center gap-2 min-w-0">
-            {match.home_team?.flag_url && (
-              <img
-                src={match.home_team.flag_url}
-                alt=""
-                className="w-5 h-3.5 object-cover rounded-xs shrink-0"
-              />
-            )}
-            <span className="text-sm font-medium text-white truncate">
-              {match.home_team?.name ?? 'TBD'}
-            </span>
+    <>
+      {/* ── Mobile card (hidden md+) ── */}
+      <div className={cn(
+        'md:hidden relative rounded-xl border overflow-hidden transition-all',
+        match.status === 'in_progress' ? 'border-emerald-500/30' :
+        match.status === 'finished'    ? 'border-slate-700/60'   : 'border-slate-800',
+      )}>
+        <div className={cn('p-3.5', isFuture && 'select-none')}>
+          <div className="flex items-center justify-between mb-2.5">
+            <span className="text-[11px] text-slate-600">{formatMatchDate(match.scheduled_at)}</span>
+            {match.status === 'in_progress' && <span className="text-[10px] font-semibold text-emerald-400">🔴 EN VIVO</span>}
+            {match.status === 'finished'    && <span className="text-[10px] text-slate-600">Finalizado</span>}
+            {isFuture && <span className="flex items-center gap-1 text-[10px] text-slate-700"><Lock className="h-2.5 w-2.5" />Pendiente</span>}
           </div>
-
-          <div className="shrink-0 text-center min-w-13">
-            {match.result ? (
-              <span className="font-bold text-white text-base font-mono">
-                {match.result.home_score} – {match.result.away_score}
-              </span>
-            ) : (
-              <span className="text-slate-600 text-xs font-medium">vs</span>
-            )}
+          <div className="flex items-center gap-2">
+            <div className="flex-1 flex items-center gap-2 min-w-0">
+              <TeamFlag team={match.home_team} />
+              <span className="text-sm font-medium text-white truncate">{match.home_team?.name ?? 'Por definir'}</span>
+            </div>
+            <div className="shrink-0 text-center min-w-13">
+              {hasResult
+                ? <span className="font-bold text-white text-base font-mono">{match.result!.home_score} – {match.result!.away_score}</span>
+                : <span className="text-slate-600 text-xs font-medium">vs</span>
+              }
+            </div>
+            <div className="flex-1 flex items-center gap-2 justify-end min-w-0">
+              <span className="text-sm font-medium text-white truncate text-right">{match.away_team?.name ?? 'Por definir'}</span>
+              <TeamFlag team={match.away_team} />
+            </div>
           </div>
-
-          <div className="flex-1 flex items-center gap-2 justify-end min-w-0">
-            <span className="text-sm font-medium text-white truncate text-right">
-              {match.away_team?.name ?? 'TBD'}
-            </span>
-            {match.away_team?.flag_url && (
-              <img
-                src={match.away_team.flag_url}
-                alt=""
-                className="w-5 h-3.5 object-cover rounded-xs shrink-0"
-              />
-            )}
-          </div>
-        </div>
-
-        {/* Prediction + breakdown — blurred for future matches */}
-        <div className={cn('mt-3 pt-3 border-t border-slate-800/70', isFuture && 'blur-sm pointer-events-none')}>
-          {isFuture ? (
-            <div className="flex items-center justify-between">
+          <div className={cn('mt-3 pt-3 border-t border-slate-800/70', isFuture && 'blur-sm pointer-events-none')}>
+            {isFuture ? (
               <span className="text-xs text-slate-500">Pronóstico: — – —</span>
-            </div>
-          ) : match.prediction ? (
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-slate-500">Pronóstico:</span>
-                <span className="text-xs font-bold font-mono text-slate-300">
-                  {match.prediction.home_score} – {match.prediction.away_score}
-                </span>
+            ) : hasPred ? (
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-slate-500">Pronóstico:</span>
+                  <span className="text-xs font-bold font-mono text-slate-300">{match.prediction!.home_score} – {match.prediction!.away_score}</span>
+                </div>
+                <ScoreBadge score={match.score} />
               </div>
-              <ScoreBadge score={match.score} />
-            </div>
-          ) : (
-            <div className="flex items-center gap-1.5">
-              <Minus className="h-3 w-3 text-slate-600" />
-              <span className="text-xs text-slate-600">Sin pronóstico</span>
-            </div>
-          )}
+            ) : (
+              <div className="flex items-center gap-1.5">
+                <Minus className="h-3 w-3 text-slate-600" />
+                <span className="text-xs text-slate-600">Sin pronóstico</span>
+              </div>
+            )}
+          </div>
         </div>
       </div>
-    </div>
+
+      {/* ── Desktop table row (hidden mobile) ── */}
+      <div className={cn(
+        'hidden md:flex items-center border-b border-slate-800/40 last:border-b-0 transition-colors group',
+        match.status === 'finished' ? 'hover:bg-slate-900/50' : 'hover:bg-slate-900/20',
+        isFuture && 'opacity-45',
+      )}>
+        {/* Partido — flex-1 */}
+        <div className="flex-1 flex items-center gap-1 min-w-0 px-3 py-2.5">
+          <div className="flex items-center gap-1.5 flex-1 justify-end min-w-0">
+            <span className={cn('text-xs font-semibold truncate text-right', hasResult && match.result!.winner === 'home' ? 'text-white' : 'text-slate-400')}>
+              {match.home_team?.short_name ?? match.home_team?.name ?? 'TBD'}
+            </span>
+            <TeamFlag team={match.home_team} />
+          </div>
+          <span className="text-[10px] text-slate-700 shrink-0 w-5 text-center font-medium">vs</span>
+          <div className="flex items-center gap-1.5 flex-1 min-w-0">
+            <TeamFlag team={match.away_team} />
+            <span className={cn('text-xs font-semibold truncate', hasResult && match.result!.winner === 'away' ? 'text-white' : 'text-slate-400')}>
+              {match.away_team?.short_name ?? match.away_team?.name ?? 'TBD'}
+            </span>
+          </div>
+        </div>
+
+        {/* Resultado real — w-20 */}
+        <div className="w-20 shrink-0 text-center px-2 py-2.5">
+          {hasResult ? (
+            <span className="text-sm font-bold text-white tabular-nums font-mono tracking-tight">
+              {match.result!.home_score}–{match.result!.away_score}
+            </span>
+          ) : (
+            <span className="text-slate-700 text-xs">–</span>
+          )}
+        </div>
+
+        {/* Tu pronóstico — w-20 */}
+        <div className="w-20 shrink-0 text-center px-2 py-2.5">
+          {isFuture ? (
+            <span className="text-slate-700 text-xs">—</span>
+          ) : hasPred ? (
+            <span className={cn(
+              'text-sm font-semibold tabular-nums font-mono tracking-tight',
+              match.score?.points === 3 ? 'text-emerald-400' :
+              match.score?.points === 1 ? 'text-blue-400'    : 'text-slate-500',
+            )}>
+              {match.prediction!.home_score}–{match.prediction!.away_score}
+            </span>
+          ) : (
+            <span className="text-slate-600 text-xs">–</span>
+          )}
+        </div>
+
+        {/* Puntos — w-16 */}
+        <div className="w-16 shrink-0 flex justify-center px-2 py-2.5">
+          {!isFuture && hasPred && match.score
+            ? <ScoreBadge score={match.score} />
+            : <span className="text-slate-700 text-xs">—</span>
+          }
+        </div>
+      </div>
+    </>
   );
 }
 
@@ -204,7 +231,24 @@ function RoundSection({
             transition={{ duration: 0.18, ease: 'easeInOut' }}
             className="overflow-hidden"
           >
-            <div className="space-y-2 pb-3">
+            {/* Desktop table header */}
+            <div className="hidden md:flex items-center border border-slate-800/60 rounded-t-lg bg-slate-900/60 mb-0">
+              <div className="flex-1 px-3 py-2 text-[9px] font-bold uppercase tracking-widest text-slate-600 text-center">
+                Partido
+              </div>
+              <div className="w-20 shrink-0 px-2 py-2 text-[9px] font-bold uppercase tracking-widest text-slate-600 text-center">
+                Resultado
+              </div>
+              <div className="w-20 shrink-0 px-2 py-2 text-[9px] font-bold uppercase tracking-widest text-slate-600 text-center">
+                Pronóstico
+              </div>
+              <div className="w-16 shrink-0 px-2 py-2 text-[9px] font-bold uppercase tracking-widest text-slate-600 text-center">
+                Pts
+              </div>
+            </div>
+
+            {/* Mobile: card list / Desktop: table rows */}
+            <div className="space-y-2 pb-3 md:space-y-0 md:pb-0 md:border md:border-t-0 md:border-slate-800/60 md:rounded-b-lg md:overflow-hidden">
               {matches.map((match) => (
                 <MatchRow key={match.id} match={match} />
               ))}
@@ -272,9 +316,12 @@ function BreakdownDetail({
         <p className="text-red-400 text-sm text-center py-10">{error}</p>
       )}
 
-      {data && (
-        <div className="space-y-5">
-          {/* User header card */}
+      {data && (() => {
+        const accuracy = data.standing && data.standing.predictions_made > 0
+          ? Math.round(((data.standing.exact_scores + data.standing.correct_results) / data.standing.predictions_made) * 100)
+          : null;
+
+        const statsCard = (
           <div className="rounded-xl border border-slate-800 bg-slate-950 p-4 space-y-4">
             <div className="flex items-center gap-3">
               <Avatar className="h-12 w-12">
@@ -289,66 +336,57 @@ function BreakdownDetail({
               </div>
             </div>
 
-            {data.standing ? (() => {
-              const accuracy = data.standing.predictions_made > 0
-                ? Math.round(((data.standing.exact_scores + data.standing.correct_results) / data.standing.predictions_made) * 100)
-                : null;
-              return (
-                <div className="space-y-2 mt-1">
-                  {/* 3-col grid */}
-                  <div className="grid grid-cols-3 border border-slate-800 rounded-lg overflow-hidden divide-x divide-slate-800">
-                    {/* Marcador Exacto */}
-                    <div className="px-2 py-3 flex flex-col gap-1.5">
-                      <div className="flex items-center gap-1 min-h-[22px]">
-                        <Target className="h-3 w-3 text-emerald-400 shrink-0" />
-                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wide leading-tight">Marcador<br />Exacto</span>
-                      </div>
-                      <p className="text-xl font-black text-white tabular-nums leading-none">{data.standing.exact_scores}</p>
-                      <p className="text-emerald-400 text-[10px] font-bold tabular-nums">+{data.standing.exact_scores * 3} pts</p>
+            {data.standing ? (
+              <div className="space-y-2">
+                <div className="grid grid-cols-3 border border-slate-800 rounded-lg overflow-hidden divide-x divide-slate-800">
+                  <div className="px-2 py-3 flex flex-col gap-1.5">
+                    <div className="flex items-center gap-1 min-h-[22px]">
+                      <Target className="h-3 w-3 text-emerald-400 shrink-0" />
+                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wide leading-tight">Marcador<br />Exacto</span>
                     </div>
-                    {/* Resultado Correcto */}
-                    <div className="px-2 py-3 flex flex-col gap-1.5">
-                      <div className="flex items-center gap-1 min-h-[22px]">
-                        <CheckCircle2 className="h-3 w-3 text-blue-400 shrink-0" />
-                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wide leading-tight">Resultado<br />Correcto</span>
-                      </div>
-                      <p className="text-xl font-black text-white tabular-nums leading-none">{data.standing.correct_results}</p>
-                      <p className="text-blue-400 text-[10px] font-bold tabular-nums">+{data.standing.correct_results} pts</p>
-                    </div>
-                    {/* Precisión */}
-                    <div className="px-2 py-3 flex flex-col gap-1.5">
-                      <div className="flex items-center gap-1 min-h-[22px]">
-                        <Percent className="h-3 w-3 text-slate-400 shrink-0" />
-                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wide leading-tight">Precisión</span>
-                      </div>
-                      <p className="text-xl font-black text-white tabular-nums leading-none">
-                        {accuracy !== null ? accuracy : '—'}
-                      </p>
-                      <p className="text-slate-600 text-[10px] tabular-nums">{accuracy !== null ? 'precisión' : 'sin datos'}</p>
-                    </div>
+                    <p className="text-xl font-black text-white tabular-nums leading-none">{data.standing.exact_scores}</p>
+                    <p className="text-emerald-400 text-[10px] font-bold tabular-nums">+{data.standing.exact_scores * 3} pts</p>
                   </div>
-                  {/* Puntuación Total */}
-                  <div className="border border-slate-800 rounded-lg px-4 py-3 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Trophy className="h-4 w-4 text-slate-400 shrink-0" />
-                      <div>
-                        <p className="text-xs font-bold text-white">Puntuación Total</p>
-                        <p className="text-[10px] text-slate-600">acumulado</p>
-                      </div>
+                  <div className="px-2 py-3 flex flex-col gap-1.5">
+                    <div className="flex items-center gap-1 min-h-[22px]">
+                      <CheckCircle2 className="h-3 w-3 text-blue-400 shrink-0" />
+                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wide leading-tight">Resultado<br />Correcto</span>
                     </div>
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-3xl font-black text-white tabular-nums">{data.standing.total_points}</span>
-                      <span className="text-xs text-slate-500 font-medium">pts</span>
+                    <p className="text-xl font-black text-white tabular-nums leading-none">{data.standing.correct_results}</p>
+                    <p className="text-blue-400 text-[10px] font-bold tabular-nums">+{data.standing.correct_results} pts</p>
+                  </div>
+                  <div className="px-2 py-3 flex flex-col gap-1.5">
+                    <div className="flex items-center gap-1 min-h-[22px]">
+                      <Percent className="h-3 w-3 text-slate-400 shrink-0" />
+                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wide leading-tight">Precisión</span>
                     </div>
+                    <p className="text-xl font-black text-white tabular-nums leading-none">
+                      {accuracy !== null ? `${accuracy}%` : '—'}
+                    </p>
+                    <p className="text-slate-600 text-[10px]">{accuracy !== null ? 'de acierto' : 'sin datos'}</p>
                   </div>
                 </div>
-              );
-            })() : (
+                <div className="border border-slate-800 rounded-lg px-4 py-3 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Trophy className="h-4 w-4 text-slate-400 shrink-0" />
+                    <div>
+                      <p className="text-xs font-bold text-white">Puntuación Total</p>
+                      <p className="text-[10px] text-slate-600">acumulado</p>
+                    </div>
+                  </div>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-3xl font-black text-white tabular-nums">{data.standing.total_points}</span>
+                    <span className="text-xs text-slate-500 font-medium">pts</span>
+                  </div>
+                </div>
+              </div>
+            ) : (
               <p className="text-slate-500 text-xs text-center">Sin estadísticas aún.</p>
             )}
           </div>
+        );
 
-          {/* Rounds */}
+        const roundsSection = (
           <div className="divide-y divide-slate-800/60">
             {data.rounds
               .filter((r) => r.matches.length > 0)
@@ -361,8 +399,26 @@ function BreakdownDetail({
                 />
               ))}
           </div>
-        </div>
-      )}
+        );
+
+        return (
+          <>
+            {/* Mobile: stacked */}
+            <div className="md:hidden space-y-5">
+              {statsCard}
+              {roundsSection}
+            </div>
+
+            {/* Desktop: 2-col layout */}
+            <div className="hidden md:grid md:grid-cols-[1fr_300px] md:gap-6 md:items-start">
+              {/* Left col: rounds table */}
+              <div>{roundsSection}</div>
+              {/* Right col: stats sticky */}
+              <div className="sticky top-4">{statsCard}</div>
+            </div>
+          </>
+        );
+      })()}
     </motion.div>
   );
 }
