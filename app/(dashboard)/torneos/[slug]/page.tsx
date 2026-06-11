@@ -11,7 +11,7 @@ import { TeamStandings } from '@/components/team-standings';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
 import type { ApiResponse, Match, Tournament, RoundWithMatches, TeamStandingsData } from '@/types';
-import { CalendarDays, Trophy, RefreshCw } from 'lucide-react';
+import { CalendarDays, Trophy, RefreshCw, GitBranch, ChevronRight, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -29,6 +29,17 @@ const ROUND_TYPE_ORDER = [
 ] as const;
 
 const ROUND_ORDER_MAP = new Map(ROUND_TYPE_ORDER.map((t, i) => [t, i]));
+
+const KNOCKOUT_ORDER = ['round_of_32', 'round_of_16', 'quarter', 'semi', 'third_place', 'final'] as const;
+
+const KNOCKOUT_LABELS: Record<string, { label: string; abbr: string }> = {
+  round_of_32: { label: '32avos de Final',  abbr: '32avos'    },
+  round_of_16: { label: '16avos de Final',  abbr: '16avos'    },
+  quarter:     { label: 'Cuartos de Final', abbr: 'Cuartos'   },
+  semi:        { label: 'Semifinales',      abbr: 'Semis'     },
+  third_place: { label: 'Tercer Lugar',     abbr: '3er lugar' },
+  final:       { label: 'Gran Final',       abbr: 'Final'     },
+};
 
 // ── component ──────────────────────────────────────────────────────────────
 
@@ -218,7 +229,7 @@ export default function TorneoDetailPage() {
 
       {/* ── Tabs ─────────────────────────────────────────────────────── */}
       <Tabs value={activeTab} onValueChange={handleTabChange}>
-        <TabsList className="grid! grid-cols-2 w-full h-auto! bg-slate-900 border border-slate-700/60 p-1 gap-1 rounded-xl">
+        <TabsList className="grid! grid-cols-3 w-full h-auto! bg-slate-900 border border-slate-700/60 p-1 gap-1 rounded-xl">
           <TabsTrigger
             value="calendar"
             className="flex items-center justify-center gap-2 py-2.5 h-auto rounded-lg text-slate-400 hover:text-white transition-colors"
@@ -232,6 +243,13 @@ export default function TorneoDetailPage() {
           >
             <Trophy className="h-4 w-4" />
             <span className="text-xs font-medium">Clasificación</span>
+          </TabsTrigger>
+          <TabsTrigger
+            value="bracket"
+            className="flex items-center justify-center gap-2 py-2.5 h-auto rounded-lg text-slate-400 hover:text-white transition-colors"
+          >
+            <GitBranch className="h-4 w-4" />
+            <span className="text-xs font-medium">Eliminatoria</span>
           </TabsTrigger>
         </TabsList>
 
@@ -265,22 +283,22 @@ export default function TorneoDetailPage() {
                     ref={isActiveDate ? activeDateRef : undefined}
                     onClick={() => setActiveDateKey(dateKey)}
                     className={cn(
-                      'shrink-0 flex flex-col items-center px-3.5 py-3 rounded-xl border text-center min-w-17 transition-all duration-150',
+                      'shrink-0 flex flex-col items-center px-3 py-2.5 rounded-xl border text-center min-w-15.5 transition-all',
                       isActiveDate
-                        ? 'bg-emerald-500 border-emerald-500 text-white shadow-md shadow-emerald-500/25'
+                        ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400'
                         : isToday
                         ? 'border-emerald-500/50 bg-emerald-500/5 text-emerald-300 hover:bg-emerald-500/10'
-                        : 'border-slate-700/70 bg-slate-900/60 text-slate-400 hover:border-slate-600 hover:text-white hover:bg-slate-800/60'
+                        : 'border-slate-700 text-slate-400 hover:border-slate-500 hover:text-white'
                     )}
                   >
-                    <span className={cn('text-[10px] uppercase tracking-wide leading-none mb-1 font-semibold', isActiveDate ? 'text-white/80' : '')}>
+                    <span className="text-[10px] uppercase tracking-wide leading-none mb-1 font-semibold">
                       {isToday ? 'Hoy' : weekday}
                     </span>
                     <span className="text-xl font-bold leading-none">{day}</span>
-                    <span className={cn('text-[10px] uppercase tracking-wide leading-none mt-1', isActiveDate ? 'text-white/70' : '')}>
+                    <span className="text-[10px] uppercase tracking-wide leading-none mt-1">
                       {month}
                     </span>
-                    <span className={cn('text-[9px] font-semibold mt-2 leading-none tabular-nums', isActiveDate ? 'text-white/60' : 'text-slate-600')}>
+                    <span className={cn('text-[9px] font-semibold mt-2 leading-none tabular-nums', isActiveDate ? 'text-emerald-300/70' : 'text-slate-600')}>
                       {count} {count === 1 ? 'ptdo' : 'ptdos'}
                     </span>
                   </button>
@@ -337,6 +355,11 @@ export default function TorneoDetailPage() {
         <TabsContent value="standings" className="mt-4">
           <TeamStandings data={teamStandings} loading={loadingTeamStandings} />
         </TabsContent>
+
+        {/* ── Bracket tab ──────────────────────────────────────────── */}
+        <TabsContent value="bracket" className="mt-4">
+          <BracketTab rounds={sortedRounds} />
+        </TabsContent>
       </Tabs>
 
     </motion.div>
@@ -350,6 +373,252 @@ function EmptyCalendar({ message }: { message: string }) {
     <div className="flex flex-col items-center justify-center py-16 text-slate-600 gap-3">
       <CalendarDays className="h-10 w-10 opacity-30" />
       <p className="text-sm">{message}</p>
+    </div>
+  );
+}
+
+// ── Bracket components ───────────────────────────────────────────────────────
+
+function BracketMatchCard({ match, isFinal = false }: { match: Match; isFinal?: boolean }) {
+  const isFinished = match.status === 'finished';
+  const inProgress = match.status === 'in_progress';
+  const homeWon = isFinished && match.result?.winner === 'home';
+  const awayWon = isFinished && match.result?.winner === 'away';
+
+  return (
+    <div className={cn(
+      'rounded-xl border overflow-hidden bg-slate-950',
+      isFinal ? 'border-amber-500/40 shadow-lg shadow-amber-500/10' : 'border-slate-800'
+    )}>
+      {/* Home team */}
+      <div className={cn(
+        'flex items-center gap-3 px-4 py-3.5 transition-colors',
+        homeWon && 'bg-emerald-500/8',
+        awayWon && 'opacity-35'
+      )}>
+        <div className="w-7 shrink-0 flex justify-center">
+          {match.home_team?.flag_url
+            ? <img src={match.home_team.flag_url} alt="" className="w-7 h-5 object-cover rounded-sm" />
+            : <div className="w-5 h-5 rounded-full bg-slate-800" />
+          }
+        </div>
+        <span className={cn(
+          'flex-1 text-sm font-semibold truncate',
+          homeWon ? 'text-white' : isFinished ? 'text-slate-400' : 'text-slate-200'
+        )}>
+          {match.home_team?.name ?? <span className="text-slate-600 italic text-xs">Por definir</span>}
+        </span>
+        {(isFinished || inProgress) && (
+          <span className={cn(
+            'text-2xl font-black tabular-nums font-mono shrink-0 min-w-6 text-right',
+            homeWon ? 'text-white' : 'text-slate-500'
+          )}>
+            {match.result?.home_score ?? '–'}
+          </span>
+        )}
+        <div className={cn('w-0.5 h-5 rounded-full shrink-0 transition-colors', homeWon ? 'bg-emerald-500' : 'bg-transparent')} />
+      </div>
+
+      <div className="h-px bg-slate-800 mx-4" />
+
+      {/* Away team */}
+      <div className={cn(
+        'flex items-center gap-3 px-4 py-3.5 transition-colors',
+        awayWon && 'bg-emerald-500/8',
+        homeWon && 'opacity-35'
+      )}>
+        <div className="w-7 shrink-0 flex justify-center">
+          {match.away_team?.flag_url
+            ? <img src={match.away_team.flag_url} alt="" className="w-7 h-5 object-cover rounded-sm" />
+            : <div className="w-5 h-5 rounded-full bg-slate-800" />
+          }
+        </div>
+        <span className={cn(
+          'flex-1 text-sm font-semibold truncate',
+          awayWon ? 'text-white' : isFinished ? 'text-slate-400' : 'text-slate-200'
+        )}>
+          {match.away_team?.name ?? <span className="text-slate-600 italic text-xs">Por definir</span>}
+        </span>
+        {(isFinished || inProgress) && (
+          <span className={cn(
+            'text-2xl font-black tabular-nums font-mono shrink-0 min-w-6 text-right',
+            awayWon ? 'text-white' : 'text-slate-500'
+          )}>
+            {match.result?.away_score ?? '–'}
+          </span>
+        )}
+        <div className={cn('w-0.5 h-5 rounded-full shrink-0 transition-colors', awayWon ? 'bg-emerald-500' : 'bg-transparent')} />
+      </div>
+
+      {/* Footer */}
+      <div className={cn(
+        'px-4 py-2 border-t border-slate-800/60 flex items-center justify-between',
+        isFinal && 'bg-amber-950/20'
+      )}>
+        <span className="text-[10px] text-slate-600 flex items-center gap-1.5">
+          <CalendarDays className="h-3 w-3" />
+          {new Date(match.scheduled_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}
+          {' · '}
+          {new Date(match.scheduled_at).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}
+        </span>
+        {inProgress && (
+          <span className="flex items-center gap-1 text-[10px] font-bold text-red-400">
+            <span className="h-1.5 w-1.5 rounded-full bg-red-400 animate-pulse inline-block" />
+            En vivo
+          </span>
+        )}
+        {isFinished && <span className="text-[10px] text-slate-600">Finalizado</span>}
+        {match.status === 'scheduled' && <span className="text-[10px] text-slate-600">Programado</span>}
+      </div>
+    </div>
+  );
+}
+
+function BracketTab({ rounds }: { rounds: RoundWithMatches[] }) {
+  const knockoutRounds = useMemo(() =>
+    rounds
+      .filter(r => (KNOCKOUT_ORDER as readonly string[]).includes(r.round.type))
+      .sort((a, b) => KNOCKOUT_ORDER.indexOf(a.round.type as typeof KNOCKOUT_ORDER[number]) - KNOCKOUT_ORDER.indexOf(b.round.type as typeof KNOCKOUT_ORDER[number])),
+    [rounds]
+  );
+
+  const [activeRoundId, setActiveRoundId] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (knockoutRounds.length === 0) return;
+    const inProgress = knockoutRounds.find(r => r.matches.some(m => m.status === 'in_progress'));
+    if (inProgress) { setActiveRoundId(inProgress.round.id); return; }
+    const upcoming = knockoutRounds.find(r => r.matches.some(m => m.status === 'scheduled'));
+    if (upcoming) { setActiveRoundId(upcoming.round.id); return; }
+    setActiveRoundId(knockoutRounds[knockoutRounds.length - 1]?.round.id ?? null);
+  }, [knockoutRounds]);
+
+  const activeRound = knockoutRounds.find(r => r.round.id === activeRoundId);
+  const isFinalRound = activeRound?.round.type === 'final';
+
+  if (knockoutRounds.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-center gap-3">
+        <div className="rounded-2xl bg-slate-900 border border-slate-800 p-5">
+          <GitBranch className="h-10 w-10 text-slate-700 mx-auto" />
+        </div>
+        <p className="text-slate-500 text-sm font-medium">Fase eliminatoria no disponible</p>
+        <p className="text-slate-700 text-xs">Aparecerá cuando el torneo avance a esta fase.</p>
+      </div>
+    );
+  }
+
+  const champion = isFinalRound && activeRound.matches[0]?.result
+    ? activeRound.matches[0].result.winner === 'home'
+      ? activeRound.matches[0].home_team?.name
+      : activeRound.matches[0].away_team?.name
+    : null;
+
+  return (
+    <div className="space-y-4">
+
+      {/* ── Round stepper ─────────────────────────────────────────── */}
+      <div className="flex items-center gap-0 overflow-x-auto scrollbar-none">
+        {knockoutRounds.map((r, idx) => {
+          const meta = KNOCKOUT_LABELS[r.round.type];
+          const isActive = activeRoundId === r.round.id;
+          const allDone = r.matches.length > 0 && r.matches.every(m => m.status === 'finished');
+          const isFinal = r.round.type === 'final';
+
+          return (
+            <div key={r.round.id} className="flex items-center shrink-0">
+              <button
+                onClick={() => setActiveRoundId(r.round.id)}
+                className={cn(
+                  'flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl border transition-all',
+                  isActive && isFinal
+                    ? 'bg-amber-500/15 border-amber-500/50 text-amber-400'
+                    : isActive
+                    ? 'bg-emerald-500/15 border-emerald-500/50 text-emerald-400'
+                    : allDone
+                    ? 'border-slate-700/40 text-slate-500'
+                    : 'border-slate-800 text-slate-600 hover:border-slate-700 hover:text-slate-400'
+                )}
+              >
+                <span className="text-[9px] font-bold uppercase tracking-wider whitespace-nowrap">
+                  {meta?.abbr ?? r.round.name}
+                </span>
+                <span className={cn('text-xs font-black tabular-nums', !isActive && 'text-slate-600')}>
+                  {r.matches.length}
+                </span>
+                {allDone && <CheckCircle2 className="h-2.5 w-2.5 text-emerald-600" />}
+              </button>
+              {idx < knockoutRounds.length - 1 && (
+                <ChevronRight className="h-3 w-3 text-slate-700 shrink-0" />
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* ── Active round ──────────────────────────────────────────── */}
+      <AnimatePresence mode="wait">
+        {activeRound && (
+          <motion.div
+            key={activeRoundId}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.2 }}
+            className="space-y-3"
+          >
+            {/* Round header card */}
+            <div className={cn(
+              'rounded-xl p-4 border flex items-center gap-3',
+              isFinalRound
+                ? 'bg-gradient-to-r from-amber-950/70 via-amber-900/30 to-slate-950 border-amber-500/30'
+                : 'bg-slate-900/70 border-slate-800'
+            )}>
+              <div className={cn(
+                'rounded-xl p-2.5 border shrink-0',
+                isFinalRound
+                  ? 'bg-amber-500/15 border-amber-500/25'
+                  : 'bg-emerald-500/10 border-emerald-500/20'
+              )}>
+                {isFinalRound
+                  ? <Trophy className="h-5 w-5 text-amber-400" />
+                  : <GitBranch className="h-4 w-4 text-emerald-400" />
+                }
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className={cn(
+                  'font-bold text-base leading-tight',
+                  isFinalRound ? 'text-amber-300' : 'text-white'
+                )}>
+                  {KNOCKOUT_LABELS[activeRound.round.type]?.label ?? activeRound.round.name}
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  {activeRound.matches.length} {activeRound.matches.length === 1 ? 'partido' : 'partidos'}
+                  {' · '}
+                  {activeRound.matches.filter(m => m.status === 'finished').length} finalizados
+                </p>
+              </div>
+              {champion && (
+                <div className="text-right shrink-0">
+                  <p className="text-[10px] text-amber-500/70 uppercase tracking-wide font-bold">Campeón</p>
+                  <p className="text-sm font-bold text-amber-300 truncate max-w-24">{champion}</p>
+                </div>
+              )}
+            </div>
+
+            {/* Match grid */}
+            <div className={cn(
+              'grid gap-3',
+              isFinalRound ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'
+            )}>
+              {activeRound.matches.map(match => (
+                <BracketMatchCard key={match.id} match={match} isFinal={isFinalRound} />
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
     </div>
   );
 }
