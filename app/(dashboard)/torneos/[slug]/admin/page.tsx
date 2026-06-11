@@ -18,6 +18,7 @@ import {
   ArrowLeft, Plus, Trash2, Loader2, Users, CalendarDays, Trophy,
   Pencil, Check, X, Shield, ChevronRight, RefreshCw, Settings2, ImageIcon,
 } from 'lucide-react';
+import { FlagPlaceholder } from '@/components/ui/flag-placeholder';
 import { cn } from '@/lib/utils';
 
 // ── Helper sub-components ──────────────────────────────────────────────────
@@ -66,9 +67,10 @@ function TeamSelect({
   );
 }
 
-function MatchTeamFlag({ teamId, teams }: { teamId: number; teams: CustomTeam[] }) {
+function MatchTeamFlag({ teamId, teams }: { teamId: number | undefined; teams: CustomTeam[] }) {
+  if (!teamId) return <FlagPlaceholder size="sm" />;
   const team = teams.find((t) => t.id === teamId);
-  if (!team?.logo_url) return null;
+  if (!team?.logo_url) return <FlagPlaceholder size="sm" />;
   return (
     <img
       src={team.logo_url}
@@ -900,7 +902,7 @@ export default function TorneoAdminPage() {
                                       <div className="flex items-center gap-3 px-4 py-3 group">
                                         <div className="flex-1 min-w-0">
                                           <div className="flex items-center gap-1.5 min-w-0">
-                                            {match.home_team && <MatchTeamFlag teamId={match.home_team.id} teams={teams} />}
+                                            <MatchTeamFlag teamId={match.home_team?.id} teams={teams} />
                                             <span className="text-sm font-medium text-white truncate">
                                               {match.home_team?.name ?? <span className="text-slate-500 italic text-xs">{match.home_placeholder ?? 'Por definir'}</span>}
                                             </span>
@@ -914,7 +916,7 @@ export default function TorneoAdminPage() {
                                             <span className="text-sm font-medium text-white truncate">
                                               {match.away_team?.name ?? <span className="text-slate-500 italic text-xs">{match.away_placeholder ?? 'Por definir'}</span>}
                                             </span>
-                                            {match.away_team && <MatchTeamFlag teamId={match.away_team.id} teams={teams} />}
+                                            <MatchTeamFlag teamId={match.away_team?.id} teams={teams} />
                                           </div>
                                           <p className="text-xs text-slate-500 mt-0.5">
                                             {new Date(match.scheduled_at).toLocaleString('es-MX', {

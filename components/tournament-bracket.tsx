@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import type { RoundWithMatches, Match } from '@/types';
 import { CalendarDays, Trophy, GitBranch, CheckCircle2, ChevronRight } from 'lucide-react';
+import { FlagPlaceholder } from '@/components/ui/flag-placeholder';
 
 // ── Metadata ───────────────────────────────────────────────────────────────────
 
@@ -78,7 +79,7 @@ function TreeCard({ match, active }: { match: Match; active: boolean }) {
       >
         {flag
           ? <img src={flag} alt="" className="w-5 h-3.5 object-cover rounded-sm shrink-0" />
-          : <div className="w-5 h-3.5 rounded-sm bg-slate-800 shrink-0" />
+          : <FlagPlaceholder size="sm" />
         }
         <span className={cn(
           'flex-1 text-[11px] font-semibold truncate leading-none',
@@ -140,7 +141,7 @@ function DetailCard({ match, isFinal = false }: { match: Match; isFinal?: boolea
         <div className="w-7 shrink-0 flex justify-center">
           {flag
             ? <img src={flag} alt="" className="w-7 h-5 object-cover rounded-sm" />
-            : <div className="w-5 h-5 rounded-full bg-slate-800" />
+            : <FlagPlaceholder size="md" />
           }
         </div>
         <span className={cn(

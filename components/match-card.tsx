@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn, formatMatchDateParts } from '@/lib/utils';
 import type { Match, Prediction } from '@/types';
 import { Lock, CheckCircle2, ChevronUp, ChevronDown, Calendar, MapPin } from 'lucide-react';
+import { FlagPlaceholder } from '@/components/ui/flag-placeholder';
 
 const CARD_BG =
   'https://res.cloudinary.com/dr0klvutj/image/upload/v1781001150/MatchPick/file_00000000042c71fb8d0d570a11881d55.png';
@@ -157,7 +158,7 @@ export function MatchCard({ match, prediction, onChange, readOnly, isSaved }: Pr
                 className="w-12 h-8 object-cover rounded shadow-md"
               />
             ) : (
-              <div className="w-12 h-8 rounded bg-slate-800/60 border border-slate-700" />
+              <FlagPlaceholder size="lg" />
             )}
             <span className="w-full text-[11px] font-semibold text-white text-center leading-tight truncate px-1 mt-0.5">
               {match.home_team?.name ?? 'TBD'}
@@ -213,7 +214,7 @@ export function MatchCard({ match, prediction, onChange, readOnly, isSaved }: Pr
                 className="w-12 h-8 object-cover rounded shadow-md"
               />
             ) : (
-              <div className="w-12 h-8 rounded bg-slate-800/60 border border-slate-700" />
+              <FlagPlaceholder size="lg" />
             )}
             <span className="w-full text-[11px] font-semibold text-white text-center leading-tight truncate px-1 mt-0.5">
               {match.away_team?.name ?? 'TBD'}
