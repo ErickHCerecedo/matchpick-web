@@ -1069,7 +1069,7 @@ export default function TorneoAdminPage() {
                                   <>
                                     {/* Left: status controls */}
                                     <div className="flex items-center gap-1 flex-1">
-                                      {user?.is_admin && match.status === 'scheduled' && hasStarted && (
+                                      {(user?.is_admin || tournament.is_custom) && match.status === 'scheduled' && hasStarted && (
                                         <button onClick={() => handleUpdateStatus(match, 'in_progress')}
                                           disabled={updatingStatusId === match.id}
                                           className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/10 disabled:opacity-50 transition-colors">
@@ -1077,7 +1077,7 @@ export default function TorneoAdminPage() {
                                           Iniciar
                                         </button>
                                       )}
-                                      {user?.is_admin && match.status === 'in_progress' && (
+                                      {(user?.is_admin || tournament.is_custom) && match.status === 'in_progress' && (
                                         <button onClick={() => handleUpdateStatus(match, 'finished')}
                                           disabled={updatingStatusId === match.id}
                                           className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold text-slate-300 border border-slate-600/50 hover:bg-slate-700/30 disabled:opacity-50 transition-colors">
@@ -1153,60 +1153,17 @@ export default function TorneoAdminPage() {
                           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }}
                             exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.18 }} className="overflow-hidden">
                             <div className="bg-slate-950/40 border-t border-slate-800/60 divide-y divide-slate-800/50">
-                              {roundMatches.map((match) => {
-                                const hasStarted = new Date(match.scheduled_at) <= new Date();
-                                return (
-                                  <div key={match.id} className="flex items-center gap-2 px-3 py-2.5 group hover:bg-slate-800/20 transition-colors">
-                                    {/* Teams + result/status */}
-                                    <div className="flex-1 flex items-center gap-1.5 min-w-0 text-xs">
-                                      <span className="text-slate-300 font-medium truncate">
-                                        {match.home_team?.short_name ?? match.home_placeholder ?? '?'}
-                                      </span>
-                                      {match.result ? (
-                                        <span className="shrink-0 font-bold text-emerald-400 tabular-nums font-mono bg-emerald-500/10 border border-emerald-500/20 px-1 rounded text-[11px]">
-                                          {match.result.home_score}–{match.result.away_score}
-                                        </span>
-                                      ) : match.status === 'in_progress' ? (
-                                        <span className="shrink-0 flex items-center gap-0.5 text-red-400 text-[10px]">
-                                          <span className="w-1 h-1 rounded-full bg-red-400 animate-pulse" />
-                                        </span>
-                                      ) : (
-                                        <span className="text-slate-600 shrink-0">vs</span>
-                                      )}
-                                      <span className="text-slate-300 font-medium truncate">
-                                        {match.away_team?.short_name ?? match.away_placeholder ?? '?'}
-                                      </span>
-                                    </div>
-
-                                    {/* Action buttons */}
-                                    <div className="flex items-center gap-1 shrink-0">
-                                      {match.status === 'scheduled' && hasStarted && (
-                                        <button
-                                          onClick={() => handleUpdateStatus(match, 'in_progress')}
-                                          disabled={updatingStatusId === match.id}
-                                          className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/10 disabled:opacity-50 transition-colors">
-                                          {updatingStatusId === match.id ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <Play className="h-2.5 w-2.5 fill-current" />}
-                                          Iniciar
-                                        </button>
-                                      )}
-                                      {match.status === 'in_progress' && (
-                                        <button
-                                          onClick={() => handleUpdateStatus(match, 'finished')}
-                                          disabled={updatingStatusId === match.id}
-                                          className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold text-slate-300 border border-slate-600/50 hover:bg-slate-700/30 disabled:opacity-50 transition-colors">
-                                          {updatingStatusId === match.id ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <Square className="h-2.5 w-2.5 fill-current" />}
-                                          Fin
-                                        </button>
-                                      )}
-                                      <button
-                                        onClick={() => handleRemoveMatch(match.id)}
-                                        className="p-1 rounded text-slate-700 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100">
-                                        <Trash2 className="h-3 w-3" />
-                                      </button>
-                                    </div>
-                                  </div>
-                                );
-                              })}
+                              {roundMatches.map((match) => (
+                                <div key={match.id} className="flex items-center justify-between px-4 py-2.5 group">
+                                  <span className="text-xs text-slate-400 truncate flex-1 min-w-0">
+                                    {match.home_team?.name ?? match.home_placeholder ?? '?'} vs {match.away_team?.name ?? match.away_placeholder ?? '?'}
+                                  </span>
+                                  <button onClick={() => handleRemoveMatch(match.id)}
+                                    className="p-1 rounded text-slate-700 hover:text-red-400 transition-colors shrink-0 opacity-0 group-hover:opacity-100">
+                                    <Trash2 className="h-3 w-3" />
+                                  </button>
+                                </div>
+                              ))}
                               {teams.length >= 2 && (
                                 showMatchForm && expandedRoundId === round.id ? (
                                   <form onSubmit={handleAddMatch} className="px-4 py-3 space-y-2.5 bg-slate-900/40">
