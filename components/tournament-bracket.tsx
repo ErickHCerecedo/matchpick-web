@@ -339,10 +339,15 @@ function MobileBracket({
           dragConstraints={{ left: 0, right: 0 }}
           dragElastic={0.2}
           onDragEnd={(_, info) => {
+            const { offset, velocity } = info;
+            // Ignore primarily-vertical gestures: the user is scrolling, not swiping.
+            // pointercancel (browser takes scroll) fires onDragEnd with whatever diagonal
+            // delta accumulated before the browser took over — this guards against that.
+            if (Math.abs(offset.y) >= Math.abs(offset.x)) return;
             const threshold = COL_W_M * 0.3;
-            if ((info.velocity.x < -300 || info.offset.x < -threshold) && activeColIdx < bracketRounds.length - 1)
+            if ((velocity.x < -300 || offset.x < -threshold) && activeColIdx < bracketRounds.length - 1)
               onChangeColIdx(activeColIdx + 1);
-            if ((info.velocity.x >  300 || info.offset.x >  threshold) && activeColIdx > 0)
+            if ((velocity.x >  300 || offset.x >  threshold) && activeColIdx > 0)
               onChangeColIdx(activeColIdx - 1);
           }}
           style={{ width: totalW, height: totalH, touchAction: 'pan-y', cursor: 'grab' }}
@@ -556,11 +561,16 @@ function DesktopRoundStrip({
 
 export function TournamentBracket({ rounds }: { rounds: RoundWithMatches[] }) {
 
+  // Stabilize the rounds reference with a stable identity key so memo/effect
+  // don't re-fire when the parent re-renders with structurally identical data.
+  const roundsKey = rounds.map(r => `${r.round.id}:${r.matches.map(m => `${m.id}${m.status}`).join(',')}`).join('|');
+
   const knockoutRounds = useMemo(() =>
     rounds
       .filter(r => KNOCKOUT_ORDER.includes(r.round.type) && r.matches.length > 0)
       .sort((a, b) => KNOCKOUT_ORDER.indexOf(a.round.type) - KNOCKOUT_ORDER.indexOf(b.round.type)),
-    [rounds],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [roundsKey],
   );
 
   const bracketRounds = useMemo(() =>
