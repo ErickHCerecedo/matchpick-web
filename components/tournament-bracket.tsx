@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import type { RoundWithMatches, Match } from '@/types';
-import { Trophy, GitBranch, CheckCircle2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Trophy, GitBranch, CheckCircle2, ChevronLeft, ChevronRight, Calendar, MapPin } from 'lucide-react';
 import { FlagPlaceholder } from '@/components/ui/flag-placeholder';
 
 // ── Metadata ───────────────────────────────────────────────────────────────────
@@ -26,12 +26,15 @@ const CARD_BG =
 
 // ── Bracket geometry ───────────────────────────────────────────────────────────
 
-const SLOT_H  = 108;
-const CARD_H  = 90;
+const SLOT_H  = 142;
+const CARD_H  = 124;
 const COL_W   = 136;
 const COL_GAP = 48;
 const PAD_X   = 20;
 const PAD_Y   = 28;
+
+const INFO_H  = 20;   // date/status top strip
+const VENUE_H = 18;   // venue bottom strip
 
 function matchTop(roundIdx: number, slotIdx: number): number {
   const pow2 = 1 << roundIdx;
@@ -46,13 +49,28 @@ function colX(rIdx: number): number {
 
 // ── TreeCard ───────────────────────────────────────────────────────────────────
 
-const ROW_H = (CARD_H - 1) / 2;
+const ROW_H = (CARD_H - INFO_H - VENUE_H - 1) / 2; // ≈ 42.5
+
+const MX_TZ = 'America/Mexico_City';
+
+function fmtBracketDate(iso: string): { date: string; time: string } {
+  const d = new Date(iso);
+  const date = d
+    .toLocaleDateString('es-MX', { timeZone: MX_TZ, day: 'numeric', month: 'short' })
+    .replace(/\.$/, '');
+  const time = d.toLocaleTimeString('es-MX', {
+    timeZone: MX_TZ, hour: '2-digit', minute: '2-digit', hour12: false,
+  });
+  return { date, time };
+}
 
 function TreeCard({ match, active }: { match: Match; active: boolean }) {
   const fin     = match.status === 'finished';
   const live    = match.status === 'in_progress';
   const homeWon = fin && match.result?.winner === 'home';
   const awayWon = fin && match.result?.winner === 'away';
+
+  const { date, time } = fmtBracketDate(match.scheduled_at);
 
   const teamRow = (side: 'home' | 'away', won: boolean, lost: boolean) => {
     const team   = side === 'home' ? match.home_team : match.away_team;
@@ -98,7 +116,7 @@ function TreeCard({ match, active }: { match: Match; active: boolean }) {
     <div
       className={cn(
         'relative rounded-md border overflow-hidden transition-all duration-150',
-        live   ? 'border-red-500/50'                                    :
+        live   ? 'border-red-500/50'                                     :
         active ? 'border-emerald-500/60 shadow-sm shadow-emerald-500/20' :
                  'border-slate-800/80',
       )}
@@ -108,16 +126,42 @@ function TreeCard({ match, active }: { match: Match; active: boolean }) {
         className="absolute inset-0 z-0"
         style={{ backgroundImage: `url(${CARD_BG})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
       />
-      <div className="absolute inset-0 z-0 bg-slate-950/88" />
-
-      {live && (
-        <div className="absolute top-1.5 right-2 z-20 w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
-      )}
+      <div className="absolute inset-0 z-0 bg-slate-950/90" />
 
       <div className="relative z-10" style={{ height: CARD_H }}>
-        {teamRow('home', homeWon, awayWon)}
-        <div className="h-px bg-slate-700/60 mx-2" />
-        {teamRow('away', awayWon, homeWon)}
+
+        {/* ── Fecha / estado ─────────────────────────────────────── */}
+        <div
+          className="flex items-center justify-between px-2 border-b border-slate-800/60"
+          style={{ height: INFO_H }}
+        >
+          <div className="flex items-center gap-1 min-w-0 overflow-hidden">
+            <Calendar className="h-2.5 w-2.5 text-slate-600 shrink-0" />
+            <span className="text-[9px] font-medium text-slate-500 truncate">{date}</span>
+            <span className="text-[8px] text-slate-700 shrink-0 mx-px">·</span>
+            <span className="text-[9px] text-slate-600 shrink-0">{time}</span>
+          </div>
+          {live && <div className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse ml-1 shrink-0" />}
+        </div>
+
+        {/* ── Equipos ────────────────────────────────────────────── */}
+        <div style={{ height: CARD_H - INFO_H - VENUE_H }}>
+          {teamRow('home', homeWon, awayWon)}
+          <div className="h-px bg-slate-700/60 mx-2" />
+          {teamRow('away', awayWon, homeWon)}
+        </div>
+
+        {/* ── Estadio ────────────────────────────────────────────── */}
+        <div
+          className="flex items-center px-2 gap-1 border-t border-slate-800/60"
+          style={{ height: VENUE_H }}
+        >
+          <MapPin className="h-2.5 w-2.5 text-slate-700 shrink-0" />
+          <span className="text-[9px] text-slate-600 truncate">
+            {match.venue ?? 'Por definir'}
+          </span>
+        </div>
+
       </div>
     </div>
   );
