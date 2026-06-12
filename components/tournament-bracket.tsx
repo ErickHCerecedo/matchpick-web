@@ -53,6 +53,13 @@ const ROW_H = (CARD_H - INFO_H - VENUE_H - 1) / 2; // ≈ 42.5
 
 const MX_TZ = 'America/Mexico_City';
 
+const STATUS_COLORS: Record<Match['status'], { dot: string; icon: string; line: string }> = {
+  scheduled:   { dot: 'bg-emerald-400', icon: 'text-emerald-400', line: 'bg-emerald-400/60' },
+  in_progress: { dot: 'bg-red-400',     icon: 'text-red-400',     line: 'bg-red-400/60'     },
+  finished:    { dot: 'bg-slate-500',   icon: 'text-slate-500',   line: 'bg-slate-600/60'   },
+  cancelled:   { dot: 'bg-slate-500',   icon: 'text-slate-500',   line: 'bg-slate-600/60'   },
+};
+
 function fmtBracketDate(iso: string): { date: string; time: string } {
   const d = new Date(iso);
   const date = d
@@ -69,6 +76,7 @@ function TreeCard({ match, active }: { match: Match; active: boolean }) {
   const live    = match.status === 'in_progress';
   const homeWon = fin && match.result?.winner === 'home';
   const awayWon = fin && match.result?.winner === 'away';
+  const sc      = STATUS_COLORS[match.status];
 
   const { date, time } = fmtBracketDate(match.scheduled_at);
 
@@ -115,10 +123,10 @@ function TreeCard({ match, active }: { match: Match; active: boolean }) {
   return (
     <div
       className={cn(
-        'relative rounded-md border overflow-hidden transition-all duration-150',
-        live   ? 'border-red-500/50'                                     :
+        'relative rounded-xl border overflow-hidden transition-all duration-200',
+        live   ? 'border-red-500/40'                                     :
         active ? 'border-emerald-500/60 shadow-sm shadow-emerald-500/20' :
-                 'border-slate-800/80',
+                 'border-slate-700/60',
       )}
       style={{ width: COL_W, height: CARD_H }}
     >
@@ -126,38 +134,38 @@ function TreeCard({ match, active }: { match: Match; active: boolean }) {
         className="absolute inset-0 z-0"
         style={{ backgroundImage: `url(${CARD_BG})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
       />
-      <div className="absolute inset-0 z-0 bg-slate-950/90" />
+      <div className="absolute inset-0 z-0 bg-slate-950/78" />
 
       <div className="relative z-10" style={{ height: CARD_H }}>
 
         {/* ── Fecha / estado ─────────────────────────────────────── */}
         <div
-          className="flex items-center justify-between px-2 border-b border-slate-800/60"
+          className="flex items-center justify-between px-2 border-b border-slate-700/40"
           style={{ height: INFO_H }}
         >
           <div className="flex items-center gap-1 min-w-0 overflow-hidden">
-            <Calendar className="h-2.5 w-2.5 text-slate-600 shrink-0" />
-            <span className="text-[9px] font-medium text-slate-500 truncate">{date}</span>
-            <span className="text-[8px] text-slate-700 shrink-0 mx-px">·</span>
-            <span className="text-[9px] text-slate-600 shrink-0">{time}</span>
+            <Calendar className={cn('h-2.5 w-2.5 shrink-0', sc.icon)} />
+            <span className="text-[9px] font-medium text-slate-400 truncate">{date}</span>
+            <span className="text-[8px] text-slate-600 shrink-0 mx-px">|</span>
+            <span className="text-[9px] text-slate-500 shrink-0">{time}</span>
           </div>
-          {live && <div className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse ml-1 shrink-0" />}
+          <span className={cn('w-1.5 h-1.5 rounded-full shrink-0', sc.dot, live && 'animate-pulse')} />
         </div>
 
         {/* ── Equipos ────────────────────────────────────────────── */}
         <div style={{ height: CARD_H - INFO_H - VENUE_H }}>
           {teamRow('home', homeWon, awayWon)}
-          <div className="h-px bg-slate-700/60 mx-2" />
+          <div className={cn('h-px mx-2', sc.line)} />
           {teamRow('away', awayWon, homeWon)}
         </div>
 
         {/* ── Estadio ────────────────────────────────────────────── */}
         <div
-          className="flex items-center px-2 gap-1 border-t border-slate-800/60"
+          className="flex items-center px-2 gap-1 border-t border-slate-700/40"
           style={{ height: VENUE_H }}
         >
-          <MapPin className="h-2.5 w-2.5 text-slate-700 shrink-0" />
-          <span className="text-[9px] text-slate-600 truncate">
+          <MapPin className={cn('h-2.5 w-2.5 shrink-0', sc.icon)} />
+          <span className="text-[9px] text-slate-400 truncate">
             {match.venue ?? 'Por definir'}
           </span>
         </div>
