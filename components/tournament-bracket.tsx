@@ -33,6 +33,15 @@ const COL_GAP = 48;
 const PAD_X   = 20;
 const PAD_Y   = 28;
 
+// ── Mobile bracket geometry (wider cards for 80/20 peek UX) ───────────────────
+const COL_W_M   = 300;   // ≈80% of a 375px viewport
+const COL_GAP_M = 32;    // connector lines visible in the peek zone
+const PEEK_PAD  = 10;    // px: left margin for the active column
+
+function colXM(rIdx: number): number {
+  return rIdx * (COL_W_M + COL_GAP_M);
+}
+
 const INFO_H  = 20;   // date/status top strip
 const VENUE_H = 18;   // venue bottom strip
 
@@ -71,7 +80,7 @@ function fmtBracketDate(iso: string): { date: string; time: string } {
   return { date, time };
 }
 
-function TreeCard({ match, active }: { match: Match; active: boolean }) {
+function TreeCard({ match, active, colW = COL_W }: { match: Match; active: boolean; colW?: number }) {
   const fin     = match.status === 'finished';
   const live    = match.status === 'in_progress';
   const homeWon = fin && match.result?.winner === 'home';
@@ -128,7 +137,7 @@ function TreeCard({ match, active }: { match: Match; active: boolean }) {
         active ? 'border-emerald-500/60 shadow-sm shadow-emerald-500/20' :
                  'border-slate-700/60',
       )}
-      style={{ width: COL_W, height: CARD_H }}
+      style={{ width: colW, height: CARD_H }}
     >
       <div
         className="absolute inset-0 z-0"
@@ -182,19 +191,25 @@ function ConnectorLines({
   totalW,
   totalH,
   highlightRoundIdx,
+  getColX = colX,
+  colWidth = COL_W,
+  colGap = COL_GAP,
 }: {
   bracketRounds: RoundWithMatches[];
   totalW: number;
   totalH: number;
   highlightRoundIdx?: number;
+  getColX?: (rIdx: number) => number;
+  colWidth?: number;
+  colGap?: number;
 }) {
   return (
     <svg className="absolute inset-0 pointer-events-none" width={totalW} height={totalH}>
       {bracketRounds.slice(0, -1).map((_, rIdx) => {
         const nextCount = bracketRounds[rIdx + 1]?.matches.length ?? 0;
-        const fromX = colX(rIdx) + COL_W;
-        const midX  = fromX + COL_GAP / 2;
-        const toX   = colX(rIdx + 1);
+        const fromX = getColX(rIdx) + colWidth;
+        const midX  = fromX + colGap / 2;
+        const toX   = getColX(rIdx + 1);
         const visible = highlightRoundIdx === undefined
           || rIdx === highlightRoundIdx
           || rIdx + 1 === highlightRoundIdx;
@@ -304,55 +319,62 @@ function MobileBracket({
   const firstCount = bracketRounds[0]?.matches.length ?? 0;
   if (!firstCount) return null;
 
+  const cols   = bracketRounds.length;
   const totalH = firstCount * SLOT_H + 2 * PAD_Y;
-  const totalW = bracketRounds.length * COL_W + (bracketRounds.length - 1) * COL_GAP + 2 * PAD_X;
+  const totalW = cols * COL_W_M + (cols - 1) * COL_GAP_M;
 
-  // Offset so the active column is centered
-  const offsetX = -(colX(activeColIdx) - COL_GAP / 2);
+  // Slide the canvas so the active column's left edge sits at PEEK_PAD from the viewport's left.
+  // This gives an 80/20 split: ~80% active column, ~20% connector lines + peek of next column.
+  const offsetX = PEEK_PAD - colXM(activeColIdx);
 
   return (
-    <div
-      className="relative overflow-hidden rounded-xl"
-      style={{ height: Math.min(totalH, 560) }}
-    >
-      <motion.div
-        className="absolute top-0"
-        animate={{ x: offsetX }}
-        transition={{ type: 'spring', stiffness: 260, damping: 30 }}
-        drag="x"
-        dragConstraints={{ left: 0, right: 0 }}
-        dragElastic={0.08}
-        onDragEnd={(_, info) => {
-          const swipeLeft  = info.velocity.x < -200 || info.offset.x < -(COL_W * 0.35);
-          const swipeRight = info.velocity.x >  200 || info.offset.x >   COL_W * 0.35;
-          if (swipeLeft  && activeColIdx < bracketRounds.length - 1) onChangeColIdx(activeColIdx + 1);
-          if (swipeRight && activeColIdx > 0)                         onChangeColIdx(activeColIdx - 1);
-        }}
-        style={{ width: totalW, height: totalH, cursor: 'grab' }}
-      >
-        <ConnectorLines
-          bracketRounds={bracketRounds}
-          totalW={totalW}
-          totalH={totalH}
-          highlightRoundIdx={activeColIdx}
-        />
+    <div className="relative rounded-xl">
+      {/* Scroll wrapper: clips x, scrolls y so all matches in a round are reachable */}
+      <div style={{ overflowX: 'hidden', overflowY: 'auto', maxHeight: '72dvh' }}>
+        <motion.div
+          className="relative"
+          animate={{ x: offsetX }}
+          transition={{ type: 'spring', stiffness: 260, damping: 30 }}
+          drag="x"
+          dragConstraints={{ left: 0, right: 0 }}
+          dragElastic={0.2}
+          onDragEnd={(_, info) => {
+            const threshold = COL_W_M * 0.3;
+            if ((info.velocity.x < -300 || info.offset.x < -threshold) && activeColIdx < bracketRounds.length - 1)
+              onChangeColIdx(activeColIdx + 1);
+            if ((info.velocity.x >  300 || info.offset.x >  threshold) && activeColIdx > 0)
+              onChangeColIdx(activeColIdx - 1);
+          }}
+          style={{ width: totalW, height: totalH, touchAction: 'pan-y', cursor: 'grab' }}
+        >
+          <ConnectorLines
+            bracketRounds={bracketRounds}
+            totalW={totalW}
+            totalH={totalH}
+            highlightRoundIdx={activeColIdx}
+            getColX={colXM}
+            colWidth={COL_W_M}
+            colGap={COL_GAP_M}
+          />
 
-        {bracketRounds.map((r, rIdx) =>
-          r.matches.map((match, sIdx) => (
-            <div
-              key={match.id}
-              className="absolute"
-              style={{ left: colX(rIdx), top: matchTop(rIdx, sIdx) }}
-            >
-              <TreeCard match={match} active={rIdx === activeColIdx} />
-            </div>
-          ))
-        )}
-      </motion.div>
+          {bracketRounds.map((r, rIdx) =>
+            r.matches.map((match, sIdx) => (
+              <div
+                key={match.id}
+                className="absolute"
+                style={{ left: colXM(rIdx), top: matchTop(rIdx, sIdx) }}
+              >
+                <TreeCard match={match} active={rIdx === activeColIdx} colW={COL_W_M} />
+              </div>
+            ))
+          )}
+        </motion.div>
+      </div>
 
-      {/* Fade edges to hint scroll */}
-      <div className="absolute left-0 top-0 bottom-0 w-4 bg-linear-to-r from-slate-950/60 to-transparent pointer-events-none z-10" />
-      <div className="absolute right-0 top-0 bottom-0 w-4 bg-linear-to-l from-slate-950/60 to-transparent pointer-events-none z-10" />
+      {/* Left fade: softens partial view of the previous column */}
+      <div className="pointer-events-none absolute inset-y-0 left-0 w-4 bg-gradient-to-r from-slate-950/70 to-transparent z-10 rounded-l-xl" />
+      {/* Right fade: peek zone hint — connector lines + partial next column visible here */}
+      <div className="pointer-events-none absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-slate-950/80 to-transparent z-10 rounded-r-xl" />
     </div>
   );
 }
