@@ -26,16 +26,16 @@ const CARD_BG =
 
 // ── Bracket geometry ───────────────────────────────────────────────────────────
 
-const SLOT_H  = 142;
-const CARD_H  = 124;
-const COL_W   = 136;
-const COL_GAP = 48;
+const SLOT_H  = 176;
+const CARD_H  = 156;
+const COL_W   = 192;
+const COL_GAP = 52;
 const PAD_X   = 20;
 const PAD_Y   = 28;
 
 // ── Mobile bracket geometry (wider cards for 80/20 peek UX) ───────────────────
-const COL_W_M   = 300;   // ≈80% of a 375px viewport
-const COL_GAP_M = 32;    // connector lines visible in the peek zone
+const COL_W_M   = 320;   // ≈85% of a 375px viewport
+const COL_GAP_M = 36;    // connector lines visible in the peek zone
 const PEEK_PAD  = 10;    // px: left margin for the active column
 
 function colXM(rIdx: number): number {
@@ -86,10 +86,14 @@ function TreeCard({ match, active, colW = COL_W }: { match: Match; active: boole
   const hasResult = fin || live;
   const { date, time } = fmtBracketDate(match.scheduled_at);
 
-  // Scale flag size relative to card width
-  const flagClass  = colW >= 200 ? 'w-10 h-7'  : 'w-7 h-5';
-  const nameSize   = colW >= 200 ? 'text-[10px]' : 'text-[9px]';
-  const scoreSize  = colW >= 200 ? 'text-lg'     : 'text-sm';
+  // Scale flag/text proportional to card width
+  // Mobile ≥ 280: larger flags, bigger text
+  // Desktop ≥ 160: medium flags
+  // Fallback: compact
+  const flagClass = colW >= 280 ? 'w-12 h-8' : colW >= 160 ? 'w-9 h-6' : 'w-7 h-5';
+  const nameSize  = colW >= 280 ? 'text-[11px]' : 'text-[10px]';
+  const scoreSize = colW >= 280 ? 'text-xl' : 'text-base';
+  const flagSize: 'lg' | 'md' | 'sm' = colW >= 280 ? 'lg' : colW >= 160 ? 'md' : 'sm';
 
   const teamCol = (side: 'home' | 'away', won: boolean, lost: boolean) => {
     const team   = side === 'home' ? match.home_team : match.away_team;
@@ -101,7 +105,7 @@ function TreeCard({ match, active, colW = COL_W }: { match: Match; active: boole
       <div className={cn('flex-1 flex flex-col items-center gap-1 min-w-0', lost && 'opacity-35')}>
         {flag
           ? <img src={flag} alt="" className={cn(flagClass, 'object-cover rounded shadow-md shrink-0')} />
-          : <FlagPlaceholder size={colW >= 200 ? 'md' : 'sm'} />
+          : <FlagPlaceholder size={flagSize} />
         }
         <span className={cn(
           nameSize,
