@@ -6,6 +6,7 @@ import { cn, formatMatchDateParts } from '@/lib/utils';
 import type { RoundWithMatches, Match } from '@/types';
 import { Trophy, GitBranch, CheckCircle2, ChevronRight, Calendar, MapPin } from 'lucide-react';
 import { FlagPlaceholder } from '@/components/ui/flag-placeholder';
+import { Badge } from '@/components/ui/badge';
 
 // ── Metadata ───────────────────────────────────────────────────────────────────
 
@@ -34,9 +35,10 @@ const PAD_X   = 20;
 const PAD_Y   = 28;
 
 // ── Mobile bracket geometry (wider cards for 80/20 peek UX) ───────────────────
-const COL_W_M   = 330;   // close to full-width MatchCard on mobile
-const COL_GAP_M = 36;    // connector lines visible in the peek zone
-const PEEK_PAD  = 10;    // px: left margin for the active column
+const COL_W_M         = 330;   // close to full-width MatchCard on mobile
+const COL_GAP_M       = 36;    // gap when on first column (peek of next)
+const COL_GAP_M_COMPACT = 16;  // gap when on column 1+ (tighter, shows more peek)
+const PEEK_PAD        = 10;    // px: left margin for the active column
 
 function colXM(rIdx: number): number {
   return rIdx * (COL_W_M + COL_GAP_M);
@@ -62,11 +64,11 @@ const STATUS_LABELS: Record<Match['status'], string> = {
   cancelled:   'Cancelado',
 };
 
-const STATUS_COLORS: Record<Match['status'], { dot: string; icon: string; line: string; text: string }> = {
-  scheduled:   { dot: 'bg-emerald-400', icon: 'text-emerald-400', line: 'bg-emerald-400/60', text: 'text-emerald-400' },
-  in_progress: { dot: 'bg-red-400',     icon: 'text-red-400',     line: 'bg-red-400/60',     text: 'text-red-400'     },
-  finished:    { dot: 'bg-slate-500',   icon: 'text-slate-500',   line: 'bg-slate-600/60',   text: 'text-slate-500'   },
-  cancelled:   { dot: 'bg-slate-500',   icon: 'text-slate-500',   line: 'bg-slate-600/60',   text: 'text-slate-500'   },
+const STATUS_COLORS: Record<Match['status'], { dot: string; icon: string; line: string; badge: string }> = {
+  scheduled:   { dot: 'bg-emerald-400', icon: 'text-emerald-400', line: 'bg-emerald-400/60', badge: 'border-emerald-600/40 text-emerald-400' },
+  in_progress: { dot: 'bg-red-400',     icon: 'text-red-400',     line: 'bg-red-400/60',     badge: 'border-red-500/60 text-red-400'         },
+  finished:    { dot: 'bg-slate-500',   icon: 'text-slate-500',   line: 'bg-slate-600/60',   badge: 'border-slate-600 text-slate-500'         },
+  cancelled:   { dot: 'bg-slate-500',   icon: 'text-slate-500',   line: 'bg-slate-600/60',   badge: 'border-slate-600 text-slate-500'         },
 };
 
 // MatchCard-style layout: flag + name stacked, score in the middle.
@@ -134,10 +136,13 @@ function TreeCard({ match, active, colW = COL_W }: { match: Match; active: boole
             <span className="text-[8px] text-slate-600 shrink-0 mx-px">|</span>
             <span className="text-[9px] text-slate-500 shrink-0">{time}</span>
           </div>
-          <div className="flex items-center gap-1 shrink-0">
+          <Badge
+            variant="outline"
+            className={cn('text-[9px] flex items-center gap-1 px-1.5 py-px h-auto font-medium', sc.badge)}
+          >
             <span className={cn('w-1.5 h-1.5 rounded-full shrink-0', sc.dot, live && 'animate-pulse')} />
-            <span className={cn('text-[9px] font-medium', sc.text)}>{STATUS_LABELS[match.status]}</span>
-          </div>
+            {STATUS_LABELS[match.status]}
+          </Badge>
         </div>
 
         {/* ── Teams: home | score | away (MatchCard-style horizontal) ── */}
@@ -318,12 +323,18 @@ function MobileBracket({
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
 
+  // Compress inter-column gap once the user leaves the first column so later
+  // rounds (fewer matches, same canvas height) don't feel padded and the peek
+  // of the next column is clearly visible.
+  const gapM      = activeColIdx === 0 ? COL_GAP_M : COL_GAP_M_COMPACT;
+  const colXMDyn  = (rIdx: number) => rIdx * (COL_W_M + gapM);
+
   const cols   = bracketRounds.length;
   const totalH = firstCount * SLOT_H + 2 * PAD_Y;
-  const totalW = cols * COL_W_M + (cols - 1) * COL_GAP_M;
+  const totalW = cols * COL_W_M + (cols - 1) * gapM;
 
   // Slide canvas so active column's left edge sits at PEEK_PAD → ~80/20 split.
-  const offsetX = PEEK_PAD - colXM(activeColIdx);
+  const offsetX = PEEK_PAD - colXMDyn(activeColIdx);
 
   // ── Swipe detection via native touch events ─────────────────────────────────
   // We intentionally bypass Framer Motion's drag prop because when the browser
@@ -376,9 +387,9 @@ function MobileBracket({
             totalW={totalW}
             totalH={totalH}
             highlightRoundIdx={activeColIdx}
-            getColX={colXM}
+            getColX={colXMDyn}
             colWidth={COL_W_M}
-            colGap={COL_GAP_M}
+            colGap={gapM}
           />
 
           {bracketRounds.map((r, rIdx) =>
@@ -386,7 +397,7 @@ function MobileBracket({
               <div
                 key={match.id}
                 className="absolute"
-                style={{ left: colXM(rIdx), top: matchTop(rIdx, sIdx) }}
+                style={{ left: colXMDyn(rIdx), top: matchTop(rIdx, sIdx) }}
               >
                 <TreeCard match={match} active={rIdx === activeColIdx} colW={COL_W_M} />
               </div>
