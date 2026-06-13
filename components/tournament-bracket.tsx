@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { cn } from '@/lib/utils';
+import { cn, formatMatchDateParts } from '@/lib/utils';
 import type { RoundWithMatches, Match } from '@/types';
 import { Trophy, GitBranch, CheckCircle2, ChevronRight, Calendar, MapPin } from 'lucide-react';
 import { FlagPlaceholder } from '@/components/ui/flag-placeholder';
@@ -55,25 +55,19 @@ function colX(rIdx: number): number {
 
 // ── TreeCard ───────────────────────────────────────────────────────────────────
 
-const MX_TZ = 'America/Mexico_City';
-
-const STATUS_COLORS: Record<Match['status'], { dot: string; icon: string; line: string }> = {
-  scheduled:   { dot: 'bg-emerald-400', icon: 'text-emerald-400', line: 'bg-emerald-400/60' },
-  in_progress: { dot: 'bg-red-400',     icon: 'text-red-400',     line: 'bg-red-400/60'     },
-  finished:    { dot: 'bg-slate-500',   icon: 'text-slate-500',   line: 'bg-slate-600/60'   },
-  cancelled:   { dot: 'bg-slate-500',   icon: 'text-slate-500',   line: 'bg-slate-600/60'   },
+const STATUS_LABELS: Record<Match['status'], string> = {
+  scheduled:   'Programado',
+  in_progress: 'Jugando',
+  finished:    'Finalizado',
+  cancelled:   'Cancelado',
 };
 
-function fmtBracketDate(iso: string): { date: string; time: string } {
-  const d = new Date(iso);
-  const date = d
-    .toLocaleDateString('es-MX', { timeZone: MX_TZ, day: 'numeric', month: 'short' })
-    .replace(/\.$/, '');
-  const time = d.toLocaleTimeString('es-MX', {
-    timeZone: MX_TZ, hour: '2-digit', minute: '2-digit', hour12: false,
-  });
-  return { date, time };
-}
+const STATUS_COLORS: Record<Match['status'], { dot: string; icon: string; line: string; text: string }> = {
+  scheduled:   { dot: 'bg-emerald-400', icon: 'text-emerald-400', line: 'bg-emerald-400/60', text: 'text-emerald-400' },
+  in_progress: { dot: 'bg-red-400',     icon: 'text-red-400',     line: 'bg-red-400/60',     text: 'text-red-400'     },
+  finished:    { dot: 'bg-slate-500',   icon: 'text-slate-500',   line: 'bg-slate-600/60',   text: 'text-slate-500'   },
+  cancelled:   { dot: 'bg-slate-500',   icon: 'text-slate-500',   line: 'bg-slate-600/60',   text: 'text-slate-500'   },
+};
 
 // MatchCard-style layout: flag + name stacked, score in the middle.
 // colW drives proportional flag sizing so both desktop (136px) and mobile (300px) look right.
@@ -84,7 +78,7 @@ function TreeCard({ match, active, colW = COL_W }: { match: Match; active: boole
   const awayWon  = fin && match.result?.winner === 'away';
   const sc       = STATUS_COLORS[match.status];
   const hasResult = fin || live;
-  const { date, time } = fmtBracketDate(match.scheduled_at);
+  const { date, time } = formatMatchDateParts(match.scheduled_at);
 
   // Same proportions as MatchCard — both COL_W (256) and COL_W_M (330) fit these comfortably.
 
@@ -140,7 +134,10 @@ function TreeCard({ match, active, colW = COL_W }: { match: Match; active: boole
             <span className="text-[8px] text-slate-600 shrink-0 mx-px">|</span>
             <span className="text-[9px] text-slate-500 shrink-0">{time}</span>
           </div>
-          <span className={cn('w-1.5 h-1.5 rounded-full shrink-0', sc.dot, live && 'animate-pulse')} />
+          <div className="flex items-center gap-1 shrink-0">
+            <span className={cn('w-1.5 h-1.5 rounded-full shrink-0', sc.dot, live && 'animate-pulse')} />
+            <span className={cn('text-[9px] font-medium', sc.text)}>{STATUS_LABELS[match.status]}</span>
+          </div>
         </div>
 
         {/* ── Teams: home | score | away (MatchCard-style horizontal) ── */}
