@@ -316,22 +316,33 @@ function MobileBracket({
   activeColIdx: number;
   onChangeColIdx: (idx: number) => void;
 }) {
+  // Hooks before any conditional return (rules of hooks).
+  const touchStartX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
+  const scrollRef   = useRef<HTMLDivElement>(null);
+
+  // Reset vertical scroll each time the active column changes so the user
+  // always sees the top of the new column without empty space below.
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: 0, behavior: 'instant' });
+  }, [activeColIdx]);
+
   const firstCount = bracketRounds[0]?.matches.length ?? 0;
   if (!firstCount) return null;
 
-  // Touch tracking refs — no state, no re-renders on touch.
-  const touchStartX = useRef<number | null>(null);
-  const touchStartY = useRef<number | null>(null);
+  // Compress inter-column gap once the user leaves the first column.
+  const gapM     = activeColIdx === 0 ? COL_GAP_M : COL_GAP_M_COMPACT;
+  const colXMDyn = (rIdx: number) => rIdx * (COL_W_M + gapM);
 
-  // Compress inter-column gap once the user leaves the first column so later
-  // rounds (fewer matches, same canvas height) don't feel padded and the peek
-  // of the next column is clearly visible.
-  const gapM      = activeColIdx === 0 ? COL_GAP_M : COL_GAP_M_COMPACT;
-  const colXMDyn  = (rIdx: number) => rIdx * (COL_W_M + gapM);
+  const cols             = bracketRounds.length;
+  // Canvas height adapts to the active column's match count so there's no
+  // wasted vertical space — all columns use the same SLOT_H density as R32.
+  const activeMatchCount = bracketRounds[activeColIdx]?.matches.length ?? firstCount;
+  const totalH           = activeMatchCount * SLOT_H + 2 * PAD_Y;
+  const totalW           = cols * COL_W_M + (cols - 1) * gapM;
 
-  const cols   = bracketRounds.length;
-  const totalH = firstCount * SLOT_H + 2 * PAD_Y;
-  const totalW = cols * COL_W_M + (cols - 1) * gapM;
+  // Uniform vertical position: same card density in every column.
+  const mobileCardTop = (sIdx: number) => PAD_Y + sIdx * SLOT_H + (SLOT_H - CARD_H) / 2;
 
   // Slide canvas so active column's left edge sits at PEEK_PAD → ~80/20 split.
   const offsetX = PEEK_PAD - colXMDyn(activeColIdx);
@@ -371,6 +382,7 @@ function MobileBracket({
     <div className="relative rounded-xl">
       {/* Outer: clips x, scrolls y — all matches reachable via vertical scroll */}
       <div
+        ref={scrollRef}
         style={{ overflowX: 'hidden', overflowY: 'auto', maxHeight: '72dvh' }}
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
@@ -382,22 +394,12 @@ function MobileBracket({
           transition={{ type: 'spring', stiffness: 280, damping: 32 }}
           style={{ width: totalW, height: totalH }}
         >
-          <ConnectorLines
-            bracketRounds={bracketRounds}
-            totalW={totalW}
-            totalH={totalH}
-            highlightRoundIdx={activeColIdx}
-            getColX={colXMDyn}
-            colWidth={COL_W_M}
-            colGap={gapM}
-          />
-
           {bracketRounds.map((r, rIdx) =>
             r.matches.map((match, sIdx) => (
               <div
                 key={match.id}
                 className="absolute"
-                style={{ left: colXMDyn(rIdx), top: matchTop(rIdx, sIdx) }}
+                style={{ left: colXMDyn(rIdx), top: mobileCardTop(sIdx) }}
               >
                 <TreeCard match={match} active={rIdx === activeColIdx} colW={COL_W_M} />
               </div>
