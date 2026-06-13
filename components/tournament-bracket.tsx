@@ -26,15 +26,15 @@ const CARD_BG =
 
 // ── Bracket geometry ───────────────────────────────────────────────────────────
 
-const SLOT_H  = 176;
-const CARD_H  = 156;
-const COL_W   = 192;
-const COL_GAP = 52;
+const SLOT_H  = 182;
+const CARD_H  = 160;   // matches MatchCard natural height (p-4 + date + teams w-12h-8 + venue)
+const COL_W   = 256;   // wide enough for w-12 h-8 flags × 2 + score + px-4 padding
+const COL_GAP = 48;
 const PAD_X   = 20;
 const PAD_Y   = 28;
 
 // ── Mobile bracket geometry (wider cards for 80/20 peek UX) ───────────────────
-const COL_W_M   = 320;   // ≈85% of a 375px viewport
+const COL_W_M   = 330;   // close to full-width MatchCard on mobile
 const COL_GAP_M = 36;    // connector lines visible in the peek zone
 const PEEK_PAD  = 10;    // px: left margin for the active column
 
@@ -86,14 +86,7 @@ function TreeCard({ match, active, colW = COL_W }: { match: Match; active: boole
   const hasResult = fin || live;
   const { date, time } = fmtBracketDate(match.scheduled_at);
 
-  // Scale flag/text proportional to card width
-  // Mobile ≥ 280: larger flags, bigger text
-  // Desktop ≥ 160: medium flags
-  // Fallback: compact
-  const flagClass = colW >= 280 ? 'w-12 h-8' : colW >= 160 ? 'w-9 h-6' : 'w-7 h-5';
-  const nameSize  = colW >= 280 ? 'text-[11px]' : 'text-[10px]';
-  const scoreSize = colW >= 280 ? 'text-xl' : 'text-base';
-  const flagSize: 'lg' | 'md' | 'sm' = colW >= 280 ? 'lg' : colW >= 160 ? 'md' : 'sm';
+  // Same proportions as MatchCard — both COL_W (256) and COL_W_M (330) fit these comfortably.
 
   const teamCol = (side: 'home' | 'away', won: boolean, lost: boolean) => {
     const team   = side === 'home' ? match.home_team : match.away_team;
@@ -104,19 +97,18 @@ function TreeCard({ match, active, colW = COL_W }: { match: Match; active: boole
     return (
       <div className={cn('flex-1 flex flex-col items-center gap-1 min-w-0', lost && 'opacity-35')}>
         {flag
-          ? <img src={flag} alt="" className={cn(flagClass, 'object-cover rounded shadow-md shrink-0')} />
-          : <FlagPlaceholder size={flagSize} />
+          ? <img src={flag} alt="" className="w-12 h-8 object-cover rounded shadow-md shrink-0" />
+          : <FlagPlaceholder size="lg" />
         }
         <span className={cn(
-          nameSize,
-          'w-full font-semibold text-center leading-tight truncate px-0.5',
+          'text-[11px] w-full font-semibold text-center leading-tight truncate px-0.5',
           !name ? 'text-slate-600 italic' :
           won   ? 'text-white' :
           fin   ? 'text-slate-400' : 'text-slate-200',
         )}>
           {name ?? '···'}
         </span>
-        <div className={cn('h-px w-6 rounded-full', sc.line)} />
+        <div className={cn('h-0.5 w-8 rounded-full', sc.line)} />
       </div>
     );
   };
@@ -158,17 +150,17 @@ function TreeCard({ match, active, colW = COL_W }: { match: Match; active: boole
           {/* Score / VS */}
           <div className="flex flex-col items-center justify-center shrink-0 px-0.5 gap-0.5">
             {hasResult ? (
-              <div className="flex items-center gap-1">
-                <span className={cn(scoreSize, 'font-black tabular-nums font-mono', homeWon ? 'text-white' : 'text-slate-500')}>
+              <div className="flex items-center gap-1.5 font-bold text-white">
+                <span className={cn('w-8 text-center text-xl tabular-nums font-mono', homeWon ? 'text-white' : 'text-slate-400')}>
                   {match.result?.home_score ?? '–'}
                 </span>
-                <span className="text-slate-600 text-xs">–</span>
-                <span className={cn(scoreSize, 'font-black tabular-nums font-mono', awayWon ? 'text-white' : 'text-slate-500')}>
+                <span className="text-slate-500 text-sm font-normal">–</span>
+                <span className={cn('w-8 text-center text-xl tabular-nums font-mono', awayWon ? 'text-white' : 'text-slate-400')}>
                   {match.result?.away_score ?? '–'}
                 </span>
               </div>
             ) : (
-              <span className="text-[9px] font-black tracking-widest text-white/70 bg-white/10 border border-white/15 rounded px-1.5 py-0.5 leading-none">
+              <span className="text-xs font-black tracking-widest text-white/80 bg-white/10 border border-white/20 rounded px-2.5 py-0.5 backdrop-blur-sm">
                 VS
               </span>
             )}
