@@ -1,10 +1,10 @@
 'use client';
 
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import type { RoundWithMatches, Match } from '@/types';
-import { Trophy, GitBranch, CheckCircle2, ChevronLeft, ChevronRight, Calendar, MapPin } from 'lucide-react';
+import { Trophy, GitBranch, CheckCircle2, ChevronRight, Calendar, MapPin } from 'lucide-react';
 import { FlagPlaceholder } from '@/components/ui/flag-placeholder';
 
 // ── Metadata ───────────────────────────────────────────────────────────────────
@@ -42,9 +42,6 @@ function colXM(rIdx: number): number {
   return rIdx * (COL_W_M + COL_GAP_M);
 }
 
-const INFO_H  = 20;   // date/status top strip
-const VENUE_H = 18;   // venue bottom strip
-
 function matchTop(roundIdx: number, slotIdx: number): number {
   const pow2 = 1 << roundIdx;
   return PAD_Y + slotIdx * pow2 * SLOT_H + ((pow2 - 1) * SLOT_H) / 2 + (SLOT_H - CARD_H) / 2;
@@ -57,8 +54,6 @@ function colX(rIdx: number): number {
 }
 
 // ── TreeCard ───────────────────────────────────────────────────────────────────
-
-const ROW_H = (CARD_H - INFO_H - VENUE_H - 1) / 2; // ≈ 42.5
 
 const MX_TZ = 'America/Mexico_City';
 
@@ -80,51 +75,44 @@ function fmtBracketDate(iso: string): { date: string; time: string } {
   return { date, time };
 }
 
+// MatchCard-style layout: flag + name stacked, score in the middle.
+// colW drives proportional flag sizing so both desktop (136px) and mobile (300px) look right.
 function TreeCard({ match, active, colW = COL_W }: { match: Match; active: boolean; colW?: number }) {
-  const fin     = match.status === 'finished';
-  const live    = match.status === 'in_progress';
-  const homeWon = fin && match.result?.winner === 'home';
-  const awayWon = fin && match.result?.winner === 'away';
-  const sc      = STATUS_COLORS[match.status];
-
+  const fin      = match.status === 'finished';
+  const live     = match.status === 'in_progress';
+  const homeWon  = fin && match.result?.winner === 'home';
+  const awayWon  = fin && match.result?.winner === 'away';
+  const sc       = STATUS_COLORS[match.status];
+  const hasResult = fin || live;
   const { date, time } = fmtBracketDate(match.scheduled_at);
 
-  const teamRow = (side: 'home' | 'away', won: boolean, lost: boolean) => {
+  // Scale flag size relative to card width
+  const flagClass  = colW >= 200 ? 'w-10 h-7'  : 'w-7 h-5';
+  const nameSize   = colW >= 200 ? 'text-[10px]' : 'text-[9px]';
+  const scoreSize  = colW >= 200 ? 'text-lg'     : 'text-sm';
+
+  const teamCol = (side: 'home' | 'away', won: boolean, lost: boolean) => {
     const team   = side === 'home' ? match.home_team : match.away_team;
     const phText = side === 'home' ? match.home_placeholder : match.away_placeholder;
     const name   = team?.short_name ?? team?.name ?? phText;
     const flag   = team?.flag_url;
-    const score  = side === 'home' ? match.result?.home_score : match.result?.away_score;
 
     return (
-      <div
-        className={cn(
-          'flex items-center gap-1.5 px-2 border-l-[3px] transition-colors',
-          won  ? 'border-emerald-500 bg-emerald-500/15' : 'border-transparent',
-          lost ? 'opacity-30' : '',
-        )}
-        style={{ height: ROW_H }}
-      >
+      <div className={cn('flex-1 flex flex-col items-center gap-1 min-w-0', lost && 'opacity-35')}>
         {flag
-          ? <img src={flag} alt="" className="w-5 h-3.5 object-cover rounded-sm shrink-0 shadow-sm" />
-          : <FlagPlaceholder size="sm" />
+          ? <img src={flag} alt="" className={cn(flagClass, 'object-cover rounded shadow-md shrink-0')} />
+          : <FlagPlaceholder size={colW >= 200 ? 'md' : 'sm'} />
         }
         <span className={cn(
-          'flex-1 text-[11px] font-semibold truncate leading-none',
+          nameSize,
+          'w-full font-semibold text-center leading-tight truncate px-0.5',
           !name ? 'text-slate-600 italic' :
           won   ? 'text-white' :
           fin   ? 'text-slate-400' : 'text-slate-200',
         )}>
           {name ?? '···'}
         </span>
-        {(fin || live) && (
-          <span className={cn(
-            'text-sm font-black tabular-nums font-mono shrink-0 w-4 text-right',
-            won ? 'text-white' : 'text-slate-500',
-          )}>
-            {score ?? '–'}
-          </span>
-        )}
+        <div className={cn('h-px w-6 rounded-full', sc.line)} />
       </div>
     );
   };
@@ -139,19 +127,17 @@ function TreeCard({ match, active, colW = COL_W }: { match: Match; active: boole
       )}
       style={{ width: colW, height: CARD_H }}
     >
+      {/* Background */}
       <div
         className="absolute inset-0 z-0"
         style={{ backgroundImage: `url(${CARD_BG})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
       />
-      <div className="absolute inset-0 z-0 bg-slate-950/78" />
+      <div className="absolute inset-0 z-0 bg-slate-950/80" />
 
-      <div className="relative z-10" style={{ height: CARD_H }}>
+      <div className="relative z-10 flex flex-col h-full px-2 py-1.5 gap-0.5">
 
-        {/* ── Fecha / estado ─────────────────────────────────────── */}
-        <div
-          className="flex items-center justify-between px-2 border-b border-slate-700/40"
-          style={{ height: INFO_H }}
-        >
+        {/* ── Date / status row ────────────────────────────────── */}
+        <div className="flex items-center justify-between gap-1 shrink-0">
           <div className="flex items-center gap-1 min-w-0 overflow-hidden">
             <Calendar className={cn('h-2.5 w-2.5 shrink-0', sc.icon)} />
             <span className="text-[9px] font-medium text-slate-400 truncate">{date}</span>
@@ -161,18 +147,34 @@ function TreeCard({ match, active, colW = COL_W }: { match: Match; active: boole
           <span className={cn('w-1.5 h-1.5 rounded-full shrink-0', sc.dot, live && 'animate-pulse')} />
         </div>
 
-        {/* ── Equipos ────────────────────────────────────────────── */}
-        <div style={{ height: CARD_H - INFO_H - VENUE_H }}>
-          {teamRow('home', homeWon, awayWon)}
-          <div className={cn('h-px mx-2', sc.line)} />
-          {teamRow('away', awayWon, homeWon)}
+        {/* ── Teams: home | score | away (MatchCard-style horizontal) ── */}
+        <div className="flex items-center gap-1.5 flex-1 min-h-0">
+          {teamCol('home', homeWon, awayWon)}
+
+          {/* Score / VS */}
+          <div className="flex flex-col items-center justify-center shrink-0 px-0.5 gap-0.5">
+            {hasResult ? (
+              <div className="flex items-center gap-1">
+                <span className={cn(scoreSize, 'font-black tabular-nums font-mono', homeWon ? 'text-white' : 'text-slate-500')}>
+                  {match.result?.home_score ?? '–'}
+                </span>
+                <span className="text-slate-600 text-xs">–</span>
+                <span className={cn(scoreSize, 'font-black tabular-nums font-mono', awayWon ? 'text-white' : 'text-slate-500')}>
+                  {match.result?.away_score ?? '–'}
+                </span>
+              </div>
+            ) : (
+              <span className="text-[9px] font-black tracking-widest text-white/70 bg-white/10 border border-white/15 rounded px-1.5 py-0.5 leading-none">
+                VS
+              </span>
+            )}
+          </div>
+
+          {teamCol('away', awayWon, homeWon)}
         </div>
 
-        {/* ── Estadio ────────────────────────────────────────────── */}
-        <div
-          className="flex items-center px-2 gap-1 border-t border-slate-700/40"
-          style={{ height: VENUE_H }}
-        >
+        {/* ── Venue ────────────────────────────────────────────── */}
+        <div className="flex items-center justify-center gap-1 min-w-0 overflow-hidden shrink-0">
           <MapPin className={cn('h-2.5 w-2.5 shrink-0', sc.icon)} />
           <span className="text-[9px] text-slate-400 truncate">
             {match.venue ?? 'Por definir'}
@@ -319,38 +321,62 @@ function MobileBracket({
   const firstCount = bracketRounds[0]?.matches.length ?? 0;
   if (!firstCount) return null;
 
+  // Touch tracking refs — no state, no re-renders on touch.
+  const touchStartX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
+
   const cols   = bracketRounds.length;
   const totalH = firstCount * SLOT_H + 2 * PAD_Y;
   const totalW = cols * COL_W_M + (cols - 1) * COL_GAP_M;
 
-  // Slide the canvas so the active column's left edge sits at PEEK_PAD from the viewport's left.
-  // This gives an 80/20 split: ~80% active column, ~20% connector lines + peek of next column.
+  // Slide canvas so active column's left edge sits at PEEK_PAD → ~80/20 split.
   const offsetX = PEEK_PAD - colXM(activeColIdx);
+
+  // ── Swipe detection via native touch events ─────────────────────────────────
+  // We intentionally bypass Framer Motion's drag prop because when the browser
+  // takes over a vertical scroll gesture it fires pointercancel, which Framer
+  // Motion still converts into onDragEnd with whatever diagonal delta accumulated
+  // before the browser took over. That false positive was resetting the column.
+  const onTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+  };
+
+  const onTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current === null || touchStartY.current === null) return;
+    const dx = e.changedTouches[0].clientX - touchStartX.current;
+    const dy = e.changedTouches[0].clientY - touchStartY.current;
+    touchStartX.current = null;
+    touchStartY.current = null;
+
+    // Require the gesture to be at least 2× more horizontal than vertical.
+    if (Math.abs(dy) * 0.5 >= Math.abs(dx)) return;
+
+    const threshold = COL_W_M * 0.2; // 20% of column width
+    if (dx < -threshold && activeColIdx < bracketRounds.length - 1) onChangeColIdx(activeColIdx + 1);
+    if (dx >  threshold && activeColIdx > 0)                         onChangeColIdx(activeColIdx - 1);
+  };
+
+  // Reset refs if the browser cancels the touch (takes over scroll).
+  const onTouchCancel = () => {
+    touchStartX.current = null;
+    touchStartY.current = null;
+  };
 
   return (
     <div className="relative rounded-xl">
-      {/* Scroll wrapper: clips x, scrolls y so all matches in a round are reachable */}
-      <div style={{ overflowX: 'hidden', overflowY: 'auto', maxHeight: '72dvh' }}>
+      {/* Outer: clips x, scrolls y — all matches reachable via vertical scroll */}
+      <div
+        style={{ overflowX: 'hidden', overflowY: 'auto', maxHeight: '72dvh' }}
+        onTouchStart={onTouchStart}
+        onTouchEnd={onTouchEnd}
+        onTouchCancel={onTouchCancel}
+      >
         <motion.div
           className="relative"
           animate={{ x: offsetX }}
-          transition={{ type: 'spring', stiffness: 260, damping: 30 }}
-          drag="x"
-          dragConstraints={{ left: 0, right: 0 }}
-          dragElastic={0.2}
-          onDragEnd={(_, info) => {
-            const { offset, velocity } = info;
-            // Ignore primarily-vertical gestures: the user is scrolling, not swiping.
-            // pointercancel (browser takes scroll) fires onDragEnd with whatever diagonal
-            // delta accumulated before the browser took over — this guards against that.
-            if (Math.abs(offset.y) >= Math.abs(offset.x)) return;
-            const threshold = COL_W_M * 0.3;
-            if ((velocity.x < -300 || offset.x < -threshold) && activeColIdx < bracketRounds.length - 1)
-              onChangeColIdx(activeColIdx + 1);
-            if ((velocity.x >  300 || offset.x >  threshold) && activeColIdx > 0)
-              onChangeColIdx(activeColIdx - 1);
-          }}
-          style={{ width: totalW, height: totalH, touchAction: 'pan-y', cursor: 'grab' }}
+          transition={{ type: 'spring', stiffness: 280, damping: 32 }}
+          style={{ width: totalW, height: totalH }}
         >
           <ConnectorLines
             bracketRounds={bracketRounds}
@@ -376,9 +402,9 @@ function MobileBracket({
         </motion.div>
       </div>
 
-      {/* Left fade: softens partial view of the previous column */}
+      {/* Left fade — softens partial view of previous column */}
       <div className="pointer-events-none absolute inset-y-0 left-0 w-4 bg-gradient-to-r from-slate-950/70 to-transparent z-10 rounded-l-xl" />
-      {/* Right fade: peek zone hint — connector lines + partial next column visible here */}
+      {/* Right fade — peek zone: connector lines + partial next column visible here */}
       <div className="pointer-events-none absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-slate-950/80 to-transparent z-10 rounded-r-xl" />
     </div>
   );
