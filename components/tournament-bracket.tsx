@@ -255,7 +255,7 @@ function DesktopBracket({
   const totalW = bracketRounds.length * COL_W + (bracketRounds.length - 1) * COL_GAP + 2 * PAD_X;
 
   return (
-    <div className="overflow-x-auto overflow-y-auto scrollbar-none" style={{ maxHeight: 860 }}>
+    <div className="overflow-x-auto scrollbar-none">
       <div className="relative" style={{ width: totalW, height: totalH }}>
 
         {/* Column labels */}
@@ -321,13 +321,6 @@ function MobileBracket({
   // Hooks before any conditional return (rules of hooks).
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
-  const scrollRef   = useRef<HTMLDivElement>(null);
-
-  // Reset vertical scroll each time the active column changes so the user
-  // always sees the top of the new column without empty space below.
-  useEffect(() => {
-    scrollRef.current?.scrollTo({ top: 0, behavior: 'instant' });
-  }, [activeColIdx]);
 
   const firstCount = bracketRounds[0]?.matches.length ?? 0;
   if (!firstCount) return null;
@@ -383,15 +376,13 @@ function MobileBracket({
   };
 
   return (
-    <div className="relative rounded-xl">
-      {/* Outer: clips x, scrolls y — all matches reachable via vertical scroll */}
-      <div
-        ref={scrollRef}
-        style={{ overflowX: 'hidden', overflowY: 'auto', maxHeight: '72dvh' }}
-        onTouchStart={onTouchStart}
-        onTouchEnd={onTouchEnd}
-        onTouchCancel={onTouchCancel}
-      >
+    <div
+      className="relative rounded-xl"
+      style={{ overflowX: 'clip' }}
+      onTouchStart={onTouchStart}
+      onTouchEnd={onTouchEnd}
+      onTouchCancel={onTouchCancel}
+    >
         <motion.div
           className="relative"
           animate={{ x: offsetX }}
@@ -425,7 +416,6 @@ function MobileBracket({
             ))
           )}
         </motion.div>
-      </div>
 
       {/* Left fade — softens partial view of previous column */}
       <div className="pointer-events-none absolute inset-y-0 left-0 w-4 bg-gradient-to-r from-slate-950/70 to-transparent z-10 rounded-l-xl" />
