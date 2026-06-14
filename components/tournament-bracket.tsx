@@ -194,6 +194,7 @@ function ConnectorLines({
   getColX = colX,
   colWidth = COL_W,
   colGap = COL_GAP,
+  getMatchCenterY: getY = matchCenterY,
 }: {
   bracketRounds: RoundWithMatches[];
   totalW: number;
@@ -202,6 +203,7 @@ function ConnectorLines({
   getColX?: (rIdx: number) => number;
   colWidth?: number;
   colGap?: number;
+  getMatchCenterY?: (rIdx: number, sIdx: number) => number;
 }) {
   return (
     <svg className="absolute inset-0 pointer-events-none" width={totalW} height={totalH}>
@@ -214,8 +216,8 @@ function ConnectorLines({
           || rIdx === highlightRoundIdx
           || rIdx + 1 === highlightRoundIdx;
         return Array.from({ length: nextCount }, (_, ps) => {
-          const topY = matchCenterY(rIdx, ps * 2);
-          const botY = matchCenterY(rIdx, ps * 2 + 1);
+          const topY = getY(rIdx, ps * 2);
+          const botY = getY(rIdx, ps * 2 + 1);
           const midY = (topY + botY) / 2;
           return (
             <path
@@ -341,8 +343,10 @@ function MobileBracket({
   const totalH           = activeMatchCount * SLOT_H + 2 * PAD_Y;
   const totalW           = cols * COL_W_M + (cols - 1) * gapM;
 
-  // Uniform vertical position: same card density in every column.
+  // Uniform vertical position — same card density in every column.
   const mobileCardTop = (sIdx: number) => PAD_Y + sIdx * SLOT_H + (SLOT_H - CARD_H) / 2;
+  // Connector line center Y consistent with mobileCardTop.
+  const mobileCenterY = (_rIdx: number, sIdx: number) => PAD_Y + sIdx * SLOT_H + SLOT_H / 2;
 
   // Slide canvas so active column's left edge sits at PEEK_PAD → ~80/20 split.
   const offsetX = PEEK_PAD - colXMDyn(activeColIdx);
@@ -394,12 +398,27 @@ function MobileBracket({
           transition={{ type: 'spring', stiffness: 280, damping: 32 }}
           style={{ width: totalW, height: totalH }}
         >
+          <ConnectorLines
+            bracketRounds={bracketRounds}
+            totalW={totalW}
+            totalH={totalH}
+            highlightRoundIdx={activeColIdx}
+            getColX={colXMDyn}
+            colWidth={COL_W_M}
+            colGap={gapM}
+            getMatchCenterY={mobileCenterY}
+          />
+
           {bracketRounds.map((r, rIdx) =>
             r.matches.map((match, sIdx) => (
               <div
                 key={match.id}
                 className="absolute"
-                style={{ left: colXMDyn(rIdx), top: mobileCardTop(sIdx) }}
+                style={{
+                  left: colXMDyn(rIdx),
+                  top: mobileCardTop(sIdx),
+                  transition: 'left 0.3s ease-out',
+                }}
               >
                 <TreeCard match={match} active={rIdx === activeColIdx} colW={COL_W_M} />
               </div>
