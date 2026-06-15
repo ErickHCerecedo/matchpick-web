@@ -1,16 +1,27 @@
 'use client';
 
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { motion } from 'framer-motion';
 import { cn, formatMatchDateParts } from '@/lib/utils';
 import type { RoundWithMatches, Match } from '@/types';
-import { Trophy, GitBranch, CheckCircle2, ChevronRight, Calendar, MapPin } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Trophy, GitBranch, CheckCircle2, ChevronRight, ChevronLeft, Calendar, MapPin, Star, Zap, Award, Crown, Layers } from 'lucide-react';
 import { FlagPlaceholder } from '@/components/ui/flag-placeholder';
 
 // ── Metadata ───────────────────────────────────────────────────────────────────
 
 const KNOCKOUT_ORDER = ['round_of_32', 'round_of_16', 'quarter', 'semi', 'third_place', 'final'];
 const BRACKET_ORDER  = ['round_of_32', 'round_of_16', 'quarter', 'semi', 'final'];
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const ROUND_ICONS: Record<string, React.ElementType<any>> = {
+  round_of_32: Layers,
+  round_of_16: Layers,
+  quarter:     Zap,
+  semi:        Star,
+  third_place: Award,
+  final:       Crown,
+  champion:    Trophy,
+};
 
 const ROUND_META: Record<string, { label: string; abbr: string }> = {
   round_of_32: { label: 'Dieciseisavos', abbr: 'R32'   },
@@ -307,18 +318,25 @@ function DesktopBracket({
       <div className="relative" style={{ width: totalW, height: totalH }}>
 
         {/* Column labels */}
-        {allCols.map(({ round: r, isThirdPlace: is3P }, colIdx) => (
-          <div
-            key={`lbl-${r.round.id}`}
-            className={cn(
-              'absolute text-[9px] font-bold uppercase tracking-widest text-center',
-              is3P ? 'text-amber-700/70' : 'text-slate-700',
-            )}
-            style={{ left: colX(colIdx), width: COL_W, top: 8 }}
-          >
-            {ROUND_META[r.round.type]?.abbr ?? r.round.name}
-          </div>
-        ))}
+        {allCols.map(({ round: r, isThirdPlace: is3P }, colIdx) => {
+          const Icon = ROUND_ICONS[r.round.type] ?? Trophy;
+          const abbr = ROUND_META[r.round.type]?.abbr ?? r.round.name;
+          return (
+            <div
+              key={`lbl-${r.round.id}`}
+              className="absolute flex items-center justify-center gap-1"
+              style={{ left: colX(colIdx), width: COL_W, top: 6 }}
+            >
+              <Icon className={cn('h-2.5 w-2.5 shrink-0', is3P ? 'text-amber-700/60' : 'text-slate-600')} />
+              <span className={cn(
+                'text-[9px] font-semibold uppercase tracking-widest',
+                is3P ? 'text-amber-700/60' : 'text-slate-600',
+              )}>
+                {abbr}
+              </span>
+            </div>
+          );
+        })}
 
         {/* Vertical separator before the standalone columns */}
         {hasTP && (
@@ -520,7 +538,7 @@ function ChampionPanel({ name, flag }: { name: string; flag?: string | null }) {
   );
 }
 
-// ── Mobile round carousel ──────────────────────────────────────────────────────
+// ── Mobile round nav (step rail) ───────────────────────────────────────────────
 
 type CarouselEntry =
   | { kind: 'round'; round: RoundWithMatches }
@@ -539,82 +557,103 @@ function MobileRoundCarousel({
     const el = scrollRef.current;
     if (!el) return;
     const child = el.children[activeIdx] as HTMLElement | undefined;
-    child?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
+    child?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
   }, [activeIdx]);
 
   return (
-    <div
-      ref={scrollRef}
-      className="flex overflow-x-auto scroll-smooth snap-x snap-mandatory gap-3 scrollbar-none px-4"
-    >
-      {entries.map((entry, i) => {
-        const isActive = i === activeIdx;
-        const isFinal  = entry.kind === 'round' && entry.round.round.type === 'final';
-        const isChamp  = entry.kind === 'champion';
+    <div className="relative px-4">
+      {/* Fade hint — more content on the right */}
+      <div className="pointer-events-none absolute right-0 inset-y-0 w-12 bg-gradient-to-l from-slate-950 to-transparent z-10" />
+      <div className="pointer-events-none absolute left-0 inset-y-0 w-4 bg-gradient-to-r from-slate-950 to-transparent z-10" />
 
-        const label = entry.kind === 'champion'
-          ? 'Campeón'
-          : ROUND_META[entry.round.round.type]?.label ?? entry.round.round.name;
+      <div ref={scrollRef} className="flex items-center overflow-x-auto scrollbar-none">
+        {entries.map((entry, i) => {
+          const isActive  = i === activeIdx;
+          const isPast    = i < activeIdx;
+          const type      = entry.kind === 'round' ? entry.round.round.type : 'champion';
+          const abbr      = entry.kind === 'champion'
+            ? 'CAM'
+            : (ROUND_META[type]?.abbr ?? (entry as { round: RoundWithMatches }).round.round.name);
+          const Icon      = ROUND_ICONS[type] ?? Trophy;
+          const isSpecial = type === 'final' || type === 'champion';
+          const is3P      = type === 'third_place';
+          const hasLive   = entry.kind === 'round' && entry.round.matches.some(m => m.status === 'in_progress');
+          const allDone   = entry.kind === 'round' && entry.round.matches.every(m => m.status === 'finished');
 
-        const finished = entry.kind === 'round'
-          ? entry.round.matches.filter(m => m.status === 'finished').length
-          : 0;
-        const total = entry.kind === 'round' ? entry.round.matches.length : 0;
+          const accentColor =
+            isSpecial ? 'bg-amber-500/70'   :
+            is3P      ? 'bg-amber-600/50'   :
+            hasLive   ? 'bg-red-500/70'     :
+                        'bg-emerald-500/70';
 
-        const sub = entry.kind === 'champion'
-          ? entry.name
-          : `${total} partido${total !== 1 ? 's' : ''} · ${finished} finalizado${finished !== 1 ? 's' : ''}`;
+          const iconColor =
+            isActive && isSpecial ? 'text-amber-400' :
+            isActive && is3P      ? 'text-amber-500/80' :
+            isActive && hasLive   ? 'text-red-400'   :
+            isActive              ? 'text-emerald-400' :
+            isPast                ? 'text-slate-600'  :
+                                    'text-slate-700';
 
-        const allDone = entry.kind === 'round' && entry.round.matches.every(m => m.status === 'finished');
-        const hasLive = entry.kind === 'round' && entry.round.matches.some(m => m.status === 'in_progress');
+          const textColor =
+            isActive && isSpecial ? 'text-amber-300' :
+            isActive && is3P      ? 'text-amber-400/80' :
+            isActive && hasLive   ? 'text-red-300'   :
+            isActive              ? 'text-emerald-300' :
+            isPast                ? 'text-slate-600'  :
+                                    'text-slate-700';
 
-        return (
-          <button
-            key={i}
-            onClick={() => onSelect(i)}
-            className={cn(
-              'shrink-0 snap-start rounded-2xl border px-5 py-4 text-left transition-all duration-200 focus:outline-none',
-              isChamp
-                ? isActive
-                  ? 'bg-linear-to-br from-amber-950/70 to-slate-950 border-amber-500/50 shadow-lg shadow-amber-500/10'
-                  : 'bg-slate-900/60 border-amber-500/20 hover:border-amber-500/40'
-                : isFinal
-                ? isActive
-                  ? 'bg-linear-to-br from-amber-950/60 to-emerald-950/20 border-amber-500/50 shadow-lg shadow-amber-500/10'
-                  : 'bg-slate-900/60 border-slate-700 hover:border-amber-500/30'
-                : hasLive
-                ? isActive
-                  ? 'bg-red-950/30 border-red-500/50 shadow-sm shadow-red-950/20'
-                  : 'bg-slate-900/60 border-red-500/20 hover:border-red-500/40'
-                : isActive
-                ? 'bg-emerald-500/15 border-emerald-500/50 shadow-sm shadow-emerald-500/10'
-                : 'bg-slate-900/60 border-slate-700 hover:border-slate-600',
-            )}
-            style={{ width: '75vw', minWidth: '75vw' }}
-          >
-            <div className="flex items-start justify-between gap-2">
-              <span className={cn(
-                'text-base font-black leading-tight',
-                isChamp  ? (isActive ? 'text-amber-300'   : 'text-amber-500/60')  :
-                isFinal  ? (isActive ? 'text-amber-300'   : 'text-slate-400')     :
-                hasLive  ? (isActive ? 'text-red-300'     : 'text-red-500/60')    :
-                            isActive ? 'text-emerald-300' : 'text-slate-300',
-              )}>
-                {label}
-              </span>
-              <div className="shrink-0 mt-0.5">
-                {hasLive  && <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse block" />}
-                {allDone  && !hasLive && <CheckCircle2 className="h-4 w-4 text-emerald-500" />}
-                {isChamp  && <Trophy className="h-4 w-4 text-amber-400" />}
-              </div>
+          return (
+            <div key={i} className="flex items-center shrink-0">
+              {/* Progress connector between pills */}
+              {i > 0 && (
+                <div className={cn(
+                  'h-px transition-all duration-300',
+                  i <= activeIdx ? 'w-5 bg-slate-600' : 'w-4 bg-slate-800',
+                )} />
+              )}
+
+              {/* Step pill */}
+              <button
+                onClick={() => onSelect(i)}
+                className={cn(
+                  'relative flex flex-col items-center gap-0.5 rounded-xl transition-all duration-200 focus:outline-none',
+                  'px-3 py-2.5 min-w-[52px]',
+                  isActive
+                    ? isSpecial ? 'bg-amber-950/50'   :
+                      is3P      ? 'bg-amber-950/30'   :
+                      hasLive   ? 'bg-red-950/30'     :
+                                  'bg-emerald-950/50'
+                    : 'bg-transparent hover:bg-slate-900/50',
+                )}
+              >
+                {/* Icon with live pulse overlay */}
+                <div className="relative">
+                  <Icon className={cn('h-4 w-4 transition-colors', iconColor)} />
+                  {hasLive && (
+                    <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                  )}
+                </div>
+
+                {/* Abbreviation */}
+                <span className={cn('text-[9px] font-bold tracking-widest whitespace-nowrap transition-colors leading-none', textColor)}>
+                  {abbr}
+                </span>
+
+                {/* Done badge */}
+                {allDone && !hasLive && !isActive && (
+                  <CheckCircle2 className="h-2.5 w-2.5 text-emerald-700 mt-0.5" />
+                )}
+
+                {/* Active bottom accent line */}
+                {isActive && (
+                  <div className={cn('absolute bottom-0 left-2 right-2 h-0.5 rounded-full', accentColor)} />
+                )}
+              </button>
             </div>
-            <p className={cn('text-xs mt-1 leading-snug', isActive ? 'text-slate-400' : 'text-slate-600')}>
-              {sub}
-            </p>
-          </button>
-        );
-      })}
-      <div className="shrink-0 w-[20vw]" />
+          );
+        })}
+        <div className="shrink-0 w-10" />
+      </div>
     </div>
   );
 }
@@ -632,34 +671,34 @@ function DesktopRoundStrip({
     <div className="flex items-center gap-0 overflow-x-auto scrollbar-none">
       {knockoutRounds.map((r, idx) => {
         const meta     = ROUND_META[r.round.type];
+        const Icon     = ROUND_ICONS[r.round.type] ?? Trophy;
         const isActive = activeRoundId === r.round.id;
         const allDone  = r.matches.every(m => m.status === 'finished');
         const live     = r.matches.some(m => m.status === 'in_progress');
         const isFinal  = r.round.type === 'final';
+        const is3P     = r.round.type === 'third_place';
         return (
           <div key={r.round.id} className="flex items-center shrink-0">
             <button
               onClick={() => onSelect(r.round.id)}
               className={cn(
-                'relative flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl border transition-all duration-150',
-                isActive && isFinal ? 'bg-amber-500/15 border-amber-500/50 text-amber-400'       :
-                isActive            ? 'bg-emerald-500/15 border-emerald-500/50 text-emerald-400' :
-                live                ? 'border-red-500/30 text-red-500'                           :
-                allDone             ? 'border-slate-700/40 text-slate-500'                       :
-                                      'border-slate-800 text-slate-600 hover:border-slate-700 hover:text-slate-400',
+                'relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-all duration-150',
+                isActive && (isFinal || is3P) ? 'bg-amber-500/10 border-amber-500/30 text-amber-400'   :
+                isActive                       ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' :
+                live                           ? 'border-red-500/20 text-red-500/70'                        :
+                allDone                        ? 'border-transparent text-slate-600'                        :
+                                                 'border-transparent text-slate-600 hover:text-slate-400',
               )}
             >
-              <span className="text-[9px] font-bold uppercase tracking-wider whitespace-nowrap">
+              <Icon className="h-3 w-3 shrink-0" />
+              <span className="text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap">
                 {meta?.abbr ?? r.round.name}
               </span>
-              <span className={cn('text-xs font-black tabular-nums', !isActive && 'text-slate-600')}>
-                {r.matches.length}
-              </span>
-              {live    && <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />}
-              {allDone && !live && <CheckCircle2 className="h-2.5 w-2.5 text-emerald-600" />}
+              {live    && <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />}
+              {allDone && !live && <CheckCircle2 className="h-3 w-3 text-emerald-700 shrink-0" />}
             </button>
             {idx < knockoutRounds.length - 1 && (
-              <ChevronRight className="h-3 w-3 text-slate-700 shrink-0" />
+              <div className="w-4 h-px bg-slate-800 mx-0.5 shrink-0" />
             )}
           </div>
         );
@@ -711,6 +750,7 @@ export function TournamentBracket({ rounds }: { rounds: RoundWithMatches[] }) {
   }, [finalRound]);
 
   const [activeRoundId, setActiveRoundId] = useState<number | null>(null);
+  const [swipeHintDone, setSwipeHintDone] = useState(false);
 
   useEffect(() => {
     if (!knockoutRounds.length) return;
@@ -718,6 +758,13 @@ export function TournamentBracket({ rounds }: { rounds: RoundWithMatches[] }) {
     const upcoming = knockoutRounds.find(r => r.matches.some(m => m.status === 'scheduled'));
     setActiveRoundId((inProg ?? upcoming ?? knockoutRounds[knockoutRounds.length - 1]).round.id);
   }, [knockoutRounds]);
+
+  // Show swipe hint briefly on mount if there are multiple bracket columns
+  useEffect(() => {
+    if (swipeHintDone) return;
+    const t = setTimeout(() => setSwipeHintDone(true), 3000);
+    return () => clearTimeout(t);
+  }, [swipeHintDone]);
 
   const carouselEntries = useMemo((): CarouselEntry[] => {
     const entries: CarouselEntry[] = knockoutRounds.map(r => ({ kind: 'round', round: r }));
@@ -817,16 +864,76 @@ export function TournamentBracket({ rounds }: { rounds: RoundWithMatches[] }) {
 
       {/* Mobile: bracket */}
       {bracketRounds.length > 0 && (
-        <div className="md:hidden mt-3">
+        <div className="md:hidden mt-3 space-y-3">
           {showChampionMobile && champion?.name ? (
             <ChampionPanel name={champion.name} flag={champion.flag} />
           ) : (
-            <MobileBracket
-              bracketRounds={allBracketRounds}
-              activeColIdx={activeBracketColIdx}
-              onChangeColIdx={handleMobileColChange}
-              thirdPlaceColIdx={thirdPlaceColIdx}
-            />
+            <>
+              <MobileBracket
+                bracketRounds={allBracketRounds}
+                activeColIdx={activeBracketColIdx}
+                onChangeColIdx={handleMobileColChange}
+                thirdPlaceColIdx={thirdPlaceColIdx}
+              />
+
+              {/* Dot pagination — swipe affordance */}
+              <div className="flex items-center justify-center gap-2 pt-1">
+                {allBracketRounds.length > 1 && (
+                  <>
+                    <button
+                      onClick={() => activeBracketColIdx > 0 && handleMobileColChange(activeBracketColIdx - 1)}
+                      disabled={activeBracketColIdx === 0}
+                      className="p-1 text-slate-700 hover:text-slate-500 disabled:opacity-0 transition-all"
+                      aria-label="Anterior"
+                    >
+                      <ChevronLeft className="h-3.5 w-3.5" />
+                    </button>
+
+                    <div className="flex items-center gap-1.5">
+                      {allBracketRounds.map((_, i) => (
+                        <button
+                          key={i}
+                          onClick={() => handleMobileColChange(i)}
+                          className={cn(
+                            'rounded-full transition-all duration-300',
+                            i === activeBracketColIdx
+                              ? 'w-4 h-1.5 bg-emerald-500/80'
+                              : 'w-1.5 h-1.5 bg-slate-700 hover:bg-slate-600',
+                          )}
+                          aria-label={`Ir a ronda ${i + 1}`}
+                        />
+                      ))}
+                    </div>
+
+                    <button
+                      onClick={() => activeBracketColIdx < allBracketRounds.length - 1 && handleMobileColChange(activeBracketColIdx + 1)}
+                      disabled={activeBracketColIdx === allBracketRounds.length - 1}
+                      className="p-1 text-slate-700 hover:text-slate-500 disabled:opacity-0 transition-all"
+                      aria-label="Siguiente"
+                    >
+                      <ChevronRight className="h-3.5 w-3.5" />
+                    </button>
+                  </>
+                )}
+              </div>
+
+              {/* One-time swipe hint */}
+              <AnimatePresence>
+                {!swipeHintDone && allBracketRounds.length > 1 && activeBracketColIdx < allBracketRounds.length - 1 && (
+                  <motion.p
+                    initial={{ opacity: 0, y: -4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.35 }}
+                    className="flex items-center justify-center gap-1.5 text-[10px] text-slate-700 select-none"
+                  >
+                    <ChevronLeft className="h-3 w-3" />
+                    Desliza para navegar las rondas
+                    <ChevronRight className="h-3 w-3" />
+                  </motion.p>
+                )}
+              </AnimatePresence>
+            </>
           )}
         </div>
       )}
