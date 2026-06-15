@@ -124,7 +124,7 @@ export default function TorneoAdminPage() {
   const [updatingStatusId, setUpdatingStatusId] = useState<number | null>(null);
 
   // Calendar date-strip state
-  const [activeTab, setActiveTab] = useState('teams');
+  const [activeTab, setActiveTab] = useState('calendar');
   const [adminDateKey, setAdminDateKey] = useState('');
   const adminDateRef = useRef<HTMLButtonElement | null>(null);
   const [calendarLoaded, setCalendarLoaded] = useState(false);
@@ -195,10 +195,10 @@ export default function TorneoAdminPage() {
     }
   };
 
-  // ── Calendar: load all rounds when tab becomes active ─────────────────
+  // ── Calendar: load all rounds as soon as rounds data is available ────────
 
   useEffect(() => {
-    if (activeTab !== 'calendar' || calendarLoaded || rounds.length === 0 || !slug) return;
+    if (calendarLoaded || rounds.length === 0 || !slug) return;
     setCalendarLoaded(true);
     Promise.all(
       rounds
@@ -215,7 +215,7 @@ export default function TorneoAdminPage() {
         return next;
       });
     });
-  }, [activeTab, calendarLoaded, rounds, slug]);
+  }, [calendarLoaded, rounds, slug]);
 
   // Tag each match with its round info and build date groups
   type AdminMatch = CustomMatch & { roundId: number; roundName: string };
@@ -234,13 +234,14 @@ export default function TorneoAdminPage() {
 
   const adminSortedDateKeys = useMemo(() => [...adminDateGroups.keys()], [adminDateGroups]);
 
-  // Init active date to today (or first available)
+  // Init active date to today or nearest upcoming day, falling back to the last date
   useEffect(() => {
     if (adminSortedDateKeys.length === 0) return;
     setAdminDateKey((prev) => {
       if (prev && adminDateGroups.has(prev)) return prev;
       const today = todayKey();
-      return adminDateGroups.has(today) ? today : adminSortedDateKeys[0];
+      const upcoming = adminSortedDateKeys.find((k) => k >= today);
+      return upcoming ?? adminSortedDateKeys[adminSortedDateKeys.length - 1];
     });
   }, [adminSortedDateKeys]);
 
