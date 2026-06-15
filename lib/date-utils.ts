@@ -37,8 +37,8 @@ export function formatDateLabel(dateKey: string) {
 }
 
 export function todayKey(): string {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  // Same timezone as toLocalDateKey so date comparisons are consistent
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Mexico_City' });
 }
 
 export function formatFullDate(dateKey: string): string {

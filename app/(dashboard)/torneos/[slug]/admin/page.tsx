@@ -157,7 +157,7 @@ export default function TorneoAdminPage() {
           const mRes = await api.get<ApiResponse<CustomMatch[]>>(
             `/tournaments/${slug}/rounds/${firstRound.id}/matches`
           );
-          setMatchesByRound({ [firstRound.id]: mRes.data });
+          setMatchesByRound((prev) => ({ ...prev, [firstRound.id]: mRes.data }));
         }
       })
       .catch(() => {
@@ -233,17 +233,22 @@ export default function TorneoAdminPage() {
   const adminSortedDateKeys = useMemo(() => [...adminDateGroups.keys()], [adminDateGroups]);
 
   // Auto-position to today or the nearest upcoming day.
-  // Re-evaluates each time new rounds load so that if the initial data only had
-  // past dates, we jump to a future date as soon as one becomes available.
-  // Once we land on today or a future date we lock in (don't disturb manual nav).
+  // Fires each time a new round loads (adminSortedDateKeys changes).
+  // Rule: if a date CLOSER to today becomes available, move to it.
+  // This handles the race where early-loading rounds only have future dates,
+  // and today's matches arrive later in a different round.
+  // Once all data is loaded adminSortedDateKeys stops changing, so manual
+  // navigation (clicking a date pill) is never overridden.
   useEffect(() => {
     if (adminSortedDateKeys.length === 0) return;
     setAdminDateKey((prev) => {
       const today = todayKey();
-      // Lock in only when we're already on today or a future date
-      if (prev && adminDateGroups.has(prev) && prev >= today) return prev;
       const upcoming = adminSortedDateKeys.find((k) => k >= today);
-      return upcoming ?? adminSortedDateKeys[adminSortedDateKeys.length - 1];
+      const ideal = upcoming ?? adminSortedDateKeys[adminSortedDateKeys.length - 1];
+      if (!prev || !adminDateGroups.has(prev)) return ideal;
+      // Move to closer date only if a strictly better option just appeared
+      if (upcoming && prev > upcoming) return upcoming;
+      return prev;
     });
   }, [adminSortedDateKeys]);
 
