@@ -304,13 +304,11 @@ function MobileBracket({
   const gapM     = activeColIdx === 0 ? COL_GAP_M : COL_GAP_M_COMPACT;
   const colXMDyn = (rIdx: number) => rIdx * (COL_W_M + gapM);
 
-  const cols             = bracketRounds.length;
-  const activeMatchCount = bracketRounds[activeColIdx]?.matches.length ?? firstCount;
-  const totalH           = activeMatchCount * SLOT_H + 2 * PAD_Y;
-  const totalW           = cols * COL_W_M + (cols - 1) * gapM;
-
-  const mobileCardTop = (sIdx: number) => PAD_Y + sIdx * SLOT_H + (SLOT_H - CARD_H) / 2;
-  const mobileCenterY = (_rIdx: number, sIdx: number) => PAD_Y + sIdx * SLOT_H + SLOT_H / 2;
+  const cols   = bracketRounds.length;
+  // Fixed to first-round height so all rounds share the same coordinate space
+  // and matchTop(rIdx, sIdx) positions each card at its correct bracket slot.
+  const totalH = firstCount * SLOT_H + 2 * PAD_Y;
+  const totalW = cols * COL_W_M + (cols - 1) * gapM;
 
   const offsetX = PEEK_PAD - colXMDyn(activeColIdx);
 
@@ -358,7 +356,7 @@ function MobileBracket({
           getColX={colXMDyn}
           colWidth={COL_W_M}
           colGap={gapM}
-          getMatchCenterY={mobileCenterY}
+          getMatchCenterY={matchCenterY}
         />
 
         {bracketRounds.map((r, rIdx) =>
@@ -366,7 +364,7 @@ function MobileBracket({
             <div
               key={match.id}
               className="absolute"
-              style={{ left: colXMDyn(rIdx), top: mobileCardTop(sIdx), transition: 'left 0.3s ease-out' }}
+              style={{ left: colXMDyn(rIdx), top: matchTop(rIdx, sIdx), transition: 'left 0.3s ease-out' }}
             >
               <TreeCard match={match} active={rIdx === activeColIdx} colW={COL_W_M} />
             </div>
