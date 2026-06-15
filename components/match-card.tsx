@@ -111,14 +111,12 @@ export function MatchCard({ match, prediction, onChange, readOnly, isSaved }: Pr
           : 'border-slate-700/60',
       )}
     >
-      {/* Background image */}
-      <div
-        className="absolute inset-0 z-0"
-        style={{
-          backgroundImage: `url(${CARD_BG})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-        }}
+      {/* Background image — fixed height so it doesn't shift when card expands */}
+      <img
+        src={CARD_BG}
+        alt=""
+        aria-hidden
+        className="absolute inset-x-0 top-0 w-full h-[200px] object-cover object-center z-0 pointer-events-none select-none"
       />
       <div className="absolute inset-0 z-0 bg-slate-950/78" />
 

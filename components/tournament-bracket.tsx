@@ -4,9 +4,8 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { cn, formatMatchDateParts } from '@/lib/utils';
 import type { RoundWithMatches, Match } from '@/types';
-import { Trophy, GitBranch, CheckCircle2, ChevronRight, Calendar, MapPin } from 'lucide-react';
+import { Trophy, GitBranch, CheckCircle2, ChevronRight } from 'lucide-react';
 import { FlagPlaceholder } from '@/components/ui/flag-placeholder';
-import { Badge } from '@/components/ui/badge';
 
 // ── Metadata ───────────────────────────────────────────────────────────────────
 
@@ -14,12 +13,12 @@ const KNOCKOUT_ORDER = ['round_of_32', 'round_of_16', 'quarter', 'semi', 'third_
 const BRACKET_ORDER  = ['round_of_32', 'round_of_16', 'quarter', 'semi', 'final'];
 
 const ROUND_META: Record<string, { label: string; abbr: string }> = {
-  round_of_32: { label: 'Dieciseisavos de final', abbr: 'R32'    },
-  round_of_16: { label: 'Octavos de final',       abbr: 'R16'    },
-  quarter:     { label: 'Cuartos de final',        abbr: 'QF'     },
-  semi:        { label: 'Semifinal',               abbr: 'SF'     },
-  third_place: { label: 'Tercer puesto',           abbr: '3er P.' },
-  final:       { label: 'FINAL',                   abbr: 'FINAL'  },
+  round_of_32: { label: 'Dieciseisavos', abbr: 'R32'   },
+  round_of_16: { label: 'Octavos',       abbr: 'R16'   },
+  quarter:     { label: 'Cuartos',       abbr: 'QF'    },
+  semi:        { label: 'Semifinal',     abbr: 'SF'    },
+  third_place: { label: 'Tercer puesto', abbr: '3P'    },
+  final:       { label: 'Final',         abbr: 'FINAL' },
 };
 
 const CARD_BG =
@@ -27,22 +26,17 @@ const CARD_BG =
 
 // ── Bracket geometry ───────────────────────────────────────────────────────────
 
-const SLOT_H  = 182;
-const CARD_H  = 160;   // matches MatchCard natural height (p-4 + date + teams w-12h-8 + venue)
-const COL_W   = 256;   // wide enough for w-12 h-8 flags × 2 + score + px-4 padding
+const SLOT_H  = 132;
+const CARD_H  = 104;
+const COL_W   = 200;
 const COL_GAP = 48;
 const PAD_X   = 20;
-const PAD_Y   = 28;
+const PAD_Y   = 32;
 
-// ── Mobile bracket geometry (wider cards for 80/20 peek UX) ───────────────────
-const COL_W_M         = 330;   // close to full-width MatchCard on mobile
-const COL_GAP_M       = 36;    // gap when on first column (peek of next)
-const COL_GAP_M_COMPACT = 16;  // gap when on column 1+ (tighter, shows more peek)
-const PEEK_PAD        = 10;    // px: left margin for the active column
-
-function colXM(rIdx: number): number {
-  return rIdx * (COL_W_M + COL_GAP_M);
-}
+const COL_W_M            = 260;
+const COL_GAP_M          = 36;
+const COL_GAP_M_COMPACT  = 16;
+const PEEK_PAD           = 10;
 
 function matchTop(roundIdx: number, slotIdx: number): number {
   const pow2 = 1 << roundIdx;
@@ -55,129 +49,127 @@ function colX(rIdx: number): number {
   return PAD_X + rIdx * (COL_W + COL_GAP);
 }
 
+// ── TeamRow ────────────────────────────────────────────────────────────────────
+
+function TeamRow({
+  team, placeholder, score, won, lost, live, hasResult,
+}: {
+  team: Match['home_team'];
+  placeholder: string | null;
+  score?: number;
+  won: boolean;
+  lost: boolean;
+  live: boolean;
+  hasResult: boolean;
+}) {
+  const name = team?.short_name ?? team?.name ?? placeholder;
+  const flag = team?.flag_url;
+
+  return (
+    <div className={cn(
+      'flex items-center gap-2 px-2.5 flex-1 min-h-0',
+      won && 'bg-emerald-950/50',
+    )}>
+      <div className={cn('shrink-0 rounded-[3px] overflow-hidden', lost && 'opacity-35')}>
+        {flag
+          ? <img src={flag} alt="" className="w-[26px] h-[17px] object-cover" />
+          : <div className="w-[26px] h-[17px] bg-slate-800 rounded-[3px]" />
+        }
+      </div>
+      <span className={cn(
+        'flex-1 text-[11px] font-semibold truncate leading-none',
+        !name  ? 'text-slate-600 italic' :
+        won    ? 'text-white' :
+        lost   ? 'text-slate-600' :
+        live   ? 'text-slate-200' : 'text-slate-300',
+      )}>
+        {name ?? '···'}
+      </span>
+      <span className={cn(
+        'font-mono tabular-nums w-4 text-right shrink-0 font-bold leading-none',
+        !hasResult ? 'text-slate-800 text-[10px]' :
+        won        ? 'text-emerald-400 text-sm'   :
+        lost       ? 'text-slate-600 text-sm'     :
+                     'text-slate-300 text-sm',
+      )}>
+        {hasResult ? (score ?? '?') : '–'}
+      </span>
+      <div className={cn(
+        'w-0.5 h-3.5 rounded-full shrink-0',
+        won ? 'bg-emerald-400' : 'bg-transparent',
+      )} />
+    </div>
+  );
+}
+
 // ── TreeCard ───────────────────────────────────────────────────────────────────
 
-const STATUS_LABELS: Record<Match['status'], string> = {
-  scheduled:   'Programado',
-  in_progress: 'Jugando',
-  finished:    'Finalizado',
-  cancelled:   'Cancelado',
-};
-
-const STATUS_COLORS: Record<Match['status'], { dot: string; icon: string; line: string; badge: string }> = {
-  scheduled:   { dot: 'bg-emerald-400', icon: 'text-emerald-400', line: 'bg-emerald-400/60', badge: 'border-emerald-600/40 text-emerald-400' },
-  in_progress: { dot: 'bg-red-400',     icon: 'text-red-400',     line: 'bg-red-400/60',     badge: 'border-red-500/60 text-red-400'         },
-  finished:    { dot: 'bg-slate-500',   icon: 'text-slate-500',   line: 'bg-slate-600/60',   badge: 'border-slate-600 text-slate-500'         },
-  cancelled:   { dot: 'bg-slate-500',   icon: 'text-slate-500',   line: 'bg-slate-600/60',   badge: 'border-slate-600 text-slate-500'         },
-};
-
-// MatchCard-style layout: flag + name stacked, score in the middle.
-// colW drives proportional flag sizing so both desktop (136px) and mobile (300px) look right.
 function TreeCard({ match, active, colW = COL_W }: { match: Match; active: boolean; colW?: number }) {
-  const fin      = match.status === 'finished';
-  const live     = match.status === 'in_progress';
-  const homeWon  = fin && match.result?.winner === 'home';
-  const awayWon  = fin && match.result?.winner === 'away';
-  const sc       = STATUS_COLORS[match.status];
-  const hasResult = fin || live;
-  const { date, time } = formatMatchDateParts(match.scheduled_at);
-
-  // Same proportions as MatchCard — both COL_W (256) and COL_W_M (330) fit these comfortably.
-
-  const teamCol = (side: 'home' | 'away', won: boolean, lost: boolean) => {
-    const team   = side === 'home' ? match.home_team : match.away_team;
-    const phText = side === 'home' ? match.home_placeholder : match.away_placeholder;
-    const name   = team?.short_name ?? team?.name ?? phText;
-    const flag   = team?.flag_url;
-
-    return (
-      <div className={cn('flex-1 flex flex-col items-center gap-1 min-w-0', lost && 'opacity-35')}>
-        {flag
-          ? <img src={flag} alt="" className="w-12 h-8 object-cover rounded shadow-md shrink-0" />
-          : <FlagPlaceholder size="lg" />
-        }
-        <span className={cn(
-          'text-[11px] w-full font-semibold text-center leading-tight truncate px-0.5',
-          !name ? 'text-slate-600 italic' :
-          won   ? 'text-white' :
-          fin   ? 'text-slate-400' : 'text-slate-200',
-        )}>
-          {name ?? '···'}
-        </span>
-        <div className={cn('h-0.5 w-8 rounded-full', sc.line)} />
-      </div>
-    );
-  };
+  const fin       = match.status === 'finished';
+  const live      = match.status === 'in_progress';
+  const homeWon   = fin && match.result?.winner === 'home';
+  const awayWon   = fin && match.result?.winner === 'away';
+  const hasResult = (fin || live) && !!match.result;
+  const { date }  = formatMatchDateParts(match.scheduled_at);
 
   return (
     <div
       className={cn(
-        'relative rounded-xl border overflow-hidden transition-all duration-200',
-        live   ? 'border-red-500/40'                                     :
-        active ? 'border-emerald-500/60 shadow-sm shadow-emerald-500/20' :
-                 'border-slate-700/60',
+        'relative rounded-xl border overflow-hidden flex flex-col transition-all duration-200 select-none',
+        live   ? 'border-red-500/50 shadow-md shadow-red-950/30'          :
+        active ? 'border-emerald-500/40 shadow-sm shadow-emerald-950/20'  :
+                 'border-slate-800/80',
       )}
       style={{ width: colW, height: CARD_H }}
     >
-      {/* Background */}
-      <div
-        className="absolute inset-0 z-0"
-        style={{ backgroundImage: `url(${CARD_BG})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
+      {/* Background — fixed size so it doesn't shift */}
+      <img
+        src={CARD_BG}
+        alt="" aria-hidden
+        className="absolute inset-0 w-full h-full object-cover object-center z-0 pointer-events-none select-none"
+        style={{ opacity: 0.06 }}
       />
-      <div className="absolute inset-0 z-0 bg-slate-950/80" />
+      <div className="absolute inset-0 z-0 bg-slate-950/91" />
 
-      <div className="relative z-10 flex flex-col h-full px-2 py-1.5 gap-0.5">
+      {/* Top accent line */}
+      <div className={cn(
+        'absolute top-0 inset-x-0 h-[2px] z-20',
+        live   ? 'bg-red-500'        :
+        active ? 'bg-emerald-600/60' :
+                 'bg-transparent',
+      )} />
 
-        {/* ── Date / status row ────────────────────────────────── */}
-        <div className="flex items-center justify-between gap-1 shrink-0">
-          <div className="flex items-center gap-1 min-w-0 overflow-hidden">
-            <Calendar className={cn('h-2.5 w-2.5 shrink-0', sc.icon)} />
-            <span className="text-[9px] font-medium text-slate-400 truncate">{date}</span>
-            <span className="text-[8px] text-slate-600 shrink-0 mx-px">|</span>
-            <span className="text-[9px] text-slate-500 shrink-0">{time}</span>
+      <div className="relative z-10 flex flex-col h-full">
+
+        {/* Header */}
+        <div className="flex items-center justify-between gap-1 px-2.5 shrink-0 h-[22px] border-b border-slate-800/60">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span className={cn(
+              'w-1.5 h-1.5 rounded-full shrink-0',
+              live ? 'bg-red-400 animate-pulse' : fin ? 'bg-slate-600' : 'bg-emerald-500',
+            )} />
+            <span className="text-[9px] text-slate-500 truncate font-medium">{date}</span>
           </div>
-          <Badge
-            variant="outline"
-            className={cn('text-[9px] flex items-center gap-1 px-1.5 py-px h-auto font-medium', sc.badge)}
-          >
-            <span className={cn('w-1.5 h-1.5 rounded-full shrink-0', sc.dot, live && 'animate-pulse')} />
-            {STATUS_LABELS[match.status]}
-          </Badge>
+          {live && <span className="text-[8px] font-black text-red-400 shrink-0 tracking-widest">LIVE</span>}
+          {fin  && <span className="text-[8px] font-bold text-slate-700 shrink-0">FIN</span>}
         </div>
 
-        {/* ── Teams: home | score | away (MatchCard-style horizontal) ── */}
-        <div className="flex items-center gap-1.5 flex-1 min-h-0">
-          {teamCol('home', homeWon, awayWon)}
+        {/* Home row */}
+        <TeamRow
+          team={match.home_team} placeholder={match.home_placeholder}
+          score={match.result?.home_score} won={homeWon} lost={awayWon}
+          live={live} hasResult={hasResult}
+        />
 
-          {/* Score / VS */}
-          <div className="flex flex-col items-center justify-center shrink-0 px-0.5 gap-0.5">
-            {hasResult ? (
-              <div className="flex items-center gap-1.5 font-bold text-white">
-                <span className={cn('w-8 text-center text-xl tabular-nums font-mono', homeWon ? 'text-white' : 'text-slate-400')}>
-                  {match.result?.home_score ?? '–'}
-                </span>
-                <span className="text-slate-500 text-sm font-normal">–</span>
-                <span className={cn('w-8 text-center text-xl tabular-nums font-mono', awayWon ? 'text-white' : 'text-slate-400')}>
-                  {match.result?.away_score ?? '–'}
-                </span>
-              </div>
-            ) : (
-              <span className="text-xs font-black tracking-widest text-white/80 bg-white/10 border border-white/20 rounded px-2.5 py-0.5 backdrop-blur-sm">
-                VS
-              </span>
-            )}
-          </div>
+        {/* Row divider */}
+        <div className="h-px bg-slate-800/60 mx-2.5 shrink-0" />
 
-          {teamCol('away', awayWon, homeWon)}
-        </div>
-
-        {/* ── Venue ────────────────────────────────────────────── */}
-        <div className="flex items-center justify-center gap-1 min-w-0 overflow-hidden shrink-0">
-          <MapPin className={cn('h-2.5 w-2.5 shrink-0', sc.icon)} />
-          <span className="text-[9px] text-slate-400 truncate">
-            {match.venue ?? 'Por definir'}
-          </span>
-        </div>
+        {/* Away row */}
+        <TeamRow
+          team={match.away_team} placeholder={match.away_placeholder}
+          score={match.result?.away_score} won={awayWon} lost={homeWon}
+          live={live} hasResult={hasResult}
+        />
 
       </div>
     </div>
@@ -187,13 +179,8 @@ function TreeCard({ match, active, colW = COL_W }: { match: Match; active: boole
 // ── Connector SVG ──────────────────────────────────────────────────────────────
 
 function ConnectorLines({
-  bracketRounds,
-  totalW,
-  totalH,
-  highlightRoundIdx,
-  getColX = colX,
-  colWidth = COL_W,
-  colGap = COL_GAP,
+  bracketRounds, totalW, totalH, highlightRoundIdx,
+  getColX = colX, colWidth = COL_W, colGap = COL_GAP,
   getMatchCenterY: getY = matchCenterY,
 }: {
   bracketRounds: RoundWithMatches[];
@@ -215,19 +202,22 @@ function ConnectorLines({
         const visible = highlightRoundIdx === undefined
           || rIdx === highlightRoundIdx
           || rIdx + 1 === highlightRoundIdx;
+
         return Array.from({ length: nextCount }, (_, ps) => {
           const topY = getY(rIdx, ps * 2);
           const botY = getY(rIdx, ps * 2 + 1);
           const midY = (topY + botY) / 2;
           return (
-            <path
-              key={`c-${rIdx}-${ps}`}
-              d={`M ${fromX} ${topY} H ${midX} V ${botY} M ${fromX} ${botY} H ${midX} M ${midX} ${midY} H ${toX}`}
-              stroke={visible ? '#1e293b' : '#0d1422'}
-              strokeWidth="1.5"
-              fill="none"
-              strokeLinecap="round"
-            />
+            <g key={`c-${rIdx}-${ps}`}>
+              <path
+                d={`M ${fromX} ${topY} H ${midX} V ${botY} M ${fromX} ${botY} H ${midX} M ${midX} ${midY} H ${toX}`}
+                stroke={visible ? '#1e293b' : '#0f172a'}
+                strokeWidth={visible ? 1.5 : 1}
+                fill="none"
+                strokeLinecap="round"
+              />
+              {visible && <circle cx={midX} cy={midY} r={2.5} fill="#1e293b" />}
+            </g>
           );
         });
       })}
@@ -235,13 +225,10 @@ function ConnectorLines({
   );
 }
 
-// ── Desktop bracket tree ───────────────────────────────────────────────────────
+// ── Desktop bracket ────────────────────────────────────────────────────────────
 
 function DesktopBracket({
-  bracketRounds,
-  thirdPlace,
-  activeRoundId,
-  onSelectRound,
+  bracketRounds, thirdPlace, activeRoundId, onSelectRound,
 }: {
   bracketRounds: RoundWithMatches[];
   thirdPlace: RoundWithMatches | undefined;
@@ -262,26 +249,21 @@ function DesktopBracket({
         {bracketRounds.map((r, rIdx) => (
           <div
             key={`lbl-${r.round.id}`}
-            className="absolute text-[9px] font-bold uppercase tracking-widest text-slate-600 text-center"
-            style={{ left: colX(rIdx), width: COL_W, top: 6 }}
+            className="absolute text-[9px] font-bold uppercase tracking-widest text-slate-700 text-center"
+            style={{ left: colX(rIdx), width: COL_W, top: 8 }}
           >
             {ROUND_META[r.round.type]?.abbr ?? r.round.name}
           </div>
         ))}
 
-        <ConnectorLines
-          bracketRounds={bracketRounds}
-          totalW={totalW}
-          totalH={totalH}
-        />
+        <ConnectorLines bracketRounds={bracketRounds} totalW={totalW} totalH={totalH} />
 
-        {/* Match cards */}
         {bracketRounds.map((r, rIdx) =>
           r.matches.map((match, sIdx) => (
             <button
               key={match.id}
               onClick={() => onSelectRound(r.round.id)}
-              className="absolute focus:outline-none hover:z-10"
+              className="absolute focus:outline-none hover:z-10 rounded-xl transition-transform duration-150 hover:scale-[1.03]"
               style={{ left: colX(rIdx), top: matchTop(rIdx, sIdx) }}
             >
               <TreeCard match={match} active={r.round.id === activeRoundId} />
@@ -290,7 +272,7 @@ function DesktopBracket({
         )}
       </div>
 
-      {/* Third place — below the bracket */}
+      {/* Third place */}
       {thirdPlace && thirdPlace.matches.length > 0 && (
         <div className="mt-4 pt-3 border-t border-slate-800/50 flex items-center gap-3 px-1">
           <div>
@@ -310,45 +292,31 @@ function DesktopBracket({
 // ── Mobile single-column bracket ───────────────────────────────────────────────
 
 function MobileBracket({
-  bracketRounds,
-  activeColIdx,
-  onChangeColIdx,
+  bracketRounds, activeColIdx, onChangeColIdx,
 }: {
   bracketRounds: RoundWithMatches[];
   activeColIdx: number;
   onChangeColIdx: (idx: number) => void;
 }) {
-  // Hooks before any conditional return (rules of hooks).
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
 
   const firstCount = bracketRounds[0]?.matches.length ?? 0;
   if (!firstCount) return null;
 
-  // Compress inter-column gap once the user leaves the first column.
   const gapM     = activeColIdx === 0 ? COL_GAP_M : COL_GAP_M_COMPACT;
   const colXMDyn = (rIdx: number) => rIdx * (COL_W_M + gapM);
 
   const cols             = bracketRounds.length;
-  // Canvas height adapts to the active column's match count so there's no
-  // wasted vertical space — all columns use the same SLOT_H density as R32.
   const activeMatchCount = bracketRounds[activeColIdx]?.matches.length ?? firstCount;
   const totalH           = activeMatchCount * SLOT_H + 2 * PAD_Y;
   const totalW           = cols * COL_W_M + (cols - 1) * gapM;
 
-  // Uniform vertical position — same card density in every column.
   const mobileCardTop = (sIdx: number) => PAD_Y + sIdx * SLOT_H + (SLOT_H - CARD_H) / 2;
-  // Connector line center Y consistent with mobileCardTop.
   const mobileCenterY = (_rIdx: number, sIdx: number) => PAD_Y + sIdx * SLOT_H + SLOT_H / 2;
 
-  // Slide canvas so active column's left edge sits at PEEK_PAD → ~80/20 split.
   const offsetX = PEEK_PAD - colXMDyn(activeColIdx);
 
-  // ── Swipe detection via native touch events ─────────────────────────────────
-  // We intentionally bypass Framer Motion's drag prop because when the browser
-  // takes over a vertical scroll gesture it fires pointercancel, which Framer
-  // Motion still converts into onDragEnd with whatever diagonal delta accumulated
-  // before the browser took over. That false positive was resetting the column.
   const onTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
     touchStartY.current = e.touches[0].clientY;
@@ -360,16 +328,12 @@ function MobileBracket({
     const dy = e.changedTouches[0].clientY - touchStartY.current;
     touchStartX.current = null;
     touchStartY.current = null;
-
-    // Require the gesture to be at least 2× more horizontal than vertical.
     if (Math.abs(dy) * 0.5 >= Math.abs(dx)) return;
-
-    const threshold = COL_W_M * 0.2; // 20% of column width
+    const threshold = COL_W_M * 0.2;
     if (dx < -threshold && activeColIdx < bracketRounds.length - 1) onChangeColIdx(activeColIdx + 1);
     if (dx >  threshold && activeColIdx > 0)                         onChangeColIdx(activeColIdx - 1);
   };
 
-  // Reset refs if the browser cancels the touch (takes over scroll).
   const onTouchCancel = () => {
     touchStartX.current = null;
     touchStartY.current = null;
@@ -383,43 +347,37 @@ function MobileBracket({
       onTouchEnd={onTouchEnd}
       onTouchCancel={onTouchCancel}
     >
-        <motion.div
-          className="relative"
-          animate={{ x: offsetX }}
-          transition={{ type: 'spring', stiffness: 280, damping: 32 }}
-          style={{ width: totalW, height: totalH }}
-        >
-          <ConnectorLines
-            bracketRounds={bracketRounds}
-            totalW={totalW}
-            totalH={totalH}
-            highlightRoundIdx={activeColIdx}
-            getColX={colXMDyn}
-            colWidth={COL_W_M}
-            colGap={gapM}
-            getMatchCenterY={mobileCenterY}
-          />
+      <motion.div
+        className="relative"
+        animate={{ x: offsetX }}
+        transition={{ type: 'spring', stiffness: 280, damping: 32 }}
+        style={{ width: totalW, height: totalH }}
+      >
+        <ConnectorLines
+          bracketRounds={bracketRounds}
+          totalW={totalW}
+          totalH={totalH}
+          highlightRoundIdx={activeColIdx}
+          getColX={colXMDyn}
+          colWidth={COL_W_M}
+          colGap={gapM}
+          getMatchCenterY={mobileCenterY}
+        />
 
-          {bracketRounds.map((r, rIdx) =>
-            r.matches.map((match, sIdx) => (
-              <div
-                key={match.id}
-                className="absolute"
-                style={{
-                  left: colXMDyn(rIdx),
-                  top: mobileCardTop(sIdx),
-                  transition: 'left 0.3s ease-out',
-                }}
-              >
-                <TreeCard match={match} active={rIdx === activeColIdx} colW={COL_W_M} />
-              </div>
-            ))
-          )}
-        </motion.div>
+        {bracketRounds.map((r, rIdx) =>
+          r.matches.map((match, sIdx) => (
+            <div
+              key={match.id}
+              className="absolute"
+              style={{ left: colXMDyn(rIdx), top: mobileCardTop(sIdx), transition: 'left 0.3s ease-out' }}
+            >
+              <TreeCard match={match} active={rIdx === activeColIdx} colW={COL_W_M} />
+            </div>
+          ))
+        )}
+      </motion.div>
 
-      {/* Left fade — softens partial view of previous column */}
       <div className="pointer-events-none absolute inset-y-0 left-0 w-4 bg-gradient-to-r from-slate-950/70 to-transparent z-10 rounded-l-xl" />
-      {/* Right fade — peek zone: connector lines + partial next column visible here */}
       <div className="pointer-events-none absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-slate-950/80 to-transparent z-10 rounded-r-xl" />
     </div>
   );
@@ -465,9 +423,7 @@ type CarouselEntry =
   | { kind: 'champion'; name: string; flag?: string | null };
 
 function MobileRoundCarousel({
-  entries,
-  activeIdx,
-  onSelect,
+  entries, activeIdx, onSelect,
 }: {
   entries: CarouselEntry[];
   activeIdx: number;
@@ -488,19 +444,25 @@ function MobileRoundCarousel({
       className="flex overflow-x-auto scroll-smooth snap-x snap-mandatory gap-3 scrollbar-none px-4"
     >
       {entries.map((entry, i) => {
-        const isActive  = i === activeIdx;
-        const isFinal   = entry.kind === 'round' && entry.round.round.type === 'final';
-        const isChamp   = entry.kind === 'champion';
+        const isActive = i === activeIdx;
+        const isFinal  = entry.kind === 'round' && entry.round.round.type === 'final';
+        const isChamp  = entry.kind === 'champion';
 
         const label = entry.kind === 'champion'
           ? 'Campeón'
           : ROUND_META[entry.round.round.type]?.label ?? entry.round.round.name;
 
+        const finished = entry.kind === 'round'
+          ? entry.round.matches.filter(m => m.status === 'finished').length
+          : 0;
+        const total = entry.kind === 'round' ? entry.round.matches.length : 0;
+
         const sub = entry.kind === 'champion'
           ? entry.name
-          : `${entry.round.matches.length} partido${entry.round.matches.length !== 1 ? 's' : ''} · ${entry.round.matches.filter(m => m.status === 'finished').length} finalizados`;
+          : `${total} partido${total !== 1 ? 's' : ''} · ${finished} finalizado${finished !== 1 ? 's' : ''}`;
 
         const allDone = entry.kind === 'round' && entry.round.matches.every(m => m.status === 'finished');
+        const hasLive = entry.kind === 'round' && entry.round.matches.some(m => m.status === 'in_progress');
 
         return (
           <button
@@ -516,6 +478,10 @@ function MobileRoundCarousel({
                 ? isActive
                   ? 'bg-linear-to-br from-amber-950/60 to-emerald-950/20 border-amber-500/50 shadow-lg shadow-amber-500/10'
                   : 'bg-slate-900/60 border-slate-700 hover:border-amber-500/30'
+                : hasLive
+                ? isActive
+                  ? 'bg-red-950/30 border-red-500/50 shadow-sm shadow-red-950/20'
+                  : 'bg-slate-900/60 border-red-500/20 hover:border-red-500/40'
                 : isActive
                 ? 'bg-emerald-500/15 border-emerald-500/50 shadow-sm shadow-emerald-500/10'
                 : 'bg-slate-900/60 border-slate-700 hover:border-slate-600',
@@ -525,37 +491,34 @@ function MobileRoundCarousel({
             <div className="flex items-start justify-between gap-2">
               <span className={cn(
                 'text-base font-black leading-tight',
-                isChamp ? (isActive ? 'text-amber-300' : 'text-amber-500/60') :
-                isFinal ? (isActive ? 'text-amber-300' : 'text-slate-400')    :
-                           isActive ? 'text-emerald-300' : 'text-slate-300',
+                isChamp  ? (isActive ? 'text-amber-300'   : 'text-amber-500/60')  :
+                isFinal  ? (isActive ? 'text-amber-300'   : 'text-slate-400')     :
+                hasLive  ? (isActive ? 'text-red-300'     : 'text-red-500/60')    :
+                            isActive ? 'text-emerald-300' : 'text-slate-300',
               )}>
                 {label}
               </span>
-              {allDone && <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />}
-              {isChamp && <Trophy className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />}
+              <div className="shrink-0 mt-0.5">
+                {hasLive  && <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse block" />}
+                {allDone  && !hasLive && <CheckCircle2 className="h-4 w-4 text-emerald-500" />}
+                {isChamp  && <Trophy className="h-4 w-4 text-amber-400" />}
+              </div>
             </div>
-            <p className={cn(
-              'text-xs mt-1 leading-snug',
-              isActive ? 'text-slate-400' : 'text-slate-600',
-            )}>
+            <p className={cn('text-xs mt-1 leading-snug', isActive ? 'text-slate-400' : 'text-slate-600')}>
               {sub}
             </p>
           </button>
         );
       })}
-
-      {/* Spacer so last pill can scroll to show peek of nothing */}
       <div className="shrink-0 w-[20vw]" />
     </div>
   );
 }
 
-// ── Desktop compact round strip ────────────────────────────────────────────────
+// ── Desktop round strip ────────────────────────────────────────────────────────
 
 function DesktopRoundStrip({
-  knockoutRounds,
-  activeRoundId,
-  onSelect,
+  knockoutRounds, activeRoundId, onSelect,
 }: {
   knockoutRounds: RoundWithMatches[];
   activeRoundId: number | null;
@@ -564,20 +527,22 @@ function DesktopRoundStrip({
   return (
     <div className="flex items-center gap-0 overflow-x-auto scrollbar-none">
       {knockoutRounds.map((r, idx) => {
-        const meta    = ROUND_META[r.round.type];
+        const meta     = ROUND_META[r.round.type];
         const isActive = activeRoundId === r.round.id;
         const allDone  = r.matches.every(m => m.status === 'finished');
+        const live     = r.matches.some(m => m.status === 'in_progress');
         const isFinal  = r.round.type === 'final';
         return (
           <div key={r.round.id} className="flex items-center shrink-0">
             <button
               onClick={() => onSelect(r.round.id)}
               className={cn(
-                'flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl border transition-all',
-                isActive && isFinal  ? 'bg-amber-500/15 border-amber-500/50 text-amber-400'       :
-                isActive             ? 'bg-emerald-500/15 border-emerald-500/50 text-emerald-400' :
-                allDone              ? 'border-slate-700/40 text-slate-500'                        :
-                                       'border-slate-800 text-slate-600 hover:border-slate-700 hover:text-slate-400',
+                'relative flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl border transition-all duration-150',
+                isActive && isFinal ? 'bg-amber-500/15 border-amber-500/50 text-amber-400'       :
+                isActive            ? 'bg-emerald-500/15 border-emerald-500/50 text-emerald-400' :
+                live                ? 'border-red-500/30 text-red-500'                           :
+                allDone             ? 'border-slate-700/40 text-slate-500'                       :
+                                      'border-slate-800 text-slate-600 hover:border-slate-700 hover:text-slate-400',
               )}
             >
               <span className="text-[9px] font-bold uppercase tracking-wider whitespace-nowrap">
@@ -586,7 +551,8 @@ function DesktopRoundStrip({
               <span className={cn('text-xs font-black tabular-nums', !isActive && 'text-slate-600')}>
                 {r.matches.length}
               </span>
-              {allDone && <CheckCircle2 className="h-2.5 w-2.5 text-emerald-600" />}
+              {live    && <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />}
+              {allDone && !live && <CheckCircle2 className="h-2.5 w-2.5 text-emerald-600" />}
             </button>
             {idx < knockoutRounds.length - 1 && (
               <ChevronRight className="h-3 w-3 text-slate-700 shrink-0" />
@@ -602,8 +568,6 @@ function DesktopRoundStrip({
 
 export function TournamentBracket({ rounds }: { rounds: RoundWithMatches[] }) {
 
-  // Stabilize the rounds reference with a stable identity key so memo/effect
-  // don't re-fire when the parent re-renders with structurally identical data.
   const roundsKey = rounds.map(r => `${r.round.id}:${r.matches.map(m => `${m.id}${m.status}`).join(',')}`).join('|');
 
   const knockoutRounds = useMemo(() =>
@@ -642,8 +606,6 @@ export function TournamentBracket({ rounds }: { rounds: RoundWithMatches[] }) {
     };
   }, [finalRound]);
 
-  // ── activeRoundId: which knockout round is focused ─────────────────────────
-
   const [activeRoundId, setActiveRoundId] = useState<number | null>(null);
 
   useEffect(() => {
@@ -653,31 +615,22 @@ export function TournamentBracket({ rounds }: { rounds: RoundWithMatches[] }) {
     setActiveRoundId((inProg ?? upcoming ?? knockoutRounds[knockoutRounds.length - 1]).round.id);
   }, [knockoutRounds]);
 
-  // ── Mobile carousel: all knockout rounds + optional champion entry ─────────
-
   const carouselEntries = useMemo((): CarouselEntry[] => {
     const entries: CarouselEntry[] = knockoutRounds.map(r => ({ kind: 'round', round: r }));
-    if (champion?.name) {
-      entries.push({ kind: 'champion', name: champion.name, flag: champion.flag });
-    }
+    if (champion?.name) entries.push({ kind: 'champion', name: champion.name, flag: champion.flag });
     return entries;
   }, [knockoutRounds, champion]);
 
-  // Map activeRoundId → carousel index
   const activeCarouselIdx = useMemo(() => {
-    const idx = carouselEntries.findIndex(
-      e => e.kind === 'round' && e.round.round.id === activeRoundId,
-    );
+    const idx = carouselEntries.findIndex(e => e.kind === 'round' && e.round.round.id === activeRoundId);
     return idx >= 0 ? idx : 0;
   }, [carouselEntries, activeRoundId]);
 
   const handleCarouselSelect = (idx: number) => {
     const entry = carouselEntries[idx];
     if (entry?.kind === 'round') setActiveRoundId(entry.round.round.id);
-    else setActiveRoundId(null); // champion panel
+    else setActiveRoundId(null);
   };
-
-  // ── Mobile bracket column index (bracketRounds only) ──────────────────────
 
   const activeBracketColIdx = useMemo(() => {
     const idx = bracketRounds.findIndex(r => r.round.id === activeRoundId);
@@ -689,11 +642,7 @@ export function TournamentBracket({ rounds }: { rounds: RoundWithMatches[] }) {
     if (r) setActiveRoundId(r.round.id);
   };
 
-  // ── Show champion panel on mobile? ────────────────────────────────────────
-
   const showChampionMobile = activeRoundId === null && champion !== null;
-
-  // ── Empty state ────────────────────────────────────────────────────────────
 
   if (!knockoutRounds.length) {
     return (
@@ -710,7 +659,7 @@ export function TournamentBracket({ rounds }: { rounds: RoundWithMatches[] }) {
   return (
     <div className="space-y-4">
 
-      {/* ── Desktop: compact round strip ──────────────────────────────── */}
+      {/* Desktop: round strip */}
       <div className="hidden md:block">
         <DesktopRoundStrip
           knockoutRounds={knockoutRounds}
@@ -719,7 +668,7 @@ export function TournamentBracket({ rounds }: { rounds: RoundWithMatches[] }) {
         />
       </div>
 
-      {/* ── Desktop: full bracket ─────────────────────────────────────── */}
+      {/* Desktop: full bracket */}
       {bracketRounds.length > 0 && (
         <div className="hidden md:block rounded-xl border border-slate-800/50 bg-transparent p-4">
           <DesktopBracket
@@ -731,7 +680,14 @@ export function TournamentBracket({ rounds }: { rounds: RoundWithMatches[] }) {
         </div>
       )}
 
-      {/* ── Mobile: swipeable round carousel ──────────────────────────── */}
+      {/* Desktop: champion */}
+      {champion?.name && (
+        <div className="hidden md:block">
+          <ChampionPanel name={champion.name} flag={champion.flag} />
+        </div>
+      )}
+
+      {/* Mobile: round carousel */}
       <div className="md:hidden">
         <MobileRoundCarousel
           entries={carouselEntries}
@@ -740,7 +696,7 @@ export function TournamentBracket({ rounds }: { rounds: RoundWithMatches[] }) {
         />
       </div>
 
-      {/* ── Mobile: bracket column view ────────────────────────────────── */}
+      {/* Mobile: bracket */}
       {bracketRounds.length > 0 && (
         <div className="md:hidden mt-3">
           {showChampionMobile && champion?.name ? (
@@ -752,13 +708,6 @@ export function TournamentBracket({ rounds }: { rounds: RoundWithMatches[] }) {
               onChangeColIdx={handleMobileColChange}
             />
           )}
-        </div>
-      )}
-
-      {/* ── Desktop: champion banner ──────────────────────────────────── */}
-      {champion?.name && (
-        <div className="hidden md:block">
-          <ChampionPanel name={champion.name} flag={champion.flag} />
         </div>
       )}
 

@@ -49,7 +49,12 @@ export function PredictionForm({ quinielaSlug, rounds, initialPredictions, onSav
   const [saving, setSaving] = useState(false);
 
   const matchesByDate = useMemo(() => groupByDate(rounds), [rounds]);
-  const sortedDateKeys = useMemo(() => [...matchesByDate.keys()], [matchesByDate]);
+  const sortedDateKeys = useMemo(() => {
+    const now = new Date();
+    const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+    const cutoff = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
+    return [...matchesByDate.keys()].filter((k) => k >= cutoff);
+  }, [matchesByDate]);
 
   const [activeDateKey, setActiveDateKey] = useState<string | null>(() =>
     firstOpenDate(rounds, initialPredictions)
