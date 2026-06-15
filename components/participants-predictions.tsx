@@ -158,11 +158,31 @@ function MatchResultCard({
           </div>
 
           {/* Score / VS */}
-          <div className="shrink-0 flex items-center">
+          <div className="shrink-0 flex flex-col items-center gap-1.5">
             {match.result ? (
-              <span className="text-xl font-bold text-white font-mono tabular-nums">
-                {match.result.home_score} – {match.result.away_score}
-              </span>
+              <>
+                <span className="text-xl font-bold text-white font-mono tabular-nums">
+                  {match.result.home_score} – {match.result.away_score}
+                </span>
+                <div className="flex flex-col items-center gap-0.5">
+                  <span className="text-[9px] font-semibold text-slate-600 uppercase tracking-wider">
+                    Tu pronóstico
+                  </span>
+                  {match.my_prediction ? (
+                    <span className={cn(
+                      'text-sm font-bold font-mono tabular-nums',
+                      match.my_prediction.points === 3 ? 'text-emerald-400' :
+                      match.my_prediction.points === 1 ? 'text-blue-400' :
+                      match.my_prediction.points === 0 ? 'text-slate-500' :
+                      'text-slate-400'
+                    )}>
+                      {match.my_prediction.home_score} – {match.my_prediction.away_score}
+                    </span>
+                  ) : (
+                    <span className="text-sm font-bold font-mono text-slate-700">N/P</span>
+                  )}
+                </div>
+              </>
             ) : (
               <span className="text-xs font-black tracking-widest text-white/80 bg-white/10 border border-white/20 rounded px-2.5 py-0.5 backdrop-blur-sm">
                 VS

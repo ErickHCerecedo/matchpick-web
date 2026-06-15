@@ -169,11 +169,18 @@ export function MatchCard({ match, prediction, onChange, readOnly, isSaved }: Pr
           {/* Score / VS area */}
           <div className="flex items-center gap-2 shrink-0">
             {hasResult ? (
-              <div className="flex items-center gap-1.5 font-bold text-white">
-                <span className="w-8 text-center text-xl tabular-nums font-mono">{match.result!.home_score}</span>
-                <span className="text-slate-500 text-sm font-normal">–</span>
-                <span className="w-8 text-center text-xl tabular-nums font-mono">{match.result!.away_score}</span>
-              </div>
+              prediction ? (
+                <div className="flex items-center gap-1.5 font-bold text-white">
+                  <span className="w-8 text-center text-xl tabular-nums font-mono">{prediction.home_score}</span>
+                  <span className="text-slate-500 text-sm font-normal">–</span>
+                  <span className="w-8 text-center text-xl tabular-nums font-mono">{prediction.away_score}</span>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center gap-1">
+                  <span className="text-xl font-bold font-mono text-slate-600 tabular-nums tracking-widest">N/P</span>
+                  <span className="text-[10px] text-slate-600 font-medium">Sin pronóstico</span>
+                </div>
+              )
             ) : isOpen ? (
               <div className="flex items-center gap-2">
                 <ScoreStepper value={home} onAdjust={(d) => handleAdjust('home', d)} />
