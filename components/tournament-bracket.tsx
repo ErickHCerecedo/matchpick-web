@@ -117,7 +117,7 @@ const TREE_STATUS_LABELS: Record<Match['status'], string> = {
   cancelled:   'Cancelado',
 };
 
-function TreeCard({ match, active, colW = COL_W }: { match: Match; active: boolean; colW?: number }) {
+function TreeCard({ match, active, colW = COL_W, isThirdPlace = false }: { match: Match; active: boolean; colW?: number; isThirdPlace?: boolean }) {
   const fin       = match.status === 'finished';
   const live      = match.status === 'in_progress';
   const homeWon   = fin && match.result?.winner === 'home';
@@ -134,9 +134,10 @@ function TreeCard({ match, active, colW = COL_W }: { match: Match; active: boole
     <div
       className={cn(
         'relative rounded-xl border overflow-hidden flex flex-col transition-all duration-200 select-none',
-        live   ? 'border-red-500/50 shadow-md shadow-red-950/30'          :
-        active ? 'border-emerald-500/40 shadow-sm shadow-emerald-950/20'  :
-                 'border-slate-800/80',
+        live          ? 'border-red-500/50 shadow-md shadow-red-950/30'           :
+        isThirdPlace  ? (active ? 'border-amber-600/60 shadow-sm shadow-amber-950/20' : 'border-amber-800/40') :
+        active        ? 'border-emerald-500/40 shadow-sm shadow-emerald-950/20'   :
+                        'border-slate-800/80',
       )}
       style={{ width: colW, height: CARD_H }}
     >
@@ -212,6 +213,7 @@ function ConnectorLines({
   bracketRounds, totalW, totalH, highlightRoundIdx,
   getColX = colX, colWidth = COL_W, colGap = COL_GAP,
   getMatchCenterY: getY = matchCenterY,
+  skipConnectorsAtIdx,
 }: {
   bracketRounds: RoundWithMatches[];
   totalW: number;
@@ -221,10 +223,12 @@ function ConnectorLines({
   colWidth?: number;
   colGap?: number;
   getMatchCenterY?: (rIdx: number, sIdx: number) => number;
+  skipConnectorsAtIdx?: Set<number>;
 }) {
   return (
     <svg className="absolute inset-0 pointer-events-none" width={totalW} height={totalH}>
       {bracketRounds.slice(0, -1).map((_, rIdx) => {
+        if (skipConnectorsAtIdx?.has(rIdx)) return null;
         const nextCount = bracketRounds[rIdx + 1]?.matches.length ?? 0;
         const fromX = getColX(rIdx) + colWidth;
         const midX  = fromX + colGap / 2;
@@ -268,53 +272,88 @@ function DesktopBracket({
   const firstCount = bracketRounds[0]?.matches.length ?? 0;
   if (!firstCount) return null;
 
-  const totalH = firstCount * SLOT_H + 2 * PAD_Y;
-  const totalW = bracketRounds.length * COL_W + (bracketRounds.length - 1) * COL_GAP + 2 * PAD_X;
+  const hasTP = !!(thirdPlace && thirdPlace.matches.length > 0);
+
+  // Insert thirdPlace between the last two rounds (SF and Final) for display.
+  // ConnectorLines still uses bracketRounds (without 3P) to keep the bracket tree
+  // structure intact; the SF→Final connector is skipped to avoid crossing the 3P card.
+  const allCols: Array<{ round: RoundWithMatches; isThirdPlace: boolean }> = hasTP
+    ? [
+        ...bracketRounds.slice(0, -1).map(r => ({ round: r, isThirdPlace: false })),
+        { round: thirdPlace!, isThirdPlace: true },
+        { round: bracketRounds[bracketRounds.length - 1], isThirdPlace: false },
+      ]
+    : bracketRounds.map(r => ({ round: r, isThirdPlace: false }));
+
+  const thirdPlaceColIdx = hasTP ? allCols.findIndex(c => c.isThirdPlace) : -1;
+
+  // With 3P inserted, the Final column shifts one position right.
+  // Both 3P and Final share the same Y as the original Final (matchTop at bracketRounds.length-1).
+  const originalFinalIdx = bracketRounds.length - 1;
+  const getCardTop = (colIdx: number, sIdx: number) => {
+    if (hasTP && colIdx > thirdPlaceColIdx) return matchTop(thirdPlaceColIdx, sIdx);
+    return matchTop(colIdx, sIdx);
+  };
+
+  const numCols = allCols.length;
+  const totalH  = firstCount * SLOT_H + 2 * PAD_Y;
+  const totalW  = numCols * COL_W + (numCols - 1) * COL_GAP + 2 * PAD_X;
+
+  // Skip the SF→Final connector so no line crosses through the 3P column.
+  const skipConnectors = hasTP ? new Set([originalFinalIdx - 1]) : undefined;
 
   return (
     <div className="overflow-x-auto scrollbar-none">
       <div className="relative" style={{ width: totalW, height: totalH }}>
 
         {/* Column labels */}
-        {bracketRounds.map((r, rIdx) => (
+        {allCols.map(({ round: r, isThirdPlace: is3P }, colIdx) => (
           <div
             key={`lbl-${r.round.id}`}
-            className="absolute text-[9px] font-bold uppercase tracking-widest text-slate-700 text-center"
-            style={{ left: colX(rIdx), width: COL_W, top: 8 }}
+            className={cn(
+              'absolute text-[9px] font-bold uppercase tracking-widest text-center',
+              is3P ? 'text-amber-700/70' : 'text-slate-700',
+            )}
+            style={{ left: colX(colIdx), width: COL_W, top: 8 }}
           >
             {ROUND_META[r.round.type]?.abbr ?? r.round.name}
           </div>
         ))}
 
-        <ConnectorLines bracketRounds={bracketRounds} totalW={totalW} totalH={totalH} />
+        {/* Vertical separator before the standalone columns */}
+        {hasTP && (
+          <div
+            className="absolute top-6 bottom-6 w-px bg-slate-800/60"
+            style={{ left: colX(thirdPlaceColIdx) - COL_GAP / 2 }}
+          />
+        )}
 
-        {bracketRounds.map((r, rIdx) =>
+        {/* Connector lines (original bracket rounds only, SF→Final skipped) */}
+        <ConnectorLines
+          bracketRounds={bracketRounds}
+          totalW={totalW}
+          totalH={totalH}
+          skipConnectorsAtIdx={skipConnectors}
+        />
+
+        {/* Cards */}
+        {allCols.map(({ round: r, isThirdPlace: is3P }, colIdx) =>
           r.matches.map((match, sIdx) => (
             <button
               key={match.id}
               onClick={() => onSelectRound(r.round.id)}
               className="absolute p-0 focus:outline-none hover:z-10"
-              style={{ left: colX(rIdx), top: matchTop(rIdx, sIdx), width: COL_W, height: CARD_H }}
+              style={{ left: colX(colIdx), top: getCardTop(colIdx, sIdx), width: COL_W, height: CARD_H }}
             >
-              <TreeCard match={match} active={r.round.id === activeRoundId} />
+              <TreeCard
+                match={match}
+                active={r.round.id === activeRoundId}
+                isThirdPlace={is3P}
+              />
             </button>
           ))
         )}
       </div>
-
-      {/* Third place */}
-      {thirdPlace && thirdPlace.matches.length > 0 && (
-        <div className="mt-4 pt-3 border-t border-slate-800/50 flex items-center gap-3 px-1">
-          <div>
-            <p className="text-[9px] font-bold text-slate-600 uppercase tracking-widest mb-2">
-              {ROUND_META.third_place.abbr}
-            </p>
-            <button onClick={() => onSelectRound(thirdPlace.round.id)} className="focus:outline-none">
-              <TreeCard match={thirdPlace.matches[0]} active={activeRoundId === thirdPlace.round.id} />
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -322,11 +361,12 @@ function DesktopBracket({
 // ── Mobile single-column bracket ───────────────────────────────────────────────
 
 function MobileBracket({
-  bracketRounds, activeColIdx, onChangeColIdx,
+  bracketRounds, activeColIdx, onChangeColIdx, thirdPlaceColIdx = -1,
 }: {
   bracketRounds: RoundWithMatches[];
   activeColIdx: number;
   onChangeColIdx: (idx: number) => void;
+  thirdPlaceColIdx?: number;
 }) {
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
@@ -411,6 +451,11 @@ function MobileBracket({
           colWidth={COL_W_M}
           colGap={gapM}
           getMatchCenterY={cardCenterY}
+          skipConnectorsAtIdx={
+            thirdPlaceColIdx >= 0
+              ? new Set([thirdPlaceColIdx - 1, thirdPlaceColIdx])
+              : undefined
+          }
         />
 
         {bracketRounds.map((r, rIdx) =>
@@ -425,7 +470,12 @@ function MobileBracket({
                 transition: 'top 0.5s cubic-bezier(0.34, 1.2, 0.64, 1), left 0.3s ease-out',
               }}
             >
-              <TreeCard match={match} active={rIdx === activeColIdx} colW={COL_W_M} />
+              <TreeCard
+                match={match}
+                active={rIdx === activeColIdx}
+                colW={COL_W_M}
+                isThirdPlace={rIdx === thirdPlaceColIdx}
+              />
             </div>
           ))
         )}
@@ -686,13 +736,28 @@ export function TournamentBracket({ rounds }: { rounds: RoundWithMatches[] }) {
     else setActiveRoundId(null);
   };
 
+  // For mobile: insert thirdPlace between SF and Final so it's a swipeable column.
+  const allBracketRounds = useMemo(() => {
+    if (!thirdPlace || bracketRounds.length < 2) return bracketRounds;
+    return [
+      ...bracketRounds.slice(0, -1),
+      thirdPlace,
+      bracketRounds[bracketRounds.length - 1],
+    ];
+  }, [bracketRounds, thirdPlace]);
+
+  const thirdPlaceColIdx = useMemo(() =>
+    thirdPlace ? allBracketRounds.findIndex(r => r.round.id === thirdPlace.round.id) : -1,
+    [allBracketRounds, thirdPlace],
+  );
+
   const activeBracketColIdx = useMemo(() => {
-    const idx = bracketRounds.findIndex(r => r.round.id === activeRoundId);
-    return idx >= 0 ? idx : bracketRounds.length - 1;
-  }, [bracketRounds, activeRoundId]);
+    const idx = allBracketRounds.findIndex(r => r.round.id === activeRoundId);
+    return idx >= 0 ? idx : allBracketRounds.length - 1;
+  }, [allBracketRounds, activeRoundId]);
 
   const handleMobileColChange = (idx: number) => {
-    const r = bracketRounds[idx];
+    const r = allBracketRounds[idx];
     if (r) setActiveRoundId(r.round.id);
   };
 
@@ -757,9 +822,10 @@ export function TournamentBracket({ rounds }: { rounds: RoundWithMatches[] }) {
             <ChampionPanel name={champion.name} flag={champion.flag} />
           ) : (
             <MobileBracket
-              bracketRounds={bracketRounds}
+              bracketRounds={allBracketRounds}
               activeColIdx={activeBracketColIdx}
               onChangeColIdx={handleMobileColChange}
+              thirdPlaceColIdx={thirdPlaceColIdx}
             />
           )}
         </div>
