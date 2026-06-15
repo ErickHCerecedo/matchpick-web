@@ -196,25 +196,23 @@ export default function TorneoAdminPage() {
   };
 
   // ── Calendar: load all rounds as soon as rounds data is available ────────
+  // Each round updates state independently so the calendar fills in progressively
+  // instead of waiting for every round to finish before showing anything.
 
   useEffect(() => {
     if (calendarLoaded || rounds.length === 0 || !slug) return;
     setCalendarLoaded(true);
-    Promise.all(
-      rounds
-        .filter((r) => matchesByRound[r.id] === undefined)
-        .map((r) =>
-          api.get<ApiResponse<CustomMatch[]>>(`/tournaments/${slug}/rounds/${r.id}/matches`)
-            .then((res) => ({ roundId: r.id, matches: res.data }))
-            .catch(() => ({ roundId: r.id, matches: [] as CustomMatch[] }))
-        )
-    ).then((results) => {
-      setMatchesByRound((prev) => {
-        const next = { ...prev };
-        results.forEach(({ roundId, matches }) => { next[roundId] = matches; });
-        return next;
+    rounds
+      .filter((r) => matchesByRound[r.id] === undefined)
+      .forEach((r) => {
+        api.get<ApiResponse<CustomMatch[]>>(`/tournaments/${slug}/rounds/${r.id}/matches`)
+          .then((res) => {
+            setMatchesByRound((prev) => ({ ...prev, [r.id]: res.data }));
+          })
+          .catch(() => {
+            setMatchesByRound((prev) => ({ ...prev, [r.id]: [] }));
+          });
       });
-    });
   }, [calendarLoaded, rounds, slug]);
 
   // Tag each match with its round info and build date groups
@@ -234,12 +232,16 @@ export default function TorneoAdminPage() {
 
   const adminSortedDateKeys = useMemo(() => [...adminDateGroups.keys()], [adminDateGroups]);
 
-  // Init active date to today or nearest upcoming day, falling back to the last date
+  // Auto-position to today or the nearest upcoming day.
+  // Re-evaluates each time new rounds load so that if the initial data only had
+  // past dates, we jump to a future date as soon as one becomes available.
+  // Once we land on today or a future date we lock in (don't disturb manual nav).
   useEffect(() => {
     if (adminSortedDateKeys.length === 0) return;
     setAdminDateKey((prev) => {
-      if (prev && adminDateGroups.has(prev)) return prev;
       const today = todayKey();
+      // Lock in only when we're already on today or a future date
+      if (prev && adminDateGroups.has(prev) && prev >= today) return prev;
       const upcoming = adminSortedDateKeys.find((k) => k >= today);
       return upcoming ?? adminSortedDateKeys[adminSortedDateKeys.length - 1];
     });
