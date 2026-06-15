@@ -304,11 +304,27 @@ function MobileBracket({
   const gapM     = activeColIdx === 0 ? COL_GAP_M : COL_GAP_M_COMPACT;
   const colXMDyn = (rIdx: number) => rIdx * (COL_W_M + gapM);
 
-  const cols   = bracketRounds.length;
-  // Fixed to first-round height so all rounds share the same coordinate space
-  // and matchTop(rIdx, sIdx) positions each card at its correct bracket slot.
-  const totalH = firstCount * SLOT_H + 2 * PAD_Y;
+  const cols        = bracketRounds.length;
+  const activeCount = bracketRounds[activeColIdx]?.matches.length ?? firstCount;
+  // Height adapts to the active column so later rounds don't leave empty space.
+  const totalH = activeCount * SLOT_H + 2 * PAD_Y;
   const totalW = cols * COL_W_M + (cols - 1) * gapM;
+
+  // Normalize card top position relative to activeColIdx.
+  // Active column (rel=0)  → compact matchTop(0,…) — no empty gaps.
+  // Later columns (rel>0)  → natural bracket spacing (matchTop(rel,…)).
+  // Previous columns (rel<0) → compress proportionally into the active column's space.
+  const cardTop = (rIdx: number, sIdx: number): number => {
+    const rel = rIdx - activeColIdx;
+    if (rel >= 0) return matchTop(rel, sIdx);
+    const inv = 1 << (-rel);
+    const parentSIdx = Math.floor(sIdx / inv);
+    const offset = (sIdx % inv) - (inv - 1) / 2;
+    return matchTop(0, parentSIdx) + Math.round(offset * SLOT_H / inv);
+  };
+
+  const cardCenterY = (rIdx: number, sIdx: number): number =>
+    cardTop(rIdx, sIdx) + CARD_HEADER_H + Math.floor((CARD_H - CARD_HEADER_H) / 2);
 
   const offsetX = PEEK_PAD - colXMDyn(activeColIdx);
 
@@ -342,11 +358,16 @@ function MobileBracket({
       onTouchEnd={onTouchEnd}
       onTouchCancel={onTouchCancel}
     >
+      {/* Canvas pans horizontally (x) and compresses vertically (height) as rounds advance */}
       <motion.div
-        className="relative"
-        animate={{ x: offsetX }}
-        transition={{ type: 'spring', stiffness: 280, damping: 32 }}
-        style={{ width: totalW, height: totalH }}
+        className="relative overflow-hidden"
+        animate={{ x: offsetX, height: totalH }}
+        initial={false}
+        transition={{
+          x:      { type: 'spring', stiffness: 280, damping: 32 },
+          height: { type: 'spring', stiffness: 160, damping: 26 },
+        }}
+        style={{ width: totalW }}
       >
         <ConnectorLines
           bracketRounds={bracketRounds}
@@ -356,7 +377,7 @@ function MobileBracket({
           getColX={colXMDyn}
           colWidth={COL_W_M}
           colGap={gapM}
-          getMatchCenterY={matchCenterY}
+          getMatchCenterY={cardCenterY}
         />
 
         {bracketRounds.map((r, rIdx) =>
@@ -364,7 +385,12 @@ function MobileBracket({
             <div
               key={match.id}
               className="absolute"
-              style={{ left: colXMDyn(rIdx), top: matchTop(rIdx, sIdx), transition: 'left 0.3s ease-out' }}
+              style={{
+                left: colXMDyn(rIdx),
+                top: cardTop(rIdx, sIdx),
+                // Springy ease for vertical compression; linear ease-out for horizontal gap change
+                transition: 'top 0.5s cubic-bezier(0.34, 1.2, 0.64, 1), left 0.3s ease-out',
+              }}
             >
               <TreeCard match={match} active={rIdx === activeColIdx} colW={COL_W_M} />
             </div>
