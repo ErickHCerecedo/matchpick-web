@@ -79,7 +79,7 @@ function TeamRow({
       <div className={cn('shrink-0 rounded-[3px] overflow-hidden', lost && 'opacity-35')}>
         {flag
           ? <img src={flag} alt="" className="w-[26px] h-[17px] object-cover" />
-          : <div className="w-[26px] h-[17px] bg-slate-800 rounded-[3px]" />
+          : <FlagPlaceholder size="sm" />
         }
       </div>
       <span className={cn(
