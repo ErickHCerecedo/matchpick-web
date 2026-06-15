@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { cn, formatMatchDateParts } from '@/lib/utils';
 import type { RoundWithMatches, Match } from '@/types';
-import { Trophy, GitBranch, CheckCircle2, ChevronRight } from 'lucide-react';
+import { Trophy, GitBranch, CheckCircle2, ChevronRight, Calendar, MapPin } from 'lucide-react';
 import { FlagPlaceholder } from '@/components/ui/flag-placeholder';
 
 // ── Metadata ───────────────────────────────────────────────────────────────────
@@ -27,7 +27,7 @@ const CARD_BG =
 // ── Bracket geometry ───────────────────────────────────────────────────────────
 
 const SLOT_H  = 132;
-const CARD_H  = 104;
+const CARD_H  = 120; // 104 base + 16 for venue footer row
 const COL_W   = 200;
 const COL_GAP = 48;
 const PAD_X   = 20;
@@ -38,17 +38,18 @@ const COL_GAP_M          = 36;
 const COL_GAP_M_COMPACT  = 16;
 const PEEK_PAD           = 10;
 
-// Height of the date/status header row inside TreeCard — connector lines
-// target the divider between the two team rows, not the full-card midpoint.
+// Header height (date/time + status badge row) and footer height (venue row).
+// Connector lines target the midpoint of the team-rows area between them.
 const CARD_HEADER_H = 22;
+const CARD_FOOTER_H = 16;
 
 function matchTop(roundIdx: number, slotIdx: number): number {
   const pow2 = 1 << roundIdx;
   return PAD_Y + slotIdx * pow2 * SLOT_H + ((pow2 - 1) * SLOT_H) / 2 + (SLOT_H - CARD_H) / 2;
 }
 function matchCenterY(roundIdx: number, slotIdx: number): number {
-  // Aim at the divider between the two team rows (visual center of content area)
-  return matchTop(roundIdx, slotIdx) + CARD_HEADER_H + Math.floor((CARD_H - CARD_HEADER_H) / 2);
+  // Target the divider between the two team rows, excluding header and venue footer.
+  return matchTop(roundIdx, slotIdx) + CARD_HEADER_H + Math.floor((CARD_H - CARD_HEADER_H - CARD_FOOTER_H) / 2);
 }
 function colX(rIdx: number): number {
   return PAD_X + rIdx * (COL_W + COL_GAP);
@@ -109,13 +110,25 @@ function TeamRow({
 
 // ── TreeCard ───────────────────────────────────────────────────────────────────
 
+const TREE_STATUS_LABELS: Record<Match['status'], string> = {
+  scheduled:   'Programado',
+  in_progress: 'Jugando',
+  finished:    'Finalizado',
+  cancelled:   'Cancelado',
+};
+
 function TreeCard({ match, active, colW = COL_W }: { match: Match; active: boolean; colW?: number }) {
   const fin       = match.status === 'finished';
   const live      = match.status === 'in_progress';
   const homeWon   = fin && match.result?.winner === 'home';
   const awayWon   = fin && match.result?.winner === 'away';
   const hasResult = (fin || live) && !!match.result;
-  const { date }  = formatMatchDateParts(match.scheduled_at);
+  const { date, time } = formatMatchDateParts(match.scheduled_at);
+
+  const statusColor = live ? 'text-red-400' : fin ? 'text-slate-600' : 'text-slate-500';
+  const dotColor    = live ? 'bg-red-400 animate-pulse' : fin ? 'bg-slate-600' : 'bg-emerald-500';
+  const badgeBorder = live ? 'border-red-500/40' : fin ? 'border-slate-700/60' : 'border-slate-700/40';
+  const calColor    = live ? 'text-red-400' : fin ? 'text-slate-600' : 'text-emerald-500';
 
   return (
     <div
@@ -138,17 +151,27 @@ function TreeCard({ match, active, colW = COL_W }: { match: Match; active: boole
 
       <div className="relative z-10 flex flex-col h-full">
 
-        {/* Header */}
-        <div className="flex items-center justify-between gap-1 px-2.5 shrink-0 h-[22px] border-b border-slate-800/60">
-          <div className="flex items-center gap-1.5 min-w-0">
-            <span className={cn(
-              'w-1.5 h-1.5 rounded-full shrink-0',
-              live ? 'bg-red-400 animate-pulse' : fin ? 'bg-slate-600' : 'bg-emerald-500',
-            )} />
-            <span className="text-[9px] text-slate-500 truncate font-medium">{date}</span>
+        {/* Header — date, time, status badge */}
+        <div className="flex items-center justify-between gap-1 px-2 shrink-0 h-[22px] border-b border-slate-800/60">
+          <div className="flex items-center gap-1 min-w-0">
+            <Calendar className={cn('h-2.5 w-2.5 shrink-0', calColor)} />
+            <span className="text-[9px] text-slate-500 font-medium whitespace-nowrap">{date}</span>
+            {time && (
+              <>
+                <span className="text-[9px] text-slate-700">·</span>
+                <span className="text-[9px] text-slate-600 whitespace-nowrap">{time}</span>
+              </>
+            )}
           </div>
-          {live && <span className="text-[8px] font-black text-red-400 shrink-0 tracking-widest">LIVE</span>}
-          {fin  && <span className="text-[8px] font-bold text-slate-700 shrink-0">FIN</span>}
+          <div className={cn(
+            'flex items-center gap-0.5 shrink-0 rounded border px-1 py-px',
+            badgeBorder,
+          )}>
+            <span className={cn('w-1 h-1 rounded-full shrink-0', dotColor)} />
+            <span className={cn('text-[8px] font-semibold leading-none', statusColor)}>
+              {TREE_STATUS_LABELS[match.status]}
+            </span>
+          </div>
         </div>
 
         {/* Home row */}
@@ -167,6 +190,16 @@ function TreeCard({ match, active, colW = COL_W }: { match: Match; active: boole
           score={match.result?.away_score} won={awayWon} lost={homeWon}
           live={live} hasResult={hasResult}
         />
+
+        {/* Footer — venue (always present for fixed CARD_H geometry; content conditional) */}
+        <div className="flex items-center gap-1 px-2 shrink-0 border-t border-slate-800/40" style={{ height: CARD_FOOTER_H }}>
+          {match.venue ? (
+            <>
+              <MapPin className="h-2 w-2 shrink-0 text-slate-700" />
+              <span className="text-[8px] text-slate-600 truncate">{match.venue}</span>
+            </>
+          ) : null}
+        </div>
 
       </div>
     </div>
@@ -324,7 +357,7 @@ function MobileBracket({
   };
 
   const cardCenterY = (rIdx: number, sIdx: number): number =>
-    cardTop(rIdx, sIdx) + CARD_HEADER_H + Math.floor((CARD_H - CARD_HEADER_H) / 2);
+    cardTop(rIdx, sIdx) + CARD_HEADER_H + Math.floor((CARD_H - CARD_HEADER_H - CARD_FOOTER_H) / 2);
 
   const offsetX = PEEK_PAD - colXMDyn(activeColIdx);
 
