@@ -38,12 +38,17 @@ const COL_GAP_M          = 36;
 const COL_GAP_M_COMPACT  = 16;
 const PEEK_PAD           = 10;
 
+// Height of the date/status header row inside TreeCard — connector lines
+// target the divider between the two team rows, not the full-card midpoint.
+const CARD_HEADER_H = 22;
+
 function matchTop(roundIdx: number, slotIdx: number): number {
   const pow2 = 1 << roundIdx;
   return PAD_Y + slotIdx * pow2 * SLOT_H + ((pow2 - 1) * SLOT_H) / 2 + (SLOT_H - CARD_H) / 2;
 }
 function matchCenterY(roundIdx: number, slotIdx: number): number {
-  return matchTop(roundIdx, slotIdx) + CARD_H / 2;
+  // Aim at the divider between the two team rows (visual center of content area)
+  return matchTop(roundIdx, slotIdx) + CARD_HEADER_H + Math.floor((CARD_H - CARD_HEADER_H) / 2);
 }
 function colX(rIdx: number): number {
   return PAD_X + rIdx * (COL_W + COL_GAP);
@@ -130,14 +135,6 @@ function TreeCard({ match, active, colW = COL_W }: { match: Match; active: boole
         style={{ opacity: 0.06 }}
       />
       <div className="absolute inset-0 z-0 bg-slate-950/91" />
-
-      {/* Top accent line */}
-      <div className={cn(
-        'absolute top-0 inset-x-0 h-[2px] z-20',
-        live   ? 'bg-red-500'        :
-        active ? 'bg-emerald-600/60' :
-                 'bg-transparent',
-      )} />
 
       <div className="relative z-10 flex flex-col h-full">
 
@@ -263,8 +260,8 @@ function DesktopBracket({
             <button
               key={match.id}
               onClick={() => onSelectRound(r.round.id)}
-              className="absolute focus:outline-none hover:z-10 rounded-xl transition-transform duration-150 hover:scale-[1.03]"
-              style={{ left: colX(rIdx), top: matchTop(rIdx, sIdx) }}
+              className="absolute p-0 focus:outline-none hover:z-10"
+              style={{ left: colX(rIdx), top: matchTop(rIdx, sIdx), width: COL_W, height: CARD_H }}
             >
               <TreeCard match={match} active={r.round.id === activeRoundId} />
             </button>
