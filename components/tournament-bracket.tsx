@@ -250,6 +250,7 @@ function ConnectorLines({
   getColX = colX, colWidth = COL_W, colGap = COL_GAP,
   getMatchCenterY: getY = matchCenterY,
   skipConnectorsAtIdx,
+  flip = false,
 }: {
   bracketRounds: RoundWithMatches[];
   totalW: number;
@@ -260,15 +261,17 @@ function ConnectorLines({
   colGap?: number;
   getMatchCenterY?: (rIdx: number, sIdx: number) => number;
   skipConnectorsAtIdx?: Set<number>;
+  /** Mirrors the connector direction for a right-to-left (right-half) bracket flow. */
+  flip?: boolean;
 }) {
   return (
     <svg className="absolute inset-0 pointer-events-none" width={totalW} height={totalH}>
       {bracketRounds.slice(0, -1).map((_, rIdx) => {
         if (skipConnectorsAtIdx?.has(rIdx)) return null;
         const nextCount = bracketRounds[rIdx + 1]?.matches.length ?? 0;
-        const fromX = getColX(rIdx) + colWidth;
-        const midX  = fromX + colGap / 2;
-        const toX   = getColX(rIdx + 1);
+        const fromX = flip ? getColX(rIdx) : getColX(rIdx) + colWidth;
+        const midX  = flip ? fromX - colGap / 2 : fromX + colGap / 2;
+        const toX   = flip ? getColX(rIdx + 1) + colWidth : getColX(rIdx + 1);
         const visible = highlightRoundIdx === undefined
           || rIdx === highlightRoundIdx
           || rIdx + 1 === highlightRoundIdx;
@@ -305,96 +308,138 @@ function DesktopBracket({
   activeRoundId: number | null;
   onSelectRound: (id: number) => void;
 }) {
-  const firstCount = bracketRounds[0]?.matches.length ?? 0;
-  if (!firstCount) return null;
+  const finalRound = bracketRounds[bracketRounds.length - 1];
+  const finalMatch = finalRound?.matches[0];
+  if (!finalMatch) return null;
 
   const hasTP = !!(thirdPlace && thirdPlace.matches.length > 0);
 
-  // Insert thirdPlace between the last two rounds (SF and Final) for display.
-  // ConnectorLines still uses bracketRounds (without 3P) to keep the bracket tree
-  // structure intact; the SF→Final connector is skipped to avoid crossing the 3P card.
-  const allCols: Array<{ round: RoundWithMatches; isThirdPlace: boolean }> = hasTP
-    ? [
-        ...bracketRounds.slice(0, -1).map(r => ({ round: r, isThirdPlace: false })),
-        { round: thirdPlace!, isThirdPlace: true },
-        { round: bracketRounds[bracketRounds.length - 1], isThirdPlace: false },
-      ]
-    : bracketRounds.map(r => ({ round: r, isThirdPlace: false }));
+  // Split every round before the Final into a left half and a right half (by
+  // bracket_slot, which is already nested so the first half of each round's
+  // slots traces back to the same sub-bracket). Each half is then laid out as
+  // its own independent mini-bracket converging on the centered Final, so the
+  // connector lines point inward from both edges of the screen toward it.
+  const preFinalRounds = bracketRounds.slice(0, -1);
+  const numHalfRounds  = preFinalRounds.length;
 
-  const thirdPlaceColIdx = hasTP ? allCols.findIndex(c => c.isThirdPlace) : -1;
+  const leftRounds: RoundWithMatches[] = preFinalRounds.map(r => ({
+    round: r.round,
+    matches: r.matches.slice(0, Math.ceil(r.matches.length / 2)),
+  }));
+  const rightRounds: RoundWithMatches[] = preFinalRounds.map(r => ({
+    round: r.round,
+    matches: r.matches.slice(Math.ceil(r.matches.length / 2)),
+  }));
 
-  // With 3P inserted, the Final column shifts one position right.
-  // Both 3P and Final share the same Y as the original Final (matchTop at bracketRounds.length-1).
-  const originalFinalIdx = bracketRounds.length - 1;
-  const getCardTop = (colIdx: number, sIdx: number) => {
-    if (hasTP && colIdx > thirdPlaceColIdx) return matchTop(thirdPlaceColIdx, sIdx);
-    return matchTop(colIdx, sIdx);
-  };
+  const halfFirstCount = leftRounds[0]?.matches.length ?? 0;
 
-  const numCols = allCols.length;
-  const totalH  = firstCount * SLOT_H + 2 * PAD_Y;
+  const colXLeft  = (rIdx: number) => PAD_X + rIdx * (COL_W + COL_GAP);
+  const colXRight = (rIdx: number) => PAD_X + (2 * numHalfRounds - rIdx) * (COL_W + COL_GAP);
+  const colXFinal = PAD_X + numHalfRounds * (COL_W + COL_GAP);
+
+  const bracketH = halfFirstCount > 0
+    ? halfFirstCount * SLOT_H + 2 * PAD_Y
+    : CARD_H + 2 * PAD_Y;
+  const finalCenterY = bracketH / 2;
+  const finalTop     = finalCenterY - CARD_H / 2;
+
+  const tpGap  = 28;
+  const totalH = hasTP ? bracketH + tpGap + CARD_H + PAD_Y : bracketH;
+
+  const numCols = 2 * numHalfRounds + 1;
   const totalW  = numCols * COL_W + (numCols - 1) * COL_GAP + 2 * PAD_X;
 
-  // Skip the SF→Final connector so no line crosses through the 3P column.
-  const skipConnectors = hasTP ? new Set([originalFinalIdx - 1]) : undefined;
+  const renderLabel = (round: RoundWithMatches['round'], x: number, key: string, amber = false) => {
+    const Icon = ROUND_ICONS[round.type] ?? Trophy;
+    const abbr = ROUND_META[round.type]?.abbr ?? round.name;
+    return (
+      <div key={key} className="absolute flex items-center justify-center gap-1" style={{ left: x, width: COL_W, top: 6 }}>
+        <Icon className={cn('h-2.5 w-2.5 shrink-0', amber ? 'text-amber-700/60' : 'text-slate-600')} />
+        <span className={cn('text-[9px] font-semibold uppercase tracking-widest', amber ? 'text-amber-700/60' : 'text-slate-600')}>
+          {abbr}
+        </span>
+      </div>
+    );
+  };
+
+  const renderCard = (match: Match, x: number, y: number, roundId: number, isThirdPlace = false) => (
+    <button
+      key={match.id}
+      onClick={() => onSelectRound(roundId)}
+      className="absolute p-0 focus:outline-none hover:z-10"
+      style={{ left: x, top: y, width: COL_W, height: CARD_H }}
+    >
+      <TreeCard match={match} active={roundId === activeRoundId} isThirdPlace={isThirdPlace} />
+    </button>
+  );
 
   return (
     <div className="overflow-x-auto scrollbar-none">
       <div className="relative" style={{ width: totalW, height: totalH }}>
 
-        {/* Column labels */}
-        {allCols.map(({ round: r, isThirdPlace: is3P }, colIdx) => {
-          const Icon = ROUND_ICONS[r.round.type] ?? Trophy;
-          const abbr = ROUND_META[r.round.type]?.abbr ?? r.round.name;
-          return (
-            <div
-              key={`lbl-${r.round.id}`}
-              className="absolute flex items-center justify-center gap-1"
-              style={{ left: colX(colIdx), width: COL_W, top: 6 }}
-            >
-              <Icon className={cn('h-2.5 w-2.5 shrink-0', is3P ? 'text-amber-700/60' : 'text-slate-600')} />
-              <span className={cn(
-                'text-[9px] font-semibold uppercase tracking-widest',
-                is3P ? 'text-amber-700/60' : 'text-slate-600',
-              )}>
-                {abbr}
-              </span>
-            </div>
-          );
-        })}
-
-        {/* Vertical separator before the standalone columns */}
-        {hasTP && (
-          <div
-            className="absolute top-6 bottom-6 w-px bg-slate-800/60"
-            style={{ left: colX(thirdPlaceColIdx) - COL_GAP / 2 }}
-          />
-        )}
-
-        {/* Connector lines (original bracket rounds only, SF→Final skipped) */}
-        <ConnectorLines
-          bracketRounds={bracketRounds}
-          totalW={totalW}
-          totalH={totalH}
-          skipConnectorsAtIdx={skipConnectors}
+        {/* Soft glow anchoring the Final at the visual center */}
+        <div
+          className="absolute rounded-full bg-emerald-500/5 blur-2xl pointer-events-none"
+          style={{ left: colXFinal - 40, top: finalTop - 40, width: COL_W + 80, height: CARD_H + 80 }}
         />
 
-        {/* Cards */}
-        {allCols.map(({ round: r, isThirdPlace: is3P }, colIdx) =>
-          r.matches.map((match, sIdx) => (
-            <button
-              key={match.id}
-              onClick={() => onSelectRound(r.round.id)}
-              className="absolute p-0 focus:outline-none hover:z-10"
-              style={{ left: colX(colIdx), top: getCardTop(colIdx, sIdx), width: COL_W, height: CARD_H }}
-            >
-              <TreeCard
-                match={match}
-                active={r.round.id === activeRoundId}
-                isThirdPlace={is3P}
-              />
-            </button>
-          ))
+        {/* Column labels — left half, right half (mirrored), Final */}
+        {preFinalRounds.map((r, i) => renderLabel(r.round, colXLeft(i), `lbl-l-${r.round.id}`))}
+        {preFinalRounds.map((r, i) => renderLabel(r.round, colXRight(i), `lbl-r-${r.round.id}`))}
+        {renderLabel(finalRound.round, colXFinal, 'lbl-final')}
+
+        {/* Connector lines — left half flows rightward, right half flows leftward */}
+        {numHalfRounds > 0 && (
+          <>
+            <ConnectorLines bracketRounds={leftRounds} totalW={totalW} totalH={totalH} />
+            <ConnectorLines bracketRounds={rightRounds} totalW={totalW} totalH={totalH} getColX={colXRight} flip />
+          </>
+        )}
+
+        {/* Manual convergence connectors: last semifinal of each half → centered Final */}
+        {numHalfRounds > 0 && (() => {
+          const lastIdx     = numHalfRounds - 1;
+          const leftMatch   = leftRounds[lastIdx]?.matches[0];
+          const rightMatch  = rightRounds[lastIdx]?.matches[0];
+          if (!leftMatch || !rightMatch) return null;
+
+          const leftFromX  = colXLeft(lastIdx) + COL_W;
+          const rightFromX = colXRight(lastIdx);
+          const fromY      = matchCenterY(lastIdx, 0);
+          const finalLeftX  = colXFinal;
+          const finalRightX = colXFinal + COL_W;
+          const midL = leftFromX + (finalLeftX - leftFromX) / 2;
+          const midR = rightFromX + (finalRightX - rightFromX) / 2;
+
+          return (
+            <svg className="absolute inset-0 pointer-events-none" width={totalW} height={totalH}>
+              <path d={`M ${leftFromX} ${fromY} H ${midL} V ${finalCenterY} H ${finalLeftX}`} stroke="#1e293b" strokeWidth={1.5} fill="none" strokeLinecap="round" />
+              <path d={`M ${rightFromX} ${fromY} H ${midR} V ${finalCenterY} H ${finalRightX}`} stroke="#1e293b" strokeWidth={1.5} fill="none" strokeLinecap="round" />
+              <circle cx={finalLeftX} cy={finalCenterY} r={2.5} fill="#1e293b" />
+              <circle cx={finalRightX} cy={finalCenterY} r={2.5} fill="#1e293b" />
+            </svg>
+          );
+        })()}
+
+        {/* Cards — left half */}
+        {leftRounds.map((r, rIdx) => r.matches.map((match, sIdx) =>
+          renderCard(match, colXLeft(rIdx), matchTop(rIdx, sIdx), r.round.id)
+        ))}
+
+        {/* Cards — right half */}
+        {rightRounds.map((r, rIdx) => r.matches.map((match, sIdx) =>
+          renderCard(match, colXRight(rIdx), matchTop(rIdx, sIdx), r.round.id)
+        ))}
+
+        {/* Final card, centered */}
+        {renderCard(finalMatch, colXFinal, finalTop, finalRound.round.id)}
+
+        {/* Third place — kept below the Final, detached from the converging flow */}
+        {hasTP && thirdPlace!.matches[0] && (
+          <>
+            {renderLabel(thirdPlace!.round, colXFinal, 'lbl-tp', true)}
+            {renderCard(thirdPlace!.matches[0], colXFinal, bracketH + tpGap, thirdPlace!.round.id, true)}
+          </>
         )}
       </div>
     </div>
