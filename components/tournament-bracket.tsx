@@ -312,6 +312,21 @@ function DesktopBracket({
   const finalMatch = finalRound?.matches[0];
   if (!finalMatch) return null;
 
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const dragOrigin = useRef<{ x: number; scrollLeft: number } | null>(null);
+  const [dragging, setDragging] = useState(false);
+
+  const onMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!scrollRef.current) return;
+    dragOrigin.current = { x: e.pageX, scrollLeft: scrollRef.current.scrollLeft };
+    setDragging(true);
+  };
+  const onMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!dragOrigin.current || !scrollRef.current) return;
+    scrollRef.current.scrollLeft = dragOrigin.current.scrollLeft - (e.pageX - dragOrigin.current.x);
+  };
+  const stopDrag = () => { dragOrigin.current = null; setDragging(false); };
+
   const hasTP = !!(thirdPlace && thirdPlace.matches.length > 0);
 
   // Split every round before the Final into a left half and a right half (by
@@ -374,7 +389,17 @@ function DesktopBracket({
   );
 
   return (
-    <div className="overflow-x-auto scrollbar-none">
+    <div
+      ref={scrollRef}
+      className={cn(
+        'overflow-x-auto scrollbar-none',
+        dragging ? 'cursor-grabbing select-none [&_*]:!cursor-grabbing' : 'cursor-grab',
+      )}
+      onMouseDown={onMouseDown}
+      onMouseMove={onMouseMove}
+      onMouseUp={stopDrag}
+      onMouseLeave={stopDrag}
+    >
       <div className="relative" style={{ width: totalW, height: totalH }}>
 
         {/* Soft glow anchoring the Final at the visual center */}
