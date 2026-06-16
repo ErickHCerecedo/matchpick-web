@@ -66,6 +66,19 @@ function colX(rIdx: number): number {
   return PAD_X + rIdx * (COL_W + COL_GAP);
 }
 
+// ── Desktop split-bracket geometry — compact to fit on screen without scrolling ─
+
+const D_COL_W     = 148;
+const D_CARD_H    = 56;
+const D_SLOT_H    = 80;
+const D_COL_GAP   = 20;
+const D_PAD_X     = 16;
+const D_PAD_Y     = 28;
+const D_CHAMP_H   = 88;
+const D_CHAMP_GAP = 10;
+// Final card is slightly wider than regular cards, using part of the side gaps.
+const D_FINAL_W   = D_COL_W + D_COL_GAP;
+
 // ── TeamRow ────────────────────────────────────────────────────────────────────
 
 function TeamRow({
@@ -259,6 +272,142 @@ function TreeCard({
   );
 }
 
+// ── Desktop bracket sub-components ────────────────────────────────────────────
+
+function DesktopTeamRow({
+  team, placeholder, score, won, lost, live, hasResult,
+}: {
+  team: Match['home_team'];
+  placeholder: string | null;
+  score?: number;
+  won: boolean;
+  lost: boolean;
+  live: boolean;
+  hasResult: boolean;
+}) {
+  const name = team?.short_name ?? team?.name ?? placeholder;
+  const flag = team?.flag_url;
+  return (
+    <div className={cn('flex items-center gap-1.5 px-2 flex-1 min-h-0', won && 'bg-emerald-950/40')}>
+      <div className={cn('shrink-0 rounded-[2px] overflow-hidden', lost && 'opacity-30')}>
+        {flag
+          ? <img src={flag} alt="" className="w-5 h-[13px] object-cover" />
+          : <FlagPlaceholder size="xs" />
+        }
+      </div>
+      <span className={cn(
+        'flex-1 text-[10px] font-semibold truncate leading-none',
+        !name ? 'text-slate-600 italic' :
+        won   ? 'text-white' : lost ? 'text-slate-600' : live ? 'text-slate-200' : 'text-slate-300',
+      )}>
+        {name ?? '···'}
+      </span>
+      {won && <div className="w-px h-3 rounded-full bg-emerald-400 shrink-0" />}
+      <span className={cn(
+        'font-mono tabular-nums shrink-0 font-bold leading-none',
+        !hasResult ? 'text-slate-800 text-[9px]' :
+        won        ? 'text-emerald-400 text-[11px]' :
+        lost       ? 'text-slate-600 text-[11px]'  :
+                     'text-slate-300 text-[11px]',
+      )}>
+        {hasResult ? (score ?? '?') : '–'}
+      </span>
+    </div>
+  );
+}
+
+function DesktopMatchCard({
+  match, roundId, active, isThirdPlace = false, dragging, onSelect, onHover,
+}: {
+  match: Match; roundId: number; active: boolean; isThirdPlace?: boolean;
+  dragging: boolean; onSelect: (id: number) => void; onHover: (m: Match | null) => void;
+}) {
+  const [hovered, setHovered] = useState(false);
+  const fin      = match.status === 'finished';
+  const live     = match.status === 'in_progress';
+  const homeWon  = fin && match.result?.winner === 'home';
+  const awayWon  = fin && match.result?.winner === 'away';
+  const hasResult = (fin || live) && !!match.result;
+  const handleEnter = () => { if (!dragging) { setHovered(true); onHover(match); } };
+  const handleLeave = () => { setHovered(false); onHover(null); };
+  return (
+    <button
+      style={{ width: D_COL_W, height: D_CARD_H }}
+      className={cn(
+        'flex flex-col overflow-hidden rounded-lg border transition-all duration-150 focus:outline-none',
+        live         ? 'border-red-500/50 shadow-md shadow-red-950/30'           :
+        isThirdPlace ? (active ? 'border-amber-600/50' : 'border-amber-800/40') :
+        hovered      ? 'border-slate-600/60 shadow-md shadow-slate-900/50'       :
+        active       ? 'border-emerald-500/30'                                   : 'border-slate-800/70',
+      )}
+      onClick={() => onSelect(roundId)}
+      onMouseEnter={handleEnter}
+      onMouseLeave={handleLeave}
+    >
+      <DesktopTeamRow team={match.home_team} placeholder={match.home_placeholder} score={match.result?.home_score} won={homeWon} lost={awayWon} live={live} hasResult={hasResult} />
+      <div className="h-px bg-slate-800/60 mx-2 shrink-0" />
+      <DesktopTeamRow team={match.away_team} placeholder={match.away_placeholder} score={match.result?.away_score} won={awayWon} lost={homeWon} live={live} hasResult={hasResult} />
+    </button>
+  );
+}
+
+function DesktopFinalCard({
+  match, roundId, active, dragging, onSelect, onHover,
+}: {
+  match: Match; roundId: number; active: boolean;
+  dragging: boolean; onSelect: (id: number) => void; onHover: (m: Match | null) => void;
+}) {
+  const fin      = match.status === 'finished';
+  const live     = match.status === 'in_progress';
+  const homeWon  = fin && match.result?.winner === 'home';
+  const awayWon  = fin && match.result?.winner === 'away';
+  const hasResult = (fin || live) && !!match.result;
+  return (
+    <button
+      style={{ width: D_FINAL_W, height: D_CARD_H }}
+      className={cn(
+        'flex flex-col overflow-hidden rounded-xl border transition-all duration-150 focus:outline-none',
+        live   ? 'border-red-500/60 shadow-lg shadow-red-950/30'           :
+        active ? 'border-amber-500/50 shadow-md shadow-amber-950/30'       :
+                 'border-amber-800/40',
+      )}
+      onClick={() => onSelect(roundId)}
+      onMouseEnter={() => !dragging && onHover(match)}
+      onMouseLeave={() => onHover(null)}
+    >
+      <DesktopTeamRow team={match.home_team} placeholder={match.home_placeholder} score={match.result?.home_score} won={homeWon} lost={awayWon} live={live} hasResult={hasResult} />
+      <div className="h-px bg-amber-900/25 mx-2.5 shrink-0" />
+      <DesktopTeamRow team={match.away_team} placeholder={match.away_placeholder} score={match.result?.away_score} won={awayWon} lost={homeWon} live={live} hasResult={hasResult} />
+    </button>
+  );
+}
+
+function ChampionBanner({ match }: { match: Match }) {
+  const fin      = match.status === 'finished';
+  const homeWon  = fin && match.result?.winner === 'home';
+  const awayWon  = fin && match.result?.winner === 'away';
+  const winner   = homeWon ? match.home_team : awayWon ? match.away_team : null;
+  const name     = winner?.short_name ?? winner?.name ??
+    (homeWon ? match.home_placeholder : awayWon ? match.away_placeholder : null);
+  if (!name) return null;
+  return (
+    <div
+      className="flex flex-col items-center justify-center gap-1.5 rounded-xl border border-amber-500/20 bg-amber-950/15"
+      style={{ width: D_FINAL_W, height: D_CHAMP_H }}
+    >
+      <div className="flex items-center gap-1">
+        <Trophy className="h-3.5 w-3.5 text-amber-400" />
+        <span className="text-[7px] font-black uppercase tracking-[0.2em] text-amber-500/70">Campeón</span>
+      </div>
+      {winner?.flag_url
+        ? <img src={winner.flag_url} alt="" className="w-8 h-[21px] object-cover rounded-[2px] shadow-sm" />
+        : <FlagPlaceholder size="md" />
+      }
+      <span className="text-[12px] font-bold text-amber-200 text-center leading-tight px-2">{name}</span>
+    </div>
+  );
+}
+
 // ── Connector SVG ──────────────────────────────────────────────────────────────
 
 function ConnectorLines({
@@ -324,18 +473,17 @@ function DesktopBracket({
   activeRoundId: number | null;
   onSelectRound: (id: number) => void;
 }) {
-  const finalRound = bracketRounds[bracketRounds.length - 1];
-  const finalMatch = finalRound?.matches[0];
-  if (!finalMatch) return null;
-
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const dragOrigin = useRef<{ x: number; scrollLeft: number } | null>(null);
-  const [dragging, setDragging] = useState(false);
+  // All hooks must come before any early return
+  const scrollRef    = useRef<HTMLDivElement>(null);
+  const dragOrigin   = useRef<{ x: number; scrollLeft: number } | null>(null);
+  const [dragging, setDragging]         = useState(false);
+  const [hoveredMatch, setHoveredMatch] = useState<Match | null>(null);
 
   const onMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!scrollRef.current) return;
     dragOrigin.current = { x: e.pageX, scrollLeft: scrollRef.current.scrollLeft };
     setDragging(true);
+    setHoveredMatch(null);
   };
   const onMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!dragOrigin.current || !scrollRef.current) return;
@@ -343,13 +491,14 @@ function DesktopBracket({
   };
   const stopDrag = () => { dragOrigin.current = null; setDragging(false); };
 
+  const finalRound = bracketRounds[bracketRounds.length - 1];
+  const finalMatch = finalRound?.matches[0];
+  if (!finalMatch) return null;
+
   const hasTP = !!(thirdPlace && thirdPlace.matches.length > 0);
 
-  // Split every round before the Final into a left half and a right half (by
-  // bracket_slot, which is already nested so the first half of each round's
-  // slots traces back to the same sub-bracket). Each half is then laid out as
-  // its own independent mini-bracket converging on the centered Final, so the
-  // connector lines point inward from both edges of the screen toward it.
+  // Split pre-final rounds into left/right halves — bracket_slot ordering ensures
+  // that the first half of each round's slots traces back to the same sub-bracket.
   const preFinalRounds = bracketRounds.slice(0, -1);
   const numHalfRounds  = preFinalRounds.length;
 
@@ -364,27 +513,46 @@ function DesktopBracket({
 
   const halfFirstCount = leftRounds[0]?.matches.length ?? 0;
 
-  const colXLeft  = (rIdx: number) => PAD_X + rIdx * (COL_W + COL_GAP);
-  const colXRight = (rIdx: number) => PAD_X + (2 * numHalfRounds - rIdx) * (COL_W + COL_GAP);
-  const colXFinal = PAD_X + numHalfRounds * (COL_W + COL_GAP);
+  // Desktop geometry helpers (use D_* constants, not the mobile-sized ones)
+  const dMatchTop = (rIdx: number, sIdx: number): number => {
+    const pow2 = 1 << rIdx;
+    return D_PAD_Y + sIdx * pow2 * D_SLOT_H + ((pow2 - 1) * D_SLOT_H) / 2 + (D_SLOT_H - D_CARD_H) / 2;
+  };
+  const dMatchCY = (rIdx: number, sIdx: number) => dMatchTop(rIdx, sIdx) + D_CARD_H / 2;
 
-  const bracketH = halfFirstCount > 0
-    ? halfFirstCount * SLOT_H + 2 * PAD_Y
-    : CARD_H + 2 * PAD_Y;
-  const finalCenterY = bracketH / 2;
-  const finalTop     = finalCenterY - CARD_H / 2;
+  const dColXLeft  = (rIdx: number) => D_PAD_X + rIdx * (D_COL_W + D_COL_GAP);
+  const dColXRight = (rIdx: number) => D_PAD_X + (2 * numHalfRounds - rIdx) * (D_COL_W + D_COL_GAP);
+  const dColXFinal = D_PAD_X + numHalfRounds * (D_COL_W + D_COL_GAP);
 
-  const tpGap  = 28;
-  const totalH = hasTP ? bracketH + tpGap + CARD_H + PAD_Y : bracketH;
+  // Champion detection
+  const fin        = finalMatch.status === 'finished';
+  const hasChampion = fin && !!finalMatch.result?.winner;
 
+  // Center visual block: optional champion badge + Final card, both centered together
+  const totalVisH  = hasChampion ? D_CHAMP_H + D_CHAMP_GAP + D_CARD_H : D_CARD_H;
+  const minBracketH = totalVisH + 2 * D_PAD_Y;
+  const bracketH = Math.max(
+    halfFirstCount > 0 ? halfFirstCount * D_SLOT_H + 2 * D_PAD_Y : minBracketH,
+    minBracketH,
+  );
+  const visTop       = bracketH / 2 - totalVisH / 2;
+  const champTop     = visTop;
+  const finalTop     = hasChampion ? visTop + D_CHAMP_H + D_CHAMP_GAP : visTop;
+  const finalCenterY = finalTop + D_CARD_H / 2;
+
+  // Final card positioned so it extends D_COL_GAP/2 into each side gap
+  const finalCardLeft = dColXFinal - D_COL_GAP / 2;
+
+  const tpGap  = 20;
+  const totalH = bracketH + (hasTP ? D_CARD_H + tpGap + D_PAD_Y : 0);
   const numCols = 2 * numHalfRounds + 1;
-  const totalW  = numCols * COL_W + (numCols - 1) * COL_GAP + 2 * PAD_X;
+  const totalW  = numCols * D_COL_W + (numCols - 1) * D_COL_GAP + 2 * D_PAD_X;
 
-  const renderLabel = (round: RoundWithMatches['round'], x: number, key: string, amber = false) => {
+  const renderLabel = (round: RoundWithMatches['round'], x: number, w: number, key: string, amber = false) => {
     const Icon = ROUND_ICONS[round.type] ?? Trophy;
     const abbr = ROUND_META[round.type]?.abbr ?? round.name;
     return (
-      <div key={key} className="absolute flex items-center justify-center gap-1" style={{ left: x, width: COL_W, top: 6 }}>
+      <div key={key} className="absolute flex items-center justify-center gap-1" style={{ left: x, width: w, top: 5 }}>
         <Icon className={cn('h-2.5 w-2.5 shrink-0', amber ? 'text-amber-700/60' : 'text-slate-600')} />
         <span className={cn('text-[9px] font-semibold uppercase tracking-widest', amber ? 'text-amber-700/60' : 'text-slate-600')}>
           {abbr}
@@ -393,94 +561,140 @@ function DesktopBracket({
     );
   };
 
-  const renderCard = (match: Match, x: number, y: number, roundId: number, isThirdPlace = false) => (
-    <button
-      key={match.id}
-      onClick={() => onSelectRound(roundId)}
-      className="absolute p-0 focus:outline-none hover:z-10"
-      style={{ left: x, top: y, width: COL_W, height: CARD_H }}
-    >
-      <TreeCard match={match} active={roundId === activeRoundId} isThirdPlace={isThirdPlace} />
-    </button>
-  );
+  // Info bar data for currently-hovered match
+  const { date: infoDate = null, time: infoTime = null } = hoveredMatch
+    ? formatMatchDateParts(hoveredMatch.scheduled_at)
+    : {};
 
   return (
-    <div
-      ref={scrollRef}
-      className={cn(
-        'overflow-x-auto scrollbar-none',
-        dragging ? 'cursor-grabbing select-none [&_*]:!cursor-grabbing' : 'cursor-grab',
-      )}
-      onMouseDown={onMouseDown}
-      onMouseMove={onMouseMove}
-      onMouseUp={stopDrag}
-      onMouseLeave={stopDrag}
-    >
-      <div className="relative" style={{ width: totalW, height: totalH }}>
+    <div className="flex flex-col">
 
-        {/* Soft glow anchoring the Final at the visual center */}
-        <div
-          className="absolute rounded-full bg-emerald-500/5 blur-2xl pointer-events-none"
-          style={{ left: colXFinal - 40, top: finalTop - 40, width: COL_W + 80, height: CARD_H + 80 }}
-        />
-
-        {/* Column labels — left half, right half (mirrored), Final */}
-        {preFinalRounds.map((r, i) => renderLabel(r.round, colXLeft(i), `lbl-l-${r.round.id}`))}
-        {preFinalRounds.map((r, i) => renderLabel(r.round, colXRight(i), `lbl-r-${r.round.id}`))}
-        {renderLabel(finalRound.round, colXFinal, 'lbl-final')}
-
-        {/* Connector lines — left half flows rightward, right half flows leftward */}
-        {numHalfRounds > 0 && (
-          <>
-            <ConnectorLines bracketRounds={leftRounds} totalW={totalW} totalH={totalH} />
-            <ConnectorLines bracketRounds={rightRounds} totalW={totalW} totalH={totalH} getColX={colXRight} flip />
-          </>
+      {/* Drag-scrollable bracket canvas */}
+      <div
+        ref={scrollRef}
+        className={cn(
+          'overflow-x-auto scrollbar-none',
+          dragging ? 'cursor-grabbing select-none [&_*]:!cursor-grabbing' : 'cursor-grab',
         )}
+        onMouseDown={onMouseDown}
+        onMouseMove={onMouseMove}
+        onMouseUp={stopDrag}
+        onMouseLeave={stopDrag}
+      >
+        <div
+          className={cn('relative', dragging && 'pointer-events-none')}
+          style={{ width: totalW, height: totalH }}
+        >
 
-        {/* Manual convergence connectors: last semifinal of each half → centered Final */}
-        {numHalfRounds > 0 && (() => {
-          const lastIdx     = numHalfRounds - 1;
-          const leftMatch   = leftRounds[lastIdx]?.matches[0];
-          const rightMatch  = rightRounds[lastIdx]?.matches[0];
-          if (!leftMatch || !rightMatch) return null;
+          {/* Ambient glow behind the Final / champion area */}
+          <div
+            className="absolute rounded-full bg-amber-500/5 blur-3xl pointer-events-none"
+            style={{ left: finalCardLeft - 24, top: champTop - 16, width: D_FINAL_W + 48, height: totalVisH + 32 }}
+          />
 
-          const leftFromX  = colXLeft(lastIdx) + COL_W;
-          const rightFromX = colXRight(lastIdx);
-          const fromY      = matchCenterY(lastIdx, 0);
-          const finalLeftX  = colXFinal;
-          const finalRightX = colXFinal + COL_W;
-          const midL = leftFromX + (finalLeftX - leftFromX) / 2;
-          const midR = rightFromX + (finalRightX - rightFromX) / 2;
+          {/* Column labels */}
+          {preFinalRounds.map((r, i) => renderLabel(r.round, dColXLeft(i),  D_COL_W,   `lbl-l-${r.round.id}`))}
+          {preFinalRounds.map((r, i) => renderLabel(r.round, dColXRight(i), D_COL_W,   `lbl-r-${r.round.id}`))}
+          {renderLabel(finalRound.round, finalCardLeft, D_FINAL_W, 'lbl-final')}
 
-          return (
-            <svg className="absolute inset-0 pointer-events-none" width={totalW} height={totalH}>
-              <path d={`M ${leftFromX} ${fromY} H ${midL} V ${finalCenterY} H ${finalLeftX}`} stroke="#1e293b" strokeWidth={1.5} fill="none" strokeLinecap="round" />
-              <path d={`M ${rightFromX} ${fromY} H ${midR} V ${finalCenterY} H ${finalRightX}`} stroke="#1e293b" strokeWidth={1.5} fill="none" strokeLinecap="round" />
-              <circle cx={finalLeftX} cy={finalCenterY} r={2.5} fill="#1e293b" />
-              <circle cx={finalRightX} cy={finalCenterY} r={2.5} fill="#1e293b" />
-            </svg>
-          );
-        })()}
+          {/* Bracket connector lines — left half (L→R) and right half (R→L, flipped) */}
+          {numHalfRounds > 0 && (
+            <>
+              <ConnectorLines bracketRounds={leftRounds}  totalW={totalW} totalH={totalH} getColX={dColXLeft}  colWidth={D_COL_W} colGap={D_COL_GAP} getMatchCenterY={dMatchCY} />
+              <ConnectorLines bracketRounds={rightRounds} totalW={totalW} totalH={totalH} getColX={dColXRight} colWidth={D_COL_W} colGap={D_COL_GAP} getMatchCenterY={dMatchCY} flip />
+            </>
+          )}
 
-        {/* Cards — left half */}
-        {leftRounds.map((r, rIdx) => r.matches.map((match, sIdx) =>
-          renderCard(match, colXLeft(rIdx), matchTop(rIdx, sIdx), r.round.id)
-        ))}
+          {/* Convergence connectors: last round on each half → Final card */}
+          {numHalfRounds > 0 && (() => {
+            const lastIdx    = numHalfRounds - 1;
+            const leftMatch  = leftRounds[lastIdx]?.matches[0];
+            const rightMatch = rightRounds[lastIdx]?.matches[0];
+            if (!leftMatch || !rightMatch) return null;
+            const leftFromX   = dColXLeft(lastIdx) + D_COL_W;
+            const rightFromX  = dColXRight(lastIdx);
+            const fromY       = dMatchCY(lastIdx, 0);
+            const finalLeftX  = finalCardLeft;
+            const finalRightX = finalCardLeft + D_FINAL_W;
+            const midL = leftFromX  + (finalLeftX  - leftFromX)  / 2;
+            const midR = rightFromX + (finalRightX - rightFromX) / 2;
+            return (
+              <svg className="absolute inset-0 pointer-events-none" width={totalW} height={totalH}>
+                <path d={`M ${leftFromX} ${fromY} H ${midL} V ${finalCenterY} H ${finalLeftX}`}  stroke="#1e293b" strokeWidth={1.5} fill="none" strokeLinecap="round" />
+                <path d={`M ${rightFromX} ${fromY} H ${midR} V ${finalCenterY} H ${finalRightX}`} stroke="#1e293b" strokeWidth={1.5} fill="none" strokeLinecap="round" />
+                <circle cx={finalLeftX}  cy={finalCenterY} r={2.5} fill="#1e293b" />
+                <circle cx={finalRightX} cy={finalCenterY} r={2.5} fill="#1e293b" />
+              </svg>
+            );
+          })()}
 
-        {/* Cards — right half */}
-        {rightRounds.map((r, rIdx) => r.matches.map((match, sIdx) =>
-          renderCard(match, colXRight(rIdx), matchTop(rIdx, sIdx), r.round.id)
-        ))}
+          {/* Bracket cards — left half */}
+          {leftRounds.map((r, rIdx) => r.matches.map((match, sIdx) => (
+            <div key={match.id} className="absolute" style={{ left: dColXLeft(rIdx), top: dMatchTop(rIdx, sIdx) }}>
+              <DesktopMatchCard match={match} roundId={r.round.id} active={r.round.id === activeRoundId} dragging={dragging} onSelect={onSelectRound} onHover={setHoveredMatch} />
+            </div>
+          )))}
 
-        {/* Final card, centered */}
-        {renderCard(finalMatch, colXFinal, finalTop, finalRound.round.id)}
+          {/* Bracket cards — right half */}
+          {rightRounds.map((r, rIdx) => r.matches.map((match, sIdx) => (
+            <div key={match.id} className="absolute" style={{ left: dColXRight(rIdx), top: dMatchTop(rIdx, sIdx) }}>
+              <DesktopMatchCard match={match} roundId={r.round.id} active={r.round.id === activeRoundId} dragging={dragging} onSelect={onSelectRound} onHover={setHoveredMatch} />
+            </div>
+          )))}
 
-        {/* Third place — kept below the Final, detached from the converging flow */}
-        {hasTP && thirdPlace!.matches[0] && (
+          {/* Champion banner — appears above the Final when the winner is known */}
+          {hasChampion && (
+            <div className="absolute" style={{ left: finalCardLeft, top: champTop }}>
+              <ChampionBanner match={finalMatch} />
+            </div>
+          )}
+
+          {/* Final card — wider, amber-accented, centered on screen */}
+          <div className="absolute" style={{ left: finalCardLeft, top: finalTop }}>
+            <DesktopFinalCard match={finalMatch} roundId={finalRound.round.id} active={finalRound.round.id === activeRoundId} dragging={dragging} onSelect={onSelectRound} onHover={setHoveredMatch} />
+          </div>
+
+          {/* Third place — below the Final, detached from the main flow */}
+          {hasTP && thirdPlace!.matches[0] && (
+            <>
+              {renderLabel(thirdPlace!.round, finalCardLeft, D_FINAL_W, 'lbl-tp', true)}
+              <div className="absolute" style={{ left: finalCardLeft, top: bracketH + tpGap }}>
+                <DesktopMatchCard match={thirdPlace!.matches[0]} roundId={thirdPlace!.round.id} active={thirdPlace!.round.id === activeRoundId} dragging={dragging} onSelect={onSelectRound} onHover={setHoveredMatch} isThirdPlace />
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Info bar: shows hovered match details beneath the bracket */}
+      <div className="h-7 flex items-center gap-4 px-3 border-t border-slate-800/40">
+        {hoveredMatch ? (
           <>
-            {renderLabel(thirdPlace!.round, colXFinal, 'lbl-tp', true)}
-            {renderCard(thirdPlace!.matches[0], colXFinal, bracketH + tpGap, thirdPlace!.round.id, true)}
+            {infoDate && (
+              <div className="flex items-center gap-1">
+                <Calendar className="h-2.5 w-2.5 text-slate-700" />
+                <span className="text-[9px] text-slate-500">{infoDate}</span>
+                {infoTime && <span className="text-[9px] text-slate-600">· {infoTime}</span>}
+              </div>
+            )}
+            {hoveredMatch.venue && (
+              <div className="flex items-center gap-1 min-w-0">
+                <MapPin className="h-2.5 w-2.5 shrink-0 text-slate-700" />
+                <span className="text-[9px] text-slate-500 truncate">{hoveredMatch.venue}</span>
+              </div>
+            )}
+            <span className={cn(
+              'text-[9px] font-semibold shrink-0',
+              hoveredMatch.status === 'in_progress' ? 'text-red-500' :
+              hoveredMatch.status === 'finished'    ? 'text-slate-600' : 'text-slate-500',
+            )}>
+              {TREE_STATUS_LABELS[hoveredMatch.status]}
+            </span>
           </>
+        ) : (
+          <span className="text-[9px] text-slate-800 italic select-none">
+            Pasa el cursor sobre un partido para ver los detalles
+          </span>
         )}
       </div>
     </div>
