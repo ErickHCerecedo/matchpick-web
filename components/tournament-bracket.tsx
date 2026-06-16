@@ -130,7 +130,7 @@ const TREE_STATUS_LABELS: Record<Match['status'], string> = {
 
 function TreeCard({
   match, active, colW = COL_W, isThirdPlace = false,
-  revealed = true, onTap,
+  revealed = false, onTap,
 }: {
   match: Match; active: boolean; colW?: number; isThirdPlace?: boolean;
   revealed?: boolean; onTap?: () => void;
@@ -147,21 +147,28 @@ function TreeCard({
   const badgeBorder = live ? 'border-red-500/40' : fin ? 'border-slate-700/60' : 'border-slate-700/40';
   const calColor    = live ? 'text-red-400' : fin ? 'text-slate-600' : 'text-emerald-500';
 
-  // Shared transition for header/footer reveal animation
+  // Desktop uses internal hover state; mobile uses the tap-controlled `revealed` prop.
+  const [hovered, setHovered] = useState(false);
+  const isDesktop  = !onTap;
+  const showDetails = isDesktop ? hovered : revealed;
+
   const detailTransition = { duration: 0.24, ease: [0.4, 0, 0.2, 1] as const };
 
   return (
     <div
       className={cn(
-        'relative rounded-xl border overflow-hidden flex flex-col transition-colors duration-200 select-none',
-        live          ? 'border-red-500/50 shadow-md shadow-red-950/30'           :
+        'relative rounded-xl border overflow-hidden flex flex-col transition-all duration-200 select-none',
+        live          ? 'border-red-500/50 shadow-md shadow-red-950/30' :
         isThirdPlace  ? (active ? 'border-amber-600/60 shadow-sm shadow-amber-950/20' : 'border-amber-800/40') :
-        active        ? 'border-emerald-500/40 shadow-sm shadow-emerald-950/20'   :
+        (isDesktop && hovered) ? 'border-slate-600/70 shadow-lg shadow-slate-900/60' :
+        active        ? 'border-emerald-500/40 shadow-sm shadow-emerald-950/20' :
                         'border-slate-800/80',
         onTap && 'cursor-pointer',
       )}
       style={{ width: colW, height: CARD_H }}
       onClick={onTap}
+      onMouseEnter={isDesktop ? () => setHovered(true) : undefined}
+      onMouseLeave={isDesktop ? () => setHovered(false) : undefined}
     >
       {/* Background — fixed size so it doesn't shift */}
       <img
@@ -172,11 +179,20 @@ function TreeCard({
       />
       <div className="absolute inset-0 z-0 bg-slate-950/91" />
 
+      {/* Desktop hover glow overlay */}
+      <motion.div
+        className="absolute inset-0 z-0 pointer-events-none rounded-xl"
+        style={{ background: 'radial-gradient(ellipse at 50% 50%, rgba(100,116,139,0.10) 0%, transparent 75%)' }}
+        animate={{ opacity: (isDesktop && hovered) ? 1 : 0 }}
+        initial={false}
+        transition={{ duration: 0.2 }}
+      />
+
       <div className="relative z-10 flex flex-col h-full">
 
-        {/* Header — date, time, status badge (animated on mobile) */}
+        {/* Header — date, time, status badge */}
         <motion.div
-          animate={{ height: revealed ? CARD_HEADER_H : 0 }}
+          animate={{ height: showDetails ? CARD_HEADER_H : 0 }}
           initial={false}
           transition={detailTransition}
           className="overflow-hidden shrink-0"
@@ -221,9 +237,9 @@ function TreeCard({
           live={live} hasResult={hasResult}
         />
 
-        {/* Footer — venue (animated on mobile) */}
+        {/* Footer — venue */}
         <motion.div
-          animate={{ height: revealed ? CARD_FOOTER_H : 0 }}
+          animate={{ height: showDetails ? CARD_FOOTER_H : 0 }}
           initial={false}
           transition={detailTransition}
           className="overflow-hidden shrink-0"
