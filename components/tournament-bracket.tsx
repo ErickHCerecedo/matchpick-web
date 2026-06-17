@@ -68,14 +68,14 @@ function colX(rIdx: number): number {
 
 // ── Desktop split-bracket geometry — compact to fit on screen without scrolling ─
 
-const D_COL_W     = 148;
-const D_CARD_H    = 46;
-const D_SLOT_H    = 64;
-const D_COL_GAP   = 20;
-const D_PAD_X     = 16;
-const D_PAD_Y     = 28;
-const D_CHAMP_H   = 88;
-const D_CHAMP_GAP = 10;
+const D_COL_W      = 148;
+const D_CARD_H     = 60;
+const D_SLOT_H     = 78;
+const D_COL_GAP    = 20;
+const D_PAD_X      = 16;
+const D_PAD_Y      = 28;
+const D_PODIUM_H   = 96;
+const D_PODIUM_GAP = 18;
 // Final card is slightly wider than regular cards, using part of the side gaps.
 const D_FINAL_W   = D_COL_W + D_COL_GAP;
 
@@ -283,11 +283,12 @@ function DesktopMatchCard({
   dragging: boolean; onSelect: (id: number) => void; onHover: (m: Match | null) => void;
 }) {
   const [hovered, setHovered] = useState(false);
-  const fin      = match.status === 'finished';
-  const live     = match.status === 'in_progress';
-  const homeWon  = fin && match.result?.winner === 'home';
-  const awayWon  = fin && match.result?.winner === 'away';
+  const fin       = match.status === 'finished';
+  const live      = match.status === 'in_progress';
+  const homeWon   = fin && match.result?.winner === 'home';
+  const awayWon   = fin && match.result?.winner === 'away';
   const hasResult = (fin || live) && !!match.result;
+  const { date: dDate, time: dTime } = formatMatchDateParts(match.scheduled_at);
   const handleEnter = () => { if (!dragging) { setHovered(true); onHover(match); } };
   const handleLeave = () => { setHovered(false); onHover(null); };
   return (
@@ -307,6 +308,17 @@ function DesktopMatchCard({
       <DesktopTeamRow team={match.home_team} placeholder={match.home_placeholder} score={match.result?.home_score} won={homeWon} lost={awayWon} live={live} hasResult={hasResult} />
       <div className="h-px bg-slate-800/60 mx-2 shrink-0" />
       <DesktopTeamRow team={match.away_team} placeholder={match.away_placeholder} score={match.result?.away_score} won={awayWon} lost={homeWon} live={live} hasResult={hasResult} />
+      <div className="flex items-center gap-1.5 px-2 border-t border-slate-800/40 shrink-0 overflow-hidden" style={{ height: 13 }}>
+        {dDate && <span className="text-[7px] text-slate-600 shrink-0 leading-none">{dDate}</span>}
+        {dDate && (dTime || match.venue) && <span className="text-[7px] text-slate-700 shrink-0">·</span>}
+        {dTime && <span className="text-[7px] text-slate-700 shrink-0 leading-none">{dTime}</span>}
+        {match.venue && (
+          <>
+            {(dDate || dTime) && <span className="text-[7px] text-slate-700 shrink-0">·</span>}
+            <span className="text-[7px] text-slate-600 truncate leading-none">{match.venue}</span>
+          </>
+        )}
+      </div>
     </button>
   );
 }
@@ -317,11 +329,12 @@ function DesktopFinalCard({
   match: Match; roundId: number; active: boolean;
   dragging: boolean; onSelect: (id: number) => void; onHover: (m: Match | null) => void;
 }) {
-  const fin      = match.status === 'finished';
-  const live     = match.status === 'in_progress';
-  const homeWon  = fin && match.result?.winner === 'home';
-  const awayWon  = fin && match.result?.winner === 'away';
+  const fin       = match.status === 'finished';
+  const live      = match.status === 'in_progress';
+  const homeWon   = fin && match.result?.winner === 'home';
+  const awayWon   = fin && match.result?.winner === 'away';
   const hasResult = (fin || live) && !!match.result;
+  const { date: dDate, time: dTime } = formatMatchDateParts(match.scheduled_at);
   return (
     <button
       style={{ width: D_FINAL_W, height: D_CARD_H }}
@@ -338,32 +351,78 @@ function DesktopFinalCard({
       <DesktopTeamRow team={match.home_team} placeholder={match.home_placeholder} score={match.result?.home_score} won={homeWon} lost={awayWon} live={live} hasResult={hasResult} />
       <div className="h-px bg-amber-900/25 mx-2.5 shrink-0" />
       <DesktopTeamRow team={match.away_team} placeholder={match.away_placeholder} score={match.result?.away_score} won={awayWon} lost={homeWon} live={live} hasResult={hasResult} />
+      <div className="flex items-center gap-1.5 px-2 border-t border-amber-900/20 shrink-0 overflow-hidden" style={{ height: 13 }}>
+        {dDate && <span className="text-[7px] text-amber-900/60 shrink-0 leading-none">{dDate}</span>}
+        {dDate && (dTime || match.venue) && <span className="text-[7px] text-amber-900/40 shrink-0">·</span>}
+        {dTime && <span className="text-[7px] text-amber-900/50 shrink-0 leading-none">{dTime}</span>}
+        {match.venue && (
+          <>
+            {(dDate || dTime) && <span className="text-[7px] text-amber-900/40 shrink-0">·</span>}
+            <span className="text-[7px] text-amber-900/60 truncate leading-none">{match.venue}</span>
+          </>
+        )}
+      </div>
     </button>
   );
 }
 
-function ChampionBanner({ match }: { match: Match }) {
-  const fin      = match.status === 'finished';
-  const homeWon  = fin && match.result?.winner === 'home';
-  const awayWon  = fin && match.result?.winner === 'away';
-  const winner   = homeWon ? match.home_team : awayWon ? match.away_team : null;
-  const name     = winner?.short_name ?? winner?.name ??
-    (homeWon ? match.home_placeholder : awayWon ? match.away_placeholder : null);
-  if (!name) return null;
+function PodiumCard({
+  finalMatch,
+  thirdPlaceMatch,
+}: {
+  finalMatch: Match;
+  thirdPlaceMatch: Match | undefined;
+}) {
+  const fin       = finalMatch.status === 'finished';
+  const homeWon   = fin && finalMatch.result?.winner === 'home';
+  const awayWon   = fin && finalMatch.result?.winner === 'away';
+
+  const champion  = homeWon ? finalMatch.home_team : awayWon ? finalMatch.away_team : null;
+  const champName = champion?.short_name ?? champion?.name ??
+    (homeWon ? finalMatch.home_placeholder : awayWon ? finalMatch.away_placeholder : null);
+
+  const runnerUp   = homeWon ? finalMatch.away_team : awayWon ? finalMatch.home_team : null;
+  const runnerName = runnerUp?.short_name ?? runnerUp?.name ??
+    (homeWon ? finalMatch.away_placeholder : awayWon ? finalMatch.home_placeholder : null);
+
+  const tp        = thirdPlaceMatch;
+  const tpFin     = tp?.status === 'finished';
+  const tpHomeWon = tpFin && tp?.result?.winner === 'home';
+  const tpAwayWon = tpFin && tp?.result?.winner === 'away';
+  const thirdTeam = tpHomeWon ? tp?.home_team : tpAwayWon ? tp?.away_team : null;
+  const thirdName = thirdTeam?.short_name ?? thirdTeam?.name ??
+    (tpHomeWon ? tp?.home_placeholder : tpAwayWon ? tp?.away_placeholder : null);
+
+  const PodiumRow = ({ medal, team, name, accent }: {
+    medal: string;
+    team: Match['home_team'] | null;
+    name: string | null;
+    accent: string;
+  }) => (
+    <div className="flex items-center gap-2 px-2.5 flex-1 min-h-0">
+      <span className="text-[11px] leading-none shrink-0 select-none">{medal}</span>
+      <div className="shrink-0 rounded-[2px] overflow-hidden">
+        {team?.flag_url
+          ? <img src={team.flag_url} alt="" className="w-5 h-[13px] object-cover" />
+          : <FlagPlaceholder size="xs" />
+        }
+      </div>
+      <span className={cn('text-[10px] font-semibold truncate leading-none', accent)}>
+        {name ?? '···'}
+      </span>
+    </div>
+  );
+
   return (
     <div
-      className="flex flex-col items-center justify-center gap-1.5 rounded-xl border border-amber-500/20 bg-amber-950/15"
-      style={{ width: D_FINAL_W, height: D_CHAMP_H }}
+      className="flex flex-col rounded-xl border border-amber-500/25 bg-slate-950/80 overflow-hidden"
+      style={{ width: D_FINAL_W, height: D_PODIUM_H }}
     >
-      <div className="flex items-center gap-1">
-        <Trophy className="h-3.5 w-3.5 text-amber-400" />
-        <span className="text-[7px] font-black uppercase tracking-[0.2em] text-amber-500/70">Campeón</span>
-      </div>
-      {winner?.flag_url
-        ? <img src={winner.flag_url} alt="" className="w-8 h-[21px] object-cover rounded-[2px] shadow-sm" />
-        : <FlagPlaceholder size="md" />
-      }
-      <span className="text-[12px] font-bold text-amber-200 text-center leading-tight px-2">{name}</span>
+      <PodiumRow medal="🥇" team={champion} name={champName} accent="text-amber-200" />
+      <div className="h-px bg-slate-800/60 mx-2.5 shrink-0" />
+      <PodiumRow medal="🥈" team={runnerUp} name={runnerName} accent="text-slate-300" />
+      <div className="h-px bg-slate-800/40 mx-2.5 shrink-0" />
+      <PodiumRow medal="🥉" team={thirdTeam} name={thirdName} accent="text-slate-500" />
     </div>
   );
 }
@@ -484,20 +543,16 @@ function DesktopBracket({
   const dColXRight = (rIdx: number) => D_PAD_X + (2 * numHalfRounds - rIdx) * (D_COL_W + D_COL_GAP);
   const dColXFinal = D_PAD_X + numHalfRounds * (D_COL_W + D_COL_GAP);
 
-  // Champion detection
-  const fin        = finalMatch.status === 'finished';
-  const hasChampion = fin && !!finalMatch.result?.winner;
-
-  // Center visual block: optional champion badge + Final card, both centered together
-  const totalVisH  = hasChampion ? D_CHAMP_H + D_CHAMP_GAP + D_CARD_H : D_CARD_H;
+  // Center visual block: Podium card (always visible) + Final card, centered together
+  const totalVisH   = D_PODIUM_H + D_PODIUM_GAP + D_CARD_H;
   const minBracketH = totalVisH + 2 * D_PAD_Y;
   const bracketH = Math.max(
     halfFirstCount > 0 ? halfFirstCount * D_SLOT_H + 2 * D_PAD_Y : minBracketH,
     minBracketH,
   );
   const visTop       = bracketH / 2 - totalVisH / 2;
-  const champTop     = visTop;
-  const finalTop     = hasChampion ? visTop + D_CHAMP_H + D_CHAMP_GAP : visTop;
+  const podiumTop    = visTop;
+  const finalTop     = visTop + D_PODIUM_H + D_PODIUM_GAP;
   const finalCenterY = finalTop + D_CARD_H / 2;
 
   // Final card positioned so it extends D_COL_GAP/2 into each side gap
@@ -546,10 +601,10 @@ function DesktopBracket({
           style={{ width: totalW, height: totalH }}
         >
 
-          {/* Ambient glow behind the Final / champion area */}
+          {/* Ambient glow behind the podium / Final area */}
           <div
             className="absolute rounded-full bg-amber-500/5 blur-3xl pointer-events-none"
-            style={{ left: finalCardLeft - 24, top: champTop - 16, width: D_FINAL_W + 48, height: totalVisH + 32 }}
+            style={{ left: finalCardLeft - 24, top: podiumTop - 16, width: D_FINAL_W + 48, height: totalVisH + 32 }}
           />
 
           {/* Column labels */}
@@ -602,12 +657,20 @@ function DesktopBracket({
             </div>
           )))}
 
-          {/* Champion banner — appears above the Final when the winner is known */}
-          {hasChampion && (
-            <div className="absolute" style={{ left: finalCardLeft, top: champTop }}>
-              <ChampionBanner match={finalMatch} />
-            </div>
-          )}
+          {/* Podium card — always visible above the Final, shows champion + runner-up + 3rd */}
+          <div className="absolute" style={{ left: finalCardLeft, top: podiumTop }}>
+            <PodiumCard finalMatch={finalMatch} thirdPlaceMatch={thirdPlace?.matches[0]} />
+          </div>
+
+          {/* Connector: Final card → Podium card */}
+          <svg className="absolute inset-0 pointer-events-none" width={totalW} height={totalH}>
+            <line
+              x1={finalCardLeft + D_FINAL_W / 2} y1={finalTop}
+              x2={finalCardLeft + D_FINAL_W / 2} y2={podiumTop + D_PODIUM_H}
+              stroke="#1e293b" strokeWidth={1.5} strokeLinecap="round"
+            />
+            <circle cx={finalCardLeft + D_FINAL_W / 2} cy={finalTop} r={2.5} fill="#1e293b" />
+          </svg>
 
           {/* Final card — wider, amber-accented, centered on screen */}
           <div className="absolute" style={{ left: finalCardLeft, top: finalTop }}>
