@@ -37,8 +37,8 @@ const CARD_BG =
 
 // ── Bracket geometry ───────────────────────────────────────────────────────────
 
-const SLOT_H  = 132;
-const CARD_H  = 120; // 104 base + 16 for venue footer row
+const SLOT_H  = 104;
+const CARD_H  = 92;
 const COL_W   = 200;
 const COL_GAP = 48;
 const PAD_X   = 20;
@@ -69,8 +69,8 @@ function colX(rIdx: number): number {
 // ── Desktop split-bracket geometry — compact to fit on screen without scrolling ─
 
 const D_COL_W     = 148;
-const D_CARD_H    = 56;
-const D_SLOT_H    = 80;
+const D_CARD_H    = 46;
+const D_SLOT_H    = 64;
 const D_COL_GAP   = 20;
 const D_PAD_X     = 16;
 const D_PAD_Y     = 28;
