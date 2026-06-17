@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -54,12 +54,18 @@ export function ApiMonitorModal() {
   const [open, setOpen]         = useState(false);
   const [running, setRunning]   = useState(false);
   const [sessions, setSessions] = useState<Session[]>([]);
+  const [countdown, setCountdown] = useState(60);
   const bottomRef               = useRef<HTMLDivElement>(null);
+  const intervalRef             = useRef<ReturnType<typeof setInterval> | null>(null);
+  const countdownRef            = useRef<ReturnType<typeof setInterval> | null>(null);
+  const runningRef              = useRef(false);
 
   const scrollBottom = () =>
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
 
   const runSync = async () => {
+    if (runningRef.current) return;
+    runningRef.current = true;
     setRunning(true);
     const cmd = 'php artisan matches:wc-auto-sync';
     try {
@@ -81,10 +87,33 @@ export function ApiMonitorModal() {
         },
       ]);
     } finally {
+      runningRef.current = false;
       setRunning(false);
+      setCountdown(60);
       scrollBottom();
     }
   };
+
+  // Auto-run every 60 s while the modal is open
+  useEffect(() => {
+    if (!open) return;
+
+    runSync();
+
+    intervalRef.current = setInterval(() => { runSync(); }, 60_000);
+
+    countdownRef.current = setInterval(() => {
+      setCountdown((c) => (c <= 1 ? 60 : c - 1));
+    }, 1_000);
+
+    return () => {
+      clearInterval(intervalRef.current!);
+      clearInterval(countdownRef.current!);
+      intervalRef.current  = null;
+      countdownRef.current = null;
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   const clear = () => setSessions([]);
 
@@ -162,10 +191,15 @@ export function ApiMonitorModal() {
 
           {/* toolbar */}
           <div className="shrink-0 border-t border-slate-800/80 px-4 py-2 flex items-center justify-between gap-2" style={{ background: '#111' }}>
-            <span className="text-[10px] text-slate-600 font-mono">
+            <span className="text-[10px] text-slate-600 font-mono flex items-center gap-2">
               {sessions.length > 0
                 ? `${sessions.length} ejecución${sessions.length !== 1 ? 'es' : ''}`
                 : 'sin ejecuciones'}
+              {!running && (
+                <span className="text-violet-500">
+                  · próxima en {countdown}s
+                </span>
+              )}
             </span>
             <div className="flex items-center gap-2">
               {sessions.length > 0 && (
@@ -188,7 +222,7 @@ export function ApiMonitorModal() {
                 {running
                   ? <Loader2 className="h-3 w-3 animate-spin" />
                   : <Play className="h-3 w-3" />}
-                Ejecutar
+                {running ? 'Ejecutando…' : 'Ejecutar ahora'}
               </Button>
             </div>
           </div>
