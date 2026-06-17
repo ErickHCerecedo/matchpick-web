@@ -6,7 +6,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -58,25 +57,6 @@ const STATUS_COLOR: Record<string, string> = {
   cancelled:   'text-red-400',
 };
 
-function scoreStr(s: DbScore | ApiScore | null): string {
-  return s != null ? `${s.home} – ${s.away}` : '–';
-}
-
-function ScoreCmp({ db, api }: { db: DbScore | null; api: ApiScore | null }) {
-  const match = db && api && db.home === api.home && db.away === api.away;
-  const mismatch = db && api && !match;
-  return (
-    <div className="flex items-center gap-1.5 text-xs tabular-nums">
-      <span className="text-slate-300">{scoreStr(db)}</span>
-      <span className="text-slate-600">→</span>
-      <span className={cn(
-        mismatch ? 'text-amber-400 font-semibold' : 'text-slate-300',
-      )}>
-        {scoreStr(api)}
-      </span>
-    </div>
-  );
-}
 
 // ── component ──────────────────────────────────────────────────────────────
 
@@ -107,18 +87,18 @@ export function ApiMonitorModal() {
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleOpen}>
-      <DialogTrigger asChild>
-        <Button
-          size="sm"
-          variant="outline"
-          className="border-violet-700/50 text-violet-400 hover:text-violet-300 hover:border-violet-500 text-xs h-8 gap-1.5"
-        >
-          <Activity className="h-3.5 w-3.5" />
-          Monitor API
-        </Button>
-      </DialogTrigger>
+    <>
+      <Button
+        size="sm"
+        variant="outline"
+        className="border-violet-700/50 text-violet-400 hover:text-violet-300 hover:border-violet-500 text-xs h-8 gap-1.5"
+        onClick={() => handleOpen(true)}
+      >
+        <Activity className="h-3.5 w-3.5" />
+        Monitor API
+      </Button>
 
+      <Dialog open={open} onOpenChange={handleOpen}>
       <DialogContent className="max-w-2xl bg-slate-950 border-slate-800 text-white max-h-[85vh] flex flex-col">
         <DialogHeader className="shrink-0">
           <DialogTitle className="text-sm font-semibold text-white flex items-center gap-2">
@@ -283,6 +263,7 @@ export function ApiMonitorModal() {
           })}
         </div>
       </DialogContent>
-    </Dialog>
+      </Dialog>
+    </>
   );
 }
