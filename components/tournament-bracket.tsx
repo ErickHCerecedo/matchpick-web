@@ -24,12 +24,12 @@ const ROUND_ICONS: Record<string, React.ElementType<any>> = {
 };
 
 const ROUND_META: Record<string, { label: string; abbr: string }> = {
-  round_of_32: { label: 'Dieciseisavos', abbr: 'R32'   },
-  round_of_16: { label: 'Octavos',       abbr: 'R16'   },
-  quarter:     { label: 'Cuartos',       abbr: 'QF'    },
-  semi:        { label: 'Semifinal',     abbr: 'SF'    },
-  third_place: { label: 'Tercer puesto', abbr: '3P'    },
-  final:       { label: 'Final',         abbr: 'FINAL' },
+  round_of_32: { label: 'Dieciseisavos', abbr: '32F'  },
+  round_of_16: { label: 'Octavos',       abbr: 'OCT'  },
+  quarter:     { label: 'Cuartos',       abbr: 'CF'   },
+  semi:        { label: 'Semifinal',     abbr: 'SEMI' },
+  third_place: { label: 'Tercer puesto', abbr: '3P'   },
+  final:       { label: 'Final',         abbr: 'FINAL'},
 };
 
 const CARD_BG =
@@ -140,9 +140,9 @@ const TREE_STATUS_LABELS: Record<Match['status'], string> = {
 };
 
 function TreeCard({
-  match, active, colW = COL_W, isThirdPlace = false,
+  match, active, colW = COL_W, isThirdPlace = false, isFinal = false,
 }: {
-  match: Match; active: boolean; colW?: number; isThirdPlace?: boolean;
+  match: Match; active: boolean; colW?: number; isThirdPlace?: boolean; isFinal?: boolean;
 }) {
   const fin       = match.status === 'finished';
   const live      = match.status === 'in_progress';
@@ -160,9 +160,10 @@ function TreeCard({
     <div
       className={cn(
         'relative rounded-xl border overflow-hidden flex flex-col transition-colors duration-200 select-none',
-        live         ? 'border-red-500/50 shadow-md shadow-red-950/30'                                        :
-        isThirdPlace ? (active ? 'border-amber-600/60 shadow-sm shadow-amber-950/20' : 'border-amber-800/40') :
-        active       ? 'border-emerald-500/40 shadow-sm shadow-emerald-950/20'                                :
+        live         ? 'border-red-500/50 shadow-md shadow-red-950/30'                                            :
+        isFinal      ? (active ? 'border-yellow-500/60 shadow-sm shadow-yellow-950/20' : 'border-yellow-700/35') :
+        isThirdPlace ? (active ? 'border-orange-700/60 shadow-sm shadow-orange-950/20' : 'border-orange-800/40') :
+        active       ? 'border-emerald-500/40 shadow-sm shadow-emerald-950/20'                                   :
                        'border-slate-800/80',
       )}
       style={{ width: colW, height: CARD_H }}
@@ -180,7 +181,7 @@ function TreeCard({
 
         {/* Header — date, time, status badge */}
         <div className="flex items-center justify-between gap-1 px-2 border-b border-slate-800/60 shrink-0" style={{ height: CARD_HEADER_H }}>
-          <div className="flex items-center gap-1 min-w-0">
+          <div className="flex items-center gap-1 min-w-0 overflow-hidden">
             <Calendar className={cn('h-2.5 w-2.5 shrink-0', calColor)} />
             <span className="text-[9px] text-slate-500 font-medium whitespace-nowrap">{date}</span>
             {time && (
@@ -275,10 +276,10 @@ function DesktopTeamRow({
 }
 
 function DesktopMatchCard({
-  match, roundId, active, isThirdPlace = false, roundLabel, dragging, onSelect, onHover,
+  match, roundId, active, isThirdPlace = false, roundLabel, dragging, onSelect, onHover, cardW = D_COL_W,
 }: {
   match: Match; roundId: number; active: boolean; isThirdPlace?: boolean; roundLabel?: string;
-  dragging: boolean; onSelect: (id: number) => void; onHover: (m: Match | null) => void;
+  dragging: boolean; onSelect: (id: number) => void; onHover: (m: Match | null) => void; cardW?: number;
 }) {
   const [hovered, setHovered] = useState(false);
   const fin         = match.status === 'finished';
@@ -295,20 +296,20 @@ function DesktopMatchCard({
   const handleLeave = () => { setHovered(false); onHover(null); };
   return (
     <button
-      style={{ width: D_COL_W, height: D_CARD_H }}
+      style={{ width: cardW, height: D_CARD_H }}
       className={cn(
         'flex flex-col overflow-hidden rounded-lg border transition-all duration-150 focus:outline-none',
-        live         ? 'border-red-500/50 shadow-md shadow-red-950/30'           :
-        isThirdPlace ? (active ? 'border-amber-600/50' : 'border-amber-800/40') :
-        hovered      ? 'border-slate-600/60 shadow-md shadow-slate-900/50'       :
-        active       ? 'border-emerald-500/30'                                   : 'border-slate-800/70',
+        live         ? 'border-red-500/50 shadow-md shadow-red-950/30'             :
+        isThirdPlace ? (active ? 'border-orange-700/50' : 'border-orange-900/40') :
+        hovered      ? 'border-slate-600/60 shadow-md shadow-slate-900/50'         :
+        active       ? 'border-emerald-500/30'                                     : 'border-slate-800/70',
       )}
       onClick={() => onSelect(roundId)}
       onMouseEnter={handleEnter}
       onMouseLeave={handleLeave}
     >
       <div className="flex items-center justify-between gap-1 px-2 border-b border-slate-800/60 shrink-0" style={{ height: 16 }}>
-        <div className="flex items-center gap-1 min-w-0">
+        <div className="flex items-center gap-1 min-w-0 overflow-hidden">
           {roundLabel && <span className="text-[7px] font-black uppercase tracking-wider text-amber-700/80 shrink-0 border border-amber-800/40 rounded px-0.5 leading-none py-px">{roundLabel}</span>}
           <Calendar className={cn('h-2 w-2 shrink-0', calColor)} />
           {date && <span className="text-[8px] text-slate-500 font-medium whitespace-nowrap">{date}</span>}
@@ -341,28 +342,28 @@ function DesktopFinalCard({
   const awayWon     = fin && match.result?.winner === 'away';
   const hasResult   = (fin || live) && !!match.result;
   const { date, time } = formatMatchDateParts(match.scheduled_at);
-  const statusColor = live ? 'text-red-400'     : fin ? 'text-slate-600'    : 'text-amber-700/70';
-  const dotColor    = live ? 'bg-red-400 animate-pulse' : fin ? 'bg-slate-600' : 'bg-amber-500';
-  const badgeBorder = live ? 'border-red-500/40' : fin ? 'border-slate-700/60' : 'border-amber-800/40';
-  const calColor    = live ? 'text-red-400'     : fin ? 'text-slate-600'    : 'text-amber-600/70';
+  const statusColor = live ? 'text-red-400'     : fin ? 'text-slate-600'    : 'text-yellow-600/70';
+  const dotColor    = live ? 'bg-red-400 animate-pulse' : fin ? 'bg-slate-600' : 'bg-yellow-500';
+  const badgeBorder = live ? 'border-red-500/40' : fin ? 'border-slate-700/60' : 'border-yellow-700/40';
+  const calColor    = live ? 'text-red-400'     : fin ? 'text-slate-600'    : 'text-yellow-500/70';
   return (
     <button
       style={{ width: D_FINAL_W, height: D_CARD_H }}
       className={cn(
         'flex flex-col overflow-hidden rounded-xl border transition-all duration-150 focus:outline-none',
-        live   ? 'border-red-500/60 shadow-lg shadow-red-950/30'           :
-        active ? 'border-amber-500/50 shadow-md shadow-amber-950/30'       :
-                 'border-amber-800/40',
+        live   ? 'border-red-500/60 shadow-lg shadow-red-950/30'             :
+        active ? 'border-yellow-400/60 shadow-md shadow-yellow-950/30'       :
+                 'border-yellow-700/35',
       )}
       onClick={() => onSelect(roundId)}
       onMouseEnter={() => !dragging && onHover(match)}
       onMouseLeave={() => onHover(null)}
     >
-      <div className="flex items-center justify-between gap-1 px-2 border-b border-amber-900/30 shrink-0" style={{ height: 16 }}>
-        <div className="flex items-center gap-1 min-w-0">
+      <div className="flex items-center justify-between gap-1 px-2 border-b border-yellow-800/30 shrink-0" style={{ height: 16 }}>
+        <div className="flex items-center gap-1 min-w-0 overflow-hidden">
           <Calendar className={cn('h-2 w-2 shrink-0', calColor)} />
-          {date && <span className="text-[8px] text-amber-900/70 font-medium whitespace-nowrap">{date}</span>}
-          {time && <><span className="text-[8px] text-amber-900/40">·</span><span className="text-[8px] text-amber-900/60 whitespace-nowrap">{time}</span></>}
+          {date && <span className="text-[8px] text-yellow-800/70 font-medium whitespace-nowrap">{date}</span>}
+          {time && <><span className="text-[8px] text-yellow-800/40">·</span><span className="text-[8px] text-yellow-800/60 whitespace-nowrap">{time}</span></>}
         </div>
         <div className={cn('flex items-center gap-0.5 shrink-0 rounded border px-0.5 py-px', badgeBorder)}>
           <span className={cn('w-1 h-1 rounded-full shrink-0', dotColor)} />
@@ -370,10 +371,10 @@ function DesktopFinalCard({
         </div>
       </div>
       <DesktopTeamRow team={match.home_team} placeholder={match.home_placeholder} score={match.result?.home_score} won={homeWon} lost={awayWon} live={live} hasResult={hasResult} />
-      <div className="h-px bg-amber-900/25 mx-2.5 shrink-0" />
+      <div className="h-px bg-yellow-800/25 mx-2.5 shrink-0" />
       <DesktopTeamRow team={match.away_team} placeholder={match.away_placeholder} score={match.result?.away_score} won={awayWon} lost={homeWon} live={live} hasResult={hasResult} />
-      <div className="flex items-center gap-1 px-2 border-t border-amber-900/20 shrink-0" style={{ height: 12 }}>
-        {match.venue && <><MapPin className="h-[7px] w-[7px] shrink-0 text-amber-900/40" /><span className="text-[7px] text-amber-900/60 truncate">{match.venue}</span></>}
+      <div className="flex items-center gap-1 px-2 border-t border-yellow-800/20 shrink-0" style={{ height: 12 }}>
+        {match.venue && <><MapPin className="h-[7px] w-[7px] shrink-0 text-yellow-800/40" /><span className="text-[7px] text-yellow-800/60 truncate">{match.venue}</span></>}
       </div>
     </button>
   );
@@ -507,7 +508,7 @@ function DesktopBracket({
   // Final card positioned so it extends D_COL_GAP/2 into each side gap
   const finalCardLeft = dColXFinal - D_COL_GAP / 2;
 
-  const tpGap  = 16;
+  const tpGap  = 26;
   const tpTop  = finalTop + D_CARD_H + tpGap;
   const totalH = Math.max(bracketH, hasTP ? tpTop + D_CARD_H + D_PAD_Y : 0);
   const numCols = 2 * numHalfRounds + 1;
@@ -553,7 +554,7 @@ function DesktopBracket({
 
           {/* Ambient glow behind the Final area */}
           <div
-            className="absolute rounded-full bg-amber-500/5 blur-3xl pointer-events-none"
+            className="absolute rounded-full bg-yellow-500/6 blur-3xl pointer-events-none"
             style={{ left: finalCardLeft - 24, top: finalTop - 16, width: D_FINAL_W + 48, height: D_CARD_H + 32 }}
           />
 
@@ -612,11 +613,22 @@ function DesktopBracket({
             <DesktopFinalCard match={finalMatch} roundId={finalRound.round.id} active={finalRound.round.id === activeRoundId} dragging={dragging} onSelect={onSelectRound} onHover={setHoveredMatch} />
           </div>
 
-          {/* Third place — directly below the Final, same x, label inside the card */}
+          {/* Third place — label outside above the card, same x as Final */}
           {hasTP && thirdPlace!.matches[0] && (
-            <div className="absolute" style={{ left: finalCardLeft, top: tpTop }}>
-              <DesktopMatchCard match={thirdPlace!.matches[0]} roundId={thirdPlace!.round.id} active={thirdPlace!.round.id === activeRoundId} dragging={dragging} onSelect={onSelectRound} onHover={setHoveredMatch} isThirdPlace roundLabel={ROUND_META['third_place'].abbr} />
-            </div>
+            <>
+              <div
+                className="absolute flex items-center justify-center gap-1 pointer-events-none"
+                style={{ left: finalCardLeft, width: D_FINAL_W, top: tpTop - 15 }}
+              >
+                <Award className="h-2.5 w-2.5 shrink-0 text-orange-700/70" />
+                <span className="text-[9px] font-semibold uppercase tracking-widest text-orange-700/70">
+                  Tercer puesto
+                </span>
+              </div>
+              <div className="absolute" style={{ left: finalCardLeft, top: tpTop }}>
+                <DesktopMatchCard match={thirdPlace!.matches[0]} roundId={thirdPlace!.round.id} active={thirdPlace!.round.id === activeRoundId} dragging={dragging} onSelect={onSelectRound} onHover={setHoveredMatch} isThirdPlace cardW={D_FINAL_W} />
+              </div>
+            </>
           )}
         </div>
       </div>
@@ -773,6 +785,7 @@ function MobileBracket({
                 active={rIdx === activeColIdx}
                 colW={COL_W_M}
                 isThirdPlace={rIdx === thirdPlaceColIdx}
+                isFinal={r.round.type === 'final'}
               />
             </div>
           ))
