@@ -68,14 +68,12 @@ function colX(rIdx: number): number {
 
 // ── Desktop split-bracket geometry — compact to fit on screen without scrolling ─
 
-const D_COL_W      = 148;
-const D_CARD_H     = 60;
-const D_SLOT_H     = 78;
-const D_COL_GAP    = 20;
-const D_PAD_X      = 16;
-const D_PAD_Y      = 28;
-const D_PODIUM_H   = 96;
-const D_PODIUM_GAP = 18;
+const D_COL_W   = 148;
+const D_CARD_H  = 60;
+const D_SLOT_H  = 78;
+const D_COL_GAP = 20;
+const D_PAD_X   = 16;
+const D_PAD_Y   = 28;
 // Final card is slightly wider than regular cards, using part of the side gaps.
 const D_FINAL_W   = D_COL_W + D_COL_GAP;
 
@@ -277,9 +275,9 @@ function DesktopTeamRow({
 }
 
 function DesktopMatchCard({
-  match, roundId, active, isThirdPlace = false, dragging, onSelect, onHover,
+  match, roundId, active, isThirdPlace = false, roundLabel, dragging, onSelect, onHover,
 }: {
-  match: Match; roundId: number; active: boolean; isThirdPlace?: boolean;
+  match: Match; roundId: number; active: boolean; isThirdPlace?: boolean; roundLabel?: string;
   dragging: boolean; onSelect: (id: number) => void; onHover: (m: Match | null) => void;
 }) {
   const [hovered, setHovered] = useState(false);
@@ -311,6 +309,7 @@ function DesktopMatchCard({
     >
       <div className="flex items-center justify-between gap-1 px-2 border-b border-slate-800/60 shrink-0" style={{ height: 16 }}>
         <div className="flex items-center gap-1 min-w-0">
+          {roundLabel && <span className="text-[7px] font-black uppercase tracking-wider text-amber-700/80 shrink-0 border border-amber-800/40 rounded px-0.5 leading-none py-px">{roundLabel}</span>}
           <Calendar className={cn('h-2 w-2 shrink-0', calColor)} />
           {date && <span className="text-[8px] text-slate-500 font-medium whitespace-nowrap">{date}</span>}
           {time && <><span className="text-[8px] text-slate-700">·</span><span className="text-[8px] text-slate-600 whitespace-nowrap">{time}</span></>}
@@ -377,67 +376,6 @@ function DesktopFinalCard({
         {match.venue && <><MapPin className="h-[7px] w-[7px] shrink-0 text-amber-900/40" /><span className="text-[7px] text-amber-900/60 truncate">{match.venue}</span></>}
       </div>
     </button>
-  );
-}
-
-function PodiumCard({
-  finalMatch,
-  thirdPlaceMatch,
-}: {
-  finalMatch: Match;
-  thirdPlaceMatch: Match | undefined;
-}) {
-  const fin       = finalMatch.status === 'finished';
-  const homeWon   = fin && finalMatch.result?.winner === 'home';
-  const awayWon   = fin && finalMatch.result?.winner === 'away';
-
-  const champion  = homeWon ? finalMatch.home_team : awayWon ? finalMatch.away_team : null;
-  const champName = champion?.short_name ?? champion?.name ??
-    (homeWon ? finalMatch.home_placeholder : awayWon ? finalMatch.away_placeholder : null);
-
-  const runnerUp   = homeWon ? finalMatch.away_team : awayWon ? finalMatch.home_team : null;
-  const runnerName = runnerUp?.short_name ?? runnerUp?.name ??
-    (homeWon ? finalMatch.away_placeholder : awayWon ? finalMatch.home_placeholder : null);
-
-  const tp        = thirdPlaceMatch;
-  const tpFin     = tp?.status === 'finished';
-  const tpHomeWon = tpFin && tp?.result?.winner === 'home';
-  const tpAwayWon = tpFin && tp?.result?.winner === 'away';
-  const thirdTeam = tpHomeWon ? tp?.home_team : tpAwayWon ? tp?.away_team : null;
-  const thirdName = thirdTeam?.short_name ?? thirdTeam?.name ??
-    (tpHomeWon ? tp?.home_placeholder : tpAwayWon ? tp?.away_placeholder : null);
-
-  const PodiumRow = ({ medal, team, name, accent }: {
-    medal: string;
-    team: Match['home_team'] | null;
-    name: string | null;
-    accent: string;
-  }) => (
-    <div className="flex items-center gap-2 px-2.5 flex-1 min-h-0">
-      <span className="text-[11px] leading-none shrink-0 select-none">{medal}</span>
-      <div className="shrink-0 rounded-[2px] overflow-hidden">
-        {team?.flag_url
-          ? <img src={team.flag_url} alt="" className="w-5 h-[13px] object-cover" />
-          : <FlagPlaceholder size="xs" />
-        }
-      </div>
-      <span className={cn('text-[10px] font-semibold truncate leading-none', accent)}>
-        {name ?? '···'}
-      </span>
-    </div>
-  );
-
-  return (
-    <div
-      className="flex flex-col rounded-xl border border-amber-500/25 bg-slate-950/80 overflow-hidden"
-      style={{ width: D_FINAL_W, height: D_PODIUM_H }}
-    >
-      <PodiumRow medal="🥇" team={champion} name={champName} accent="text-amber-200" />
-      <div className="h-px bg-slate-800/60 mx-2.5 shrink-0" />
-      <PodiumRow medal="🥈" team={runnerUp} name={runnerName} accent="text-slate-300" />
-      <div className="h-px bg-slate-800/40 mx-2.5 shrink-0" />
-      <PodiumRow medal="🥉" team={thirdTeam} name={thirdName} accent="text-slate-500" />
-    </div>
   );
 }
 
@@ -557,23 +495,21 @@ function DesktopBracket({
   const dColXRight = (rIdx: number) => D_PAD_X + (2 * numHalfRounds - rIdx) * (D_COL_W + D_COL_GAP);
   const dColXFinal = D_PAD_X + numHalfRounds * (D_COL_W + D_COL_GAP);
 
-  // Center visual block: Podium card (always visible) + Final card, centered together
-  const totalVisH   = D_PODIUM_H + D_PODIUM_GAP + D_CARD_H;
-  const minBracketH = totalVisH + 2 * D_PAD_Y;
+  // Final card vertically centered in the bracket area
+  const minBracketH = D_CARD_H + 2 * D_PAD_Y;
   const bracketH = Math.max(
     halfFirstCount > 0 ? halfFirstCount * D_SLOT_H + 2 * D_PAD_Y : minBracketH,
     minBracketH,
   );
-  const visTop       = bracketH / 2 - totalVisH / 2;
-  const podiumTop    = visTop;
-  const finalTop     = visTop + D_PODIUM_H + D_PODIUM_GAP;
+  const finalTop     = bracketH / 2 - D_CARD_H / 2;
   const finalCenterY = finalTop + D_CARD_H / 2;
 
   // Final card positioned so it extends D_COL_GAP/2 into each side gap
   const finalCardLeft = dColXFinal - D_COL_GAP / 2;
 
-  const tpGap  = 20;
-  const totalH = bracketH + (hasTP ? D_CARD_H + tpGap + D_PAD_Y : 0);
+  const tpGap  = 16;
+  const tpTop  = finalTop + D_CARD_H + tpGap;
+  const totalH = Math.max(bracketH, hasTP ? tpTop + D_CARD_H + D_PAD_Y : 0);
   const numCols = 2 * numHalfRounds + 1;
   const totalW  = numCols * D_COL_W + (numCols - 1) * D_COL_GAP + 2 * D_PAD_X;
 
@@ -615,10 +551,10 @@ function DesktopBracket({
           style={{ width: totalW, height: totalH }}
         >
 
-          {/* Ambient glow behind the podium / Final area */}
+          {/* Ambient glow behind the Final area */}
           <div
             className="absolute rounded-full bg-amber-500/5 blur-3xl pointer-events-none"
-            style={{ left: finalCardLeft - 24, top: podiumTop - 16, width: D_FINAL_W + 48, height: totalVisH + 32 }}
+            style={{ left: finalCardLeft - 24, top: finalTop - 16, width: D_FINAL_W + 48, height: D_CARD_H + 32 }}
           />
 
           {/* Column labels */}
@@ -671,34 +607,16 @@ function DesktopBracket({
             </div>
           )))}
 
-          {/* Podium card — always visible above the Final, shows champion + runner-up + 3rd */}
-          <div className="absolute" style={{ left: finalCardLeft, top: podiumTop }}>
-            <PodiumCard finalMatch={finalMatch} thirdPlaceMatch={thirdPlace?.matches[0]} />
-          </div>
-
-          {/* Connector: Final card → Podium card */}
-          <svg className="absolute inset-0 pointer-events-none" width={totalW} height={totalH}>
-            <line
-              x1={finalCardLeft + D_FINAL_W / 2} y1={finalTop}
-              x2={finalCardLeft + D_FINAL_W / 2} y2={podiumTop + D_PODIUM_H}
-              stroke="#1e293b" strokeWidth={1.5} strokeLinecap="round"
-            />
-            <circle cx={finalCardLeft + D_FINAL_W / 2} cy={finalTop} r={2.5} fill="#1e293b" />
-          </svg>
-
           {/* Final card — wider, amber-accented, centered on screen */}
           <div className="absolute" style={{ left: finalCardLeft, top: finalTop }}>
             <DesktopFinalCard match={finalMatch} roundId={finalRound.round.id} active={finalRound.round.id === activeRoundId} dragging={dragging} onSelect={onSelectRound} onHover={setHoveredMatch} />
           </div>
 
-          {/* Third place — below the Final, detached from the main flow */}
+          {/* Third place — directly below the Final, same x, label inside the card */}
           {hasTP && thirdPlace!.matches[0] && (
-            <>
-              {renderLabel(thirdPlace!.round, finalCardLeft, D_FINAL_W, 'lbl-tp', true)}
-              <div className="absolute" style={{ left: finalCardLeft, top: bracketH + tpGap }}>
-                <DesktopMatchCard match={thirdPlace!.matches[0]} roundId={thirdPlace!.round.id} active={thirdPlace!.round.id === activeRoundId} dragging={dragging} onSelect={onSelectRound} onHover={setHoveredMatch} isThirdPlace />
-              </div>
-            </>
+            <div className="absolute" style={{ left: finalCardLeft, top: tpTop }}>
+              <DesktopMatchCard match={thirdPlace!.matches[0]} roundId={thirdPlace!.round.id} active={thirdPlace!.round.id === activeRoundId} dragging={dragging} onSelect={onSelectRound} onHover={setHoveredMatch} isThirdPlace roundLabel={ROUND_META['third_place'].abbr} />
+            </div>
           )}
         </div>
       </div>
