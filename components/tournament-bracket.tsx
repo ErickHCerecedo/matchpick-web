@@ -283,12 +283,16 @@ function DesktopMatchCard({
   dragging: boolean; onSelect: (id: number) => void; onHover: (m: Match | null) => void;
 }) {
   const [hovered, setHovered] = useState(false);
-  const fin       = match.status === 'finished';
-  const live      = match.status === 'in_progress';
-  const homeWon   = fin && match.result?.winner === 'home';
-  const awayWon   = fin && match.result?.winner === 'away';
-  const hasResult = (fin || live) && !!match.result;
-  const { date: dDate, time: dTime } = formatMatchDateParts(match.scheduled_at);
+  const fin         = match.status === 'finished';
+  const live        = match.status === 'in_progress';
+  const homeWon     = fin && match.result?.winner === 'home';
+  const awayWon     = fin && match.result?.winner === 'away';
+  const hasResult   = (fin || live) && !!match.result;
+  const { date, time } = formatMatchDateParts(match.scheduled_at);
+  const statusColor = live ? 'text-red-400'     : fin ? 'text-slate-600'    : 'text-slate-500';
+  const dotColor    = live ? 'bg-red-400 animate-pulse' : fin ? 'bg-slate-600' : 'bg-emerald-500';
+  const badgeBorder = live ? 'border-red-500/40' : fin ? 'border-slate-700/60' : 'border-slate-700/40';
+  const calColor    = live ? 'text-red-400'     : fin ? 'text-slate-600'    : 'text-emerald-500';
   const handleEnter = () => { if (!dragging) { setHovered(true); onHover(match); } };
   const handleLeave = () => { setHovered(false); onHover(null); };
   return (
@@ -305,19 +309,22 @@ function DesktopMatchCard({
       onMouseEnter={handleEnter}
       onMouseLeave={handleLeave}
     >
+      <div className="flex items-center justify-between gap-1 px-2 border-b border-slate-800/60 shrink-0" style={{ height: 16 }}>
+        <div className="flex items-center gap-1 min-w-0">
+          <Calendar className={cn('h-2 w-2 shrink-0', calColor)} />
+          {date && <span className="text-[8px] text-slate-500 font-medium whitespace-nowrap">{date}</span>}
+          {time && <><span className="text-[8px] text-slate-700">·</span><span className="text-[8px] text-slate-600 whitespace-nowrap">{time}</span></>}
+        </div>
+        <div className={cn('flex items-center gap-0.5 shrink-0 rounded border px-0.5 py-px', badgeBorder)}>
+          <span className={cn('w-1 h-1 rounded-full shrink-0', dotColor)} />
+          <span className={cn('text-[7px] font-semibold leading-none', statusColor)}>{TREE_STATUS_LABELS[match.status]}</span>
+        </div>
+      </div>
       <DesktopTeamRow team={match.home_team} placeholder={match.home_placeholder} score={match.result?.home_score} won={homeWon} lost={awayWon} live={live} hasResult={hasResult} />
       <div className="h-px bg-slate-800/60 mx-2 shrink-0" />
       <DesktopTeamRow team={match.away_team} placeholder={match.away_placeholder} score={match.result?.away_score} won={awayWon} lost={homeWon} live={live} hasResult={hasResult} />
-      <div className="flex items-center gap-1.5 px-2 border-t border-slate-800/40 shrink-0 overflow-hidden" style={{ height: 13 }}>
-        {dDate && <span className="text-[7px] text-slate-600 shrink-0 leading-none">{dDate}</span>}
-        {dDate && (dTime || match.venue) && <span className="text-[7px] text-slate-700 shrink-0">·</span>}
-        {dTime && <span className="text-[7px] text-slate-700 shrink-0 leading-none">{dTime}</span>}
-        {match.venue && (
-          <>
-            {(dDate || dTime) && <span className="text-[7px] text-slate-700 shrink-0">·</span>}
-            <span className="text-[7px] text-slate-600 truncate leading-none">{match.venue}</span>
-          </>
-        )}
+      <div className="flex items-center gap-1 px-2 border-t border-slate-800/40 shrink-0" style={{ height: 12 }}>
+        {match.venue && <><MapPin className="h-[7px] w-[7px] shrink-0 text-slate-700" /><span className="text-[7px] text-slate-600 truncate">{match.venue}</span></>}
       </div>
     </button>
   );
@@ -329,12 +336,16 @@ function DesktopFinalCard({
   match: Match; roundId: number; active: boolean;
   dragging: boolean; onSelect: (id: number) => void; onHover: (m: Match | null) => void;
 }) {
-  const fin       = match.status === 'finished';
-  const live      = match.status === 'in_progress';
-  const homeWon   = fin && match.result?.winner === 'home';
-  const awayWon   = fin && match.result?.winner === 'away';
-  const hasResult = (fin || live) && !!match.result;
-  const { date: dDate, time: dTime } = formatMatchDateParts(match.scheduled_at);
+  const fin         = match.status === 'finished';
+  const live        = match.status === 'in_progress';
+  const homeWon     = fin && match.result?.winner === 'home';
+  const awayWon     = fin && match.result?.winner === 'away';
+  const hasResult   = (fin || live) && !!match.result;
+  const { date, time } = formatMatchDateParts(match.scheduled_at);
+  const statusColor = live ? 'text-red-400'     : fin ? 'text-slate-600'    : 'text-amber-700/70';
+  const dotColor    = live ? 'bg-red-400 animate-pulse' : fin ? 'bg-slate-600' : 'bg-amber-500';
+  const badgeBorder = live ? 'border-red-500/40' : fin ? 'border-slate-700/60' : 'border-amber-800/40';
+  const calColor    = live ? 'text-red-400'     : fin ? 'text-slate-600'    : 'text-amber-600/70';
   return (
     <button
       style={{ width: D_FINAL_W, height: D_CARD_H }}
@@ -348,19 +359,22 @@ function DesktopFinalCard({
       onMouseEnter={() => !dragging && onHover(match)}
       onMouseLeave={() => onHover(null)}
     >
+      <div className="flex items-center justify-between gap-1 px-2 border-b border-amber-900/30 shrink-0" style={{ height: 16 }}>
+        <div className="flex items-center gap-1 min-w-0">
+          <Calendar className={cn('h-2 w-2 shrink-0', calColor)} />
+          {date && <span className="text-[8px] text-amber-900/70 font-medium whitespace-nowrap">{date}</span>}
+          {time && <><span className="text-[8px] text-amber-900/40">·</span><span className="text-[8px] text-amber-900/60 whitespace-nowrap">{time}</span></>}
+        </div>
+        <div className={cn('flex items-center gap-0.5 shrink-0 rounded border px-0.5 py-px', badgeBorder)}>
+          <span className={cn('w-1 h-1 rounded-full shrink-0', dotColor)} />
+          <span className={cn('text-[7px] font-semibold leading-none', statusColor)}>{TREE_STATUS_LABELS[match.status]}</span>
+        </div>
+      </div>
       <DesktopTeamRow team={match.home_team} placeholder={match.home_placeholder} score={match.result?.home_score} won={homeWon} lost={awayWon} live={live} hasResult={hasResult} />
       <div className="h-px bg-amber-900/25 mx-2.5 shrink-0" />
       <DesktopTeamRow team={match.away_team} placeholder={match.away_placeholder} score={match.result?.away_score} won={awayWon} lost={homeWon} live={live} hasResult={hasResult} />
-      <div className="flex items-center gap-1.5 px-2 border-t border-amber-900/20 shrink-0 overflow-hidden" style={{ height: 13 }}>
-        {dDate && <span className="text-[7px] text-amber-900/60 shrink-0 leading-none">{dDate}</span>}
-        {dDate && (dTime || match.venue) && <span className="text-[7px] text-amber-900/40 shrink-0">·</span>}
-        {dTime && <span className="text-[7px] text-amber-900/50 shrink-0 leading-none">{dTime}</span>}
-        {match.venue && (
-          <>
-            {(dDate || dTime) && <span className="text-[7px] text-amber-900/40 shrink-0">·</span>}
-            <span className="text-[7px] text-amber-900/60 truncate leading-none">{match.venue}</span>
-          </>
-        )}
+      <div className="flex items-center gap-1 px-2 border-t border-amber-900/20 shrink-0" style={{ height: 12 }}>
+        {match.venue && <><MapPin className="h-[7px] w-[7px] shrink-0 text-amber-900/40" /><span className="text-[7px] text-amber-900/60 truncate">{match.venue}</span></>}
       </div>
     </button>
   );
