@@ -24,12 +24,12 @@ const ROUND_ICONS: Record<string, React.ElementType<any>> = {
 };
 
 const ROUND_META: Record<string, { label: string; abbr: string }> = {
-  round_of_32: { label: 'Dieciseisavos', abbr: '32F'  },
-  round_of_16: { label: 'Octavos',       abbr: 'OCT'  },
-  quarter:     { label: 'Cuartos',       abbr: 'CF'   },
-  semi:        { label: 'Semifinal',     abbr: 'SEMI' },
-  third_place: { label: 'Tercer puesto', abbr: '3P'   },
-  final:       { label: 'Final',         abbr: 'FINAL'},
+  round_of_32: { label: 'Dieciseisavos', abbr: 'Dieciseisavos' },
+  round_of_16: { label: 'Octavos',       abbr: 'Octavos'       },
+  quarter:     { label: 'Cuartos',       abbr: 'Cuartos'       },
+  semi:        { label: 'Semifinal',     abbr: 'Semifinal'     },
+  third_place: { label: 'Tercer puesto', abbr: '3P'            },
+  final:       { label: 'Final',         abbr: 'Final'         },
 };
 
 const CARD_BG =
