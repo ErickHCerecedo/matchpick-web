@@ -167,7 +167,21 @@ export function MatchCard({ match, prediction, onChange, readOnly, isSaved, show
 
           {/* Score / VS area */}
           <div className="flex items-center gap-2 shrink-0">
-            {hasResult ? (
+            {match.status === 'in_progress' && hasResult ? (
+              /* ── Live match: always show actual score; prediction below ── */
+              <div className="flex flex-col items-center gap-1">
+                <div className="flex items-center gap-1.5 font-bold">
+                  <span className="w-8 text-center text-xl tabular-nums font-mono text-red-300">{match.result!.home_score}</span>
+                  <span className="text-slate-500 text-sm font-normal">–</span>
+                  <span className="w-8 text-center text-xl tabular-nums font-mono text-red-300">{match.result!.away_score}</span>
+                </div>
+                {prediction && (
+                  <span className="text-[10px] text-slate-500 tabular-nums font-mono">
+                    pronóstico {prediction.home_score}–{prediction.away_score}
+                  </span>
+                )}
+              </div>
+            ) : hasResult ? (
               prediction ? (
                 <div className="flex items-center gap-1.5 font-bold text-white">
                   <span className="w-8 text-center text-xl tabular-nums font-mono">{prediction.home_score}</span>
