@@ -143,10 +143,8 @@ const TREE_STATUS_LABELS: Record<Match['status'], string> = {
 
 function TreeCard({
   match, active, colW = COL_W, isThirdPlace = false,
-  revealed = false, onTap,
 }: {
   match: Match; active: boolean; colW?: number; isThirdPlace?: boolean;
-  revealed?: boolean; onTap?: () => void;
 }) {
   const fin       = match.status === 'finished';
   const live      = match.status === 'in_progress';
@@ -160,30 +158,18 @@ function TreeCard({
   const badgeBorder = live ? 'border-red-500/40' : fin ? 'border-slate-700/60' : 'border-slate-700/40';
   const calColor    = live ? 'text-red-400' : fin ? 'text-slate-600' : 'text-emerald-500';
 
-  // Desktop uses internal hover state; mobile uses the tap-controlled `revealed` prop.
-  const [hovered, setHovered] = useState(false);
-  const isDesktop  = !onTap;
-  const showDetails = isDesktop ? hovered : revealed;
-
-  const detailTransition = { duration: 0.24, ease: [0.4, 0, 0.2, 1] as const };
-
   return (
     <div
       className={cn(
-        'relative rounded-xl border overflow-hidden flex flex-col transition-all duration-200 select-none',
-        live          ? 'border-red-500/50 shadow-md shadow-red-950/30' :
-        isThirdPlace  ? (active ? 'border-amber-600/60 shadow-sm shadow-amber-950/20' : 'border-amber-800/40') :
-        (isDesktop && hovered) ? 'border-slate-600/70 shadow-lg shadow-slate-900/60' :
-        active        ? 'border-emerald-500/40 shadow-sm shadow-emerald-950/20' :
-                        'border-slate-800/80',
-        onTap && 'cursor-pointer',
+        'relative rounded-xl border overflow-hidden flex flex-col transition-colors duration-200 select-none',
+        live         ? 'border-red-500/50 shadow-md shadow-red-950/30'                                        :
+        isThirdPlace ? (active ? 'border-amber-600/60 shadow-sm shadow-amber-950/20' : 'border-amber-800/40') :
+        active       ? 'border-emerald-500/40 shadow-sm shadow-emerald-950/20'                                :
+                       'border-slate-800/80',
       )}
       style={{ width: colW, height: CARD_H }}
-      onClick={onTap}
-      onMouseEnter={isDesktop ? () => setHovered(true) : undefined}
-      onMouseLeave={isDesktop ? () => setHovered(false) : undefined}
     >
-      {/* Background — fixed size so it doesn't shift */}
+      {/* Background */}
       <img
         src={CARD_BG}
         alt="" aria-hidden
@@ -192,46 +178,27 @@ function TreeCard({
       />
       <div className="absolute inset-0 z-0 bg-slate-950/91" />
 
-      {/* Desktop hover glow overlay */}
-      <motion.div
-        className="absolute inset-0 z-0 pointer-events-none rounded-xl"
-        style={{ background: 'radial-gradient(ellipse at 50% 50%, rgba(100,116,139,0.10) 0%, transparent 75%)' }}
-        animate={{ opacity: (isDesktop && hovered) ? 1 : 0 }}
-        initial={false}
-        transition={{ duration: 0.2 }}
-      />
-
       <div className="relative z-10 flex flex-col h-full">
 
         {/* Header — date, time, status badge */}
-        <motion.div
-          animate={{ height: showDetails ? CARD_HEADER_H : 0 }}
-          initial={false}
-          transition={detailTransition}
-          className="overflow-hidden shrink-0"
-        >
-          <div className="flex items-center justify-between gap-1 px-2 border-b border-slate-800/60" style={{ height: CARD_HEADER_H }}>
-            <div className="flex items-center gap-1 min-w-0">
-              <Calendar className={cn('h-2.5 w-2.5 shrink-0', calColor)} />
-              <span className="text-[9px] text-slate-500 font-medium whitespace-nowrap">{date}</span>
-              {time && (
-                <>
-                  <span className="text-[9px] text-slate-700">·</span>
-                  <span className="text-[9px] text-slate-600 whitespace-nowrap">{time}</span>
-                </>
-              )}
-            </div>
-            <div className={cn(
-              'flex items-center gap-0.5 shrink-0 rounded border px-1 py-px',
-              badgeBorder,
-            )}>
-              <span className={cn('w-1 h-1 rounded-full shrink-0', dotColor)} />
-              <span className={cn('text-[8px] font-semibold leading-none', statusColor)}>
-                {TREE_STATUS_LABELS[match.status]}
-              </span>
-            </div>
+        <div className="flex items-center justify-between gap-1 px-2 border-b border-slate-800/60 shrink-0" style={{ height: CARD_HEADER_H }}>
+          <div className="flex items-center gap-1 min-w-0">
+            <Calendar className={cn('h-2.5 w-2.5 shrink-0', calColor)} />
+            <span className="text-[9px] text-slate-500 font-medium whitespace-nowrap">{date}</span>
+            {time && (
+              <>
+                <span className="text-[9px] text-slate-700">·</span>
+                <span className="text-[9px] text-slate-600 whitespace-nowrap">{time}</span>
+              </>
+            )}
           </div>
-        </motion.div>
+          <div className={cn('flex items-center gap-0.5 shrink-0 rounded border px-1 py-px', badgeBorder)}>
+            <span className={cn('w-1 h-1 rounded-full shrink-0', dotColor)} />
+            <span className={cn('text-[8px] font-semibold leading-none', statusColor)}>
+              {TREE_STATUS_LABELS[match.status]}
+            </span>
+          </div>
+        </div>
 
         {/* Home row */}
         <TeamRow
@@ -251,21 +218,14 @@ function TreeCard({
         />
 
         {/* Footer — venue */}
-        <motion.div
-          animate={{ height: showDetails ? CARD_FOOTER_H : 0 }}
-          initial={false}
-          transition={detailTransition}
-          className="overflow-hidden shrink-0"
-        >
-          <div className="flex items-center gap-1 px-2 border-t border-slate-800/40" style={{ height: CARD_FOOTER_H }}>
-            {match.venue ? (
-              <>
-                <MapPin className="h-2 w-2 shrink-0 text-slate-700" />
-                <span className="text-[8px] text-slate-600 truncate">{match.venue}</span>
-              </>
-            ) : null}
-          </div>
-        </motion.div>
+        <div className="flex items-center gap-1 px-2 border-t border-slate-800/40 shrink-0" style={{ height: CARD_FOOTER_H }}>
+          {match.venue ? (
+            <>
+              <MapPin className="h-2 w-2 shrink-0 text-slate-700" />
+              <span className="text-[8px] text-slate-600 truncate">{match.venue}</span>
+            </>
+          ) : null}
+        </div>
 
       </div>
     </div>
@@ -714,14 +674,6 @@ function MobileBracket({
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
 
-  // Track which match has its details revealed (tap to toggle)
-  const [revealedMatchId, setRevealedMatchId] = useState<number | null>(null);
-
-  // Close any revealed card when the active column changes
-  useEffect(() => {
-    setRevealedMatchId(null);
-  }, [activeColIdx]);
-
   const firstCount = bracketRounds[0]?.matches.length ?? 0;
   if (!firstCount) return null;
 
@@ -826,8 +778,6 @@ function MobileBracket({
                 active={rIdx === activeColIdx}
                 colW={COL_W_M}
                 isThirdPlace={rIdx === thirdPlaceColIdx}
-                revealed={revealedMatchId === match.id}
-                onTap={() => setRevealedMatchId(prev => prev === match.id ? null : match.id)}
               />
             </div>
           ))
