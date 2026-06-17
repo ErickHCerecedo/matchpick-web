@@ -100,7 +100,8 @@ export default function TorneoAdminPage() {
   const [teamForm, setTeamForm] = useState({ name: '', short_name: '', logo_url: '' });
   const [showTeamForm, setShowTeamForm] = useState(false);
   const [editingTeamId, setEditingTeamId] = useState<number | null>(null);
-  const [editTeamForm, setEditTeamForm] = useState({ name: '', short_name: '', logo_url: '' });
+  const [editTeamForm, setEditTeamForm] = useState({ name: '', short_name: '', logo_url: '', external_id: '' });
+  const [exportingExcel, setExportingExcel] = useState(false);
 
   // Accordion state — replaces selectedRoundId + matches + loadingMatches + showRoundForm
   const [expandedRoundId, setExpandedRoundId] = useState<number | null>(null);
@@ -113,7 +114,7 @@ export default function TorneoAdminPage() {
   const [matchForm, setMatchForm] = useState({ home_team_id: '', away_team_id: '', scheduled_at: '', venue: '' });
   const [showMatchForm, setShowMatchForm] = useState(false);
   const [editingMatchId, setEditingMatchId] = useState<number | null>(null);
-  const [editMatchForm, setEditMatchForm] = useState({ home_team_id: '', away_team_id: '', scheduled_at: '', venue: '' });
+  const [editMatchForm, setEditMatchForm] = useState({ home_team_id: '', away_team_id: '', scheduled_at: '', venue: '', external_id: '' });
 
   // Result state
   const [resultMatchId, setResultMatchId] = useState<number | null>(null);
@@ -301,6 +302,7 @@ export default function TorneoAdminPage() {
         name: editTeamForm.name,
         short_name: editTeamForm.short_name,
         logo_url: editTeamForm.logo_url || null,
+        ...(user?.is_admin ? { external_id: editTeamForm.external_id || null } : {}),
       });
       setTeams((prev) => prev.map((t) => (t.id === teamId ? res.data : t)));
       setEditingTeamId(null);
@@ -324,7 +326,7 @@ export default function TorneoAdminPage() {
 
   const startEditTeam = (team: CustomTeam) => {
     setEditingTeamId(team.id);
-    setEditTeamForm({ name: team.name, short_name: team.short_name, logo_url: team.logo_url ?? '' });
+    setEditTeamForm({ name: team.name, short_name: team.short_name, logo_url: team.logo_url ?? '', external_id: team.external_id ?? '' });
   };
 
   // ── Rounds ─────────────────────────────────────────────────────────────
@@ -422,14 +424,16 @@ export default function TorneoAdminPage() {
       const scheduledAtUTC = editMatchForm.scheduled_at
         ? new Date(editMatchForm.scheduled_at + ':00-06:00').toISOString()
         : editMatchForm.scheduled_at;
+      const externalIdField = isAdmin && !isCustom ? { external_id: editMatchForm.external_id || null } : {};
       const payload = (isCustom || isAdmin) && editMatchForm.home_team_id
         ? {
             home_team_id: Number(editMatchForm.home_team_id),
             away_team_id: Number(editMatchForm.away_team_id),
             scheduled_at: scheduledAtUTC,
             venue: editMatchForm.venue || null,
+            ...externalIdField,
           }
-        : { scheduled_at: scheduledAtUTC, venue: editMatchForm.venue || null };
+        : { scheduled_at: scheduledAtUTC, venue: editMatchForm.venue || null, ...externalIdField };
       const res = await api.patch<ApiResponse<Partial<CustomMatch>>>(endpoint, payload);
       setMatchesByRound((prev) => ({
         ...prev,
@@ -481,6 +485,7 @@ export default function TorneoAdminPage() {
       away_team_id: match.away_team ? String(match.away_team.id) : '',
       scheduled_at: local,
       venue: match.venue ?? '',
+      external_id: match.external_id ?? '',
     });
   };
 
@@ -539,6 +544,32 @@ export default function TorneoAdminPage() {
       toast.error(err instanceof Error ? err.message : 'Error al actualizar estado');
     } finally {
       setUpdatingStatusId(null);
+    }
+  };
+
+  const handleExportExcel = async () => {
+    setExportingExcel(true);
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api';
+      const token  = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+      const res    = await fetch(`${apiUrl}/admin/football-data/export`, {
+        headers: { Authorization: `Bearer ${token ?? ''}` },
+      });
+      if (!res.ok) throw new Error(`Error ${res.status}`);
+      const blob     = await res.blob();
+      const url      = URL.createObjectURL(blob);
+      const a        = document.createElement('a');
+      a.href         = url;
+      a.download     = `mundial-2026-${new Date().toISOString().slice(0, 10)}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success('Archivo descargado.');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Error al exportar');
+    } finally {
+      setExportingExcel(false);
     }
   };
 
@@ -766,6 +797,12 @@ export default function TorneoAdminPage() {
                         <Label className="text-slate-400 text-xs">URL de imagen</Label>
                         <Input value={editTeamForm.logo_url} onChange={(e) => setEditTeamForm((p) => ({ ...p, logo_url: e.target.value }))} placeholder="https://..." className="bg-slate-950 border-slate-700 text-white placeholder:text-slate-600 text-sm h-8" />
                       </div>
+                      {user?.is_admin && (
+                        <div className="space-y-1">
+                          <Label className="text-slate-400 text-xs">External ID <span className="text-slate-600">(football-data.org)</span></Label>
+                          <Input value={editTeamForm.external_id} onChange={(e) => setEditTeamForm((p) => ({ ...p, external_id: e.target.value }))} placeholder="758" className="bg-slate-950 border-slate-700 text-white placeholder:text-slate-600 text-sm h-8 font-mono" />
+                        </div>
+                      )}
                       <div className="flex justify-end gap-1">
                         <button type="button" onClick={() => setEditingTeamId(null)} className="p-1.5 rounded text-slate-500 hover:text-white transition-colors"><X className="h-4 w-4" /></button>
                         <button type="button" onClick={() => handleUpdateTeam(team.id)} disabled={saving} className="p-1.5 rounded text-emerald-400 hover:text-emerald-300 transition-colors">
@@ -799,10 +836,15 @@ export default function TorneoAdminPage() {
         {/* ════════════════════ CALENDARIO ════════════════════ */}
         <TabsContent value="calendar" className="mt-4 space-y-4">
 
-          {/* Football-data.org test button */}
+          {/* Football-data.org buttons */}
           {user?.is_admin && (
             <div className="space-y-3">
-              <div className="flex justify-end">
+              <div className="flex justify-end gap-2">
+                <Button size="sm" variant="outline" onClick={handleExportExcel} disabled={exportingExcel}
+                  className="border-emerald-700/50 text-emerald-400 hover:text-emerald-300 hover:border-emerald-500 text-xs h-8 gap-1.5">
+                  {exportingExcel ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trophy className="h-3.5 w-3.5" />}
+                  Exportar Excel
+                </Button>
                 <Button size="sm" variant="outline" onClick={handleTestFootballData} disabled={testingFD}
                   className="border-blue-700/50 text-blue-400 hover:text-blue-300 hover:border-blue-500 text-xs h-8 gap-1.5">
                   {testingFD ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
@@ -1093,6 +1135,17 @@ export default function TorneoAdminPage() {
                                           <Input placeholder="Estadio..." value={editMatchForm.venue} onChange={(e) => setEditMatchForm((p) => ({ ...p, venue: e.target.value }))} className="bg-slate-950 border-slate-700 text-white placeholder:text-slate-600 text-xs h-8" />
                                         </div>
                                       </div>
+                                      {user?.is_admin && !tournament.is_custom && (
+                                        <div className="space-y-1">
+                                          <Label className="text-slate-400 text-xs">External ID <span className="text-slate-600">(football-data.org)</span></Label>
+                                          <Input
+                                            placeholder="471543"
+                                            value={editMatchForm.external_id}
+                                            onChange={(e) => setEditMatchForm((p) => ({ ...p, external_id: e.target.value }))}
+                                            className="bg-slate-950 border-slate-700 text-white placeholder:text-slate-600 text-xs h-8 font-mono"
+                                          />
+                                        </div>
+                                      )}
                                       <div className="flex justify-end gap-2">
                                         <button type="button" onClick={() => setEditingMatchId(null)}
                                           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-slate-400 hover:text-white border border-slate-700 hover:border-slate-600 transition-colors">

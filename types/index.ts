@@ -61,6 +61,7 @@ export interface CustomTeam {
   name: string;
   short_name: string;
   logo_url: string | null;
+  external_id?: string | null;
 }
 
 export interface CustomMatch {
@@ -68,6 +69,7 @@ export interface CustomMatch {
   scheduled_at: string;
   venue: string | null;
   status: string;
+  external_id?: string | null;
   home_team: { id: number; name: string; short_name: string; logo_url?: string | null } | null;
   home_placeholder: string | null;
   away_team: { id: number; name: string; short_name: string; logo_url?: string | null } | null;
