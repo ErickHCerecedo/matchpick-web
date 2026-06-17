@@ -20,6 +20,7 @@ import {
   Calendar, MapPin, ChevronUp, ChevronDown, Play, Square,
 } from 'lucide-react';
 import { FlagPlaceholder } from '@/components/ui/flag-placeholder';
+import { ApiMonitorModal } from '@/components/api-monitor-modal';
 import { cn, formatMatchDateParts } from '@/lib/utils';
 import { toLocalDateKey, formatDateLabel, todayKey } from '@/lib/date-utils';
 
@@ -839,7 +840,7 @@ export default function TorneoAdminPage() {
           {/* Football-data.org buttons */}
           {user?.is_admin && (
             <div className="space-y-3">
-              <div className="flex justify-end gap-2">
+              <div className="flex justify-end gap-2 flex-wrap">
                 <Button size="sm" variant="outline" onClick={handleExportExcel} disabled={exportingExcel}
                   className="border-emerald-700/50 text-emerald-400 hover:text-emerald-300 hover:border-emerald-500 text-xs h-8 gap-1.5">
                   {exportingExcel ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trophy className="h-3.5 w-3.5" />}
@@ -850,6 +851,7 @@ export default function TorneoAdminPage() {
                   {testingFD ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
                   Probar football-data.org
                 </Button>
+                <ApiMonitorModal />
               </div>
 
               {fdResult && (
