@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -46,6 +46,7 @@ export default function QuinielaPage() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [showDelete, setShowDelete] = useState(false);
   const [showShare, setShowShare] = useState(false);
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const handleGenerateInvite = async () => {
     if (!slug) return;
@@ -71,6 +72,20 @@ export default function QuinielaPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const pollMatches = useCallback(() => {
+    if (!slug) return;
+    api.get<ApiResponse<RoundWithMatches[]>>(`/quinielas/${slug}/matches`)
+      .then((res) => {
+        setRounds(res.data);
+        const hasLive = res.data.some((r) => r.matches.some((m) => m.status === 'in_progress'));
+        if (!hasLive && pollingRef.current) {
+          clearInterval(pollingRef.current);
+          pollingRef.current = null;
+        }
+      })
+      .catch(console.error);
+  }, [slug]);
+
   useEffect(() => {
     if (!slug) return;
 
@@ -83,13 +98,24 @@ export default function QuinielaPage() {
         setQuiniela(qRes.data);
         setStandings(sRes.data);
         setRounds(rRes.data);
+        const hasLive = rRes.data.some((r) => r.matches.some((m) => m.status === 'in_progress'));
+        if (hasLive && !pollingRef.current) {
+          pollingRef.current = setInterval(pollMatches, 30_000);
+        }
       })
       .catch(() => {
         setLoadError(true);
         toast.error('Error al cargar la quiniela. Intenta de nuevo.');
       })
       .finally(() => setLoading(false));
-  }, [slug]);
+
+    return () => {
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+        pollingRef.current = null;
+      }
+    };
+  }, [slug, pollMatches]);
 
   const handlePredictionsSaved = useCallback((saved: Record<number, Prediction>) => {
     setRounds(prev =>

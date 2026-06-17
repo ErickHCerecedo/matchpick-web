@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
@@ -9,9 +9,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { MatchCard } from '@/components/match-card';
 import { TeamStandings } from '@/components/team-standings';
 import { api } from '@/lib/api';
-import { toast } from 'sonner';
 import type { ApiResponse, Match, Tournament, RoundWithMatches, TeamStandingsData } from '@/types';
-import { CalendarDays, Trophy, RefreshCw, GitBranch } from 'lucide-react';
+import { CalendarDays, Trophy, GitBranch } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -43,13 +42,37 @@ export default function TorneoDetailPage() {
   const [teamStandings, setTeamStandings] = useState<TeamStandingsData | null>(null);
   const [loadingTeamStandings, setLoadingTeamStandings] = useState(false);
   const [activeDateKey, setActiveDateKey] = useState<string | null>(null);
-  const [syncing, setSyncing] = useState(false);
   const activeDateRef = useRef<HTMLButtonElement>(null);
   const standingsFetched = useRef(false);
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     activeDateRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
   }, [activeDateKey]);
+
+  const fetchMatches = useCallback(async (isInitial: boolean) => {
+    const res = await api.get<ApiResponse<RoundWithMatches[]>>(`/tournaments/${slug}/matches`);
+    setRounds(res.data);
+    if (isInitial) {
+      const today = todayKey();
+      const allMatches = res.data.flatMap((r) => r.matches);
+      const allDates = [
+        ...new Set(
+          allMatches
+            .map((m) => (m.scheduled_at ? toLocalDateKey(m.scheduled_at) : null))
+            .filter(Boolean) as string[]
+        ),
+      ].sort();
+      const defaultDate = allDates.find((d) => d >= today) ?? allDates[0];
+      if (defaultDate) setActiveDateKey(defaultDate);
+    }
+    const hasLive = res.data.some((r) => r.matches.some((m) => m.status === 'in_progress'));
+    if (!hasLive && pollingRef.current) {
+      clearInterval(pollingRef.current);
+      pollingRef.current = null;
+    }
+    return res.data;
+  }, [slug]);
 
   useEffect(() => {
     if (!slug) return;
@@ -59,36 +82,22 @@ export default function TorneoDetailPage() {
       .catch(console.error)
       .finally(() => setLoadingTournament(false));
 
-    api.get<ApiResponse<RoundWithMatches[]>>(`/tournaments/${slug}/matches`)
-      .then((res) => {
-        setRounds(res.data);
-        const today = todayKey();
-        const allMatches = res.data.flatMap((r) => r.matches);
-        const allDates = [
-          ...new Set(
-            allMatches
-              .map((m) => (m.scheduled_at ? toLocalDateKey(m.scheduled_at) : null))
-              .filter(Boolean) as string[]
-          ),
-        ].sort();
-        const defaultDate = allDates.find((d) => d >= today) ?? allDates[0];
-        if (defaultDate) setActiveDateKey(defaultDate);
+    fetchMatches(true)
+      .then((data) => {
+        const hasLive = data.some((r) => r.matches.some((m) => m.status === 'in_progress'));
+        if (hasLive && !pollingRef.current) {
+          pollingRef.current = setInterval(() => fetchMatches(false).catch(console.error), 30_000);
+        }
       })
       .catch(console.error);
-  }, [slug]);
 
-  const handleSync = async () => {
-    if (!tournament) return;
-    setSyncing(true);
-    try {
-      const res = await api.post<{ message: string }>(`/admin/tournaments/${tournament.slug}/sync-results`, {});
-      toast.success(res.message ?? 'Resultados sincronizados');
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Error al sincronizar');
-    } finally {
-      setSyncing(false);
-    }
-  };
+    return () => {
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+        pollingRef.current = null;
+      }
+    };
+  }, [slug, fetchMatches]);
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
@@ -203,16 +212,6 @@ export default function TorneoDetailPage() {
           </div>
         </div>
 
-        {user?.is_admin && !tournament.is_custom && (
-          <button
-            onClick={handleSync}
-            disabled={syncing}
-            className="self-start md:self-auto flex items-center gap-1.5 text-xs text-slate-400 hover:text-white border border-slate-700 hover:border-slate-500 rounded-lg px-3 py-2 transition-colors shrink-0 disabled:opacity-50"
-          >
-            <RefreshCw className={cn('h-3.5 w-3.5', syncing && 'animate-spin')} />
-            {syncing ? 'Sincronizando…' : 'Sincronizar resultados'}
-          </button>
-        )}
       </div>
 
       {/* ── Tabs ─────────────────────────────────────────────────────── */}
