@@ -17,6 +17,7 @@ interface Props {
   onChange?: (matchId: number, home: number, away: number) => void;
   readOnly?: boolean;
   isSaved?: boolean;
+  showActualResult?: boolean;
 }
 
 const STATUS_LABELS: Record<Match['status'], string> = {
@@ -69,7 +70,7 @@ function ScoreStepper({
   );
 }
 
-export function MatchCard({ match, prediction, onChange, readOnly, isSaved }: Props) {
+export function MatchCard({ match, prediction, onChange, readOnly, isSaved, showActualResult }: Props) {
   const [home, setHome] = useState<number | null>(prediction?.home_score ?? null);
   const [away, setAway] = useState<number | null>(prediction?.away_score ?? null);
 
@@ -172,6 +173,12 @@ export function MatchCard({ match, prediction, onChange, readOnly, isSaved }: Pr
                   <span className="w-8 text-center text-xl tabular-nums font-mono">{prediction.home_score}</span>
                   <span className="text-slate-500 text-sm font-normal">–</span>
                   <span className="w-8 text-center text-xl tabular-nums font-mono">{prediction.away_score}</span>
+                </div>
+              ) : showActualResult ? (
+                <div className="flex items-center gap-1.5 font-bold text-white">
+                  <span className="w-8 text-center text-xl tabular-nums font-mono">{match.result!.home_score}</span>
+                  <span className="text-slate-500 text-sm font-normal">–</span>
+                  <span className="w-8 text-center text-xl tabular-nums font-mono">{match.result!.away_score}</span>
                 </div>
               ) : (
                 <div className="flex flex-col items-center gap-1">

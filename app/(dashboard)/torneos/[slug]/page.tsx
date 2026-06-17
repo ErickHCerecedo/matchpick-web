@@ -312,7 +312,7 @@ export default function TorneoDetailPage() {
                     </div>
                     <div className="grid gap-3 md:grid-cols-2">
                       {matches.map((match) => (
-                        <MatchCard key={match.id} match={match} prediction={null} readOnly />
+                        <MatchCard key={match.id} match={match} prediction={null} readOnly showActualResult />
                       ))}
                     </div>
                   </div>
