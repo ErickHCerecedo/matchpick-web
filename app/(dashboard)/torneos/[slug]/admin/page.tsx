@@ -544,11 +544,14 @@ export default function TorneoAdminPage() {
   const handleSync = async () => {
     setSyncing(true);
     try {
-      const res = await api.post<ApiResponse<{ synced: number }>>(
+      const res = await api.post<ApiResponse<Record<string, unknown>>>(
         `/admin/tournaments/${slug}/sync-results`,
         {}
       );
-      toast.success(res.message ?? `${res.data.synced} resultado(s) sincronizados.`);
+      console.log('[Sincronizar API] Respuesta completa:', res);
+      console.log('[Sincronizar API] Partidos pendientes:', res.data.pending_matches);
+      console.log('[Sincronizar API] Fixtures de la API:', res.data.fixtures);
+      toast.success(res.message ?? 'Sincronización completada.');
       if (expandedRoundId) {
         const mRes = await api.get<ApiResponse<CustomMatch[]>>(
           `/tournaments/${slug}/rounds/${expandedRoundId}/matches`
@@ -556,6 +559,7 @@ export default function TorneoAdminPage() {
         setMatchesByRound((prev) => ({ ...prev, [expandedRoundId]: mRes.data }));
       }
     } catch (err) {
+      console.error('[Sincronizar API] Error:', err);
       toast.error(err instanceof Error ? err.message : 'Error al sincronizar resultados');
     } finally {
       setSyncing(false);
