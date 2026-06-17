@@ -119,8 +119,6 @@ export default function TorneoAdminPage() {
   const [resultMatchId, setResultMatchId] = useState<number | null>(null);
   const [resultForm, setResultForm] = useState({ home_score: '', away_score: '' });
   const [savingResult, setSavingResult] = useState(false);
-  const [syncing, setSyncing] = useState(false);
-  const [syncResult, setSyncResult] = useState<Record<string, unknown> | null>(null);
   const [testingFD, setTestingFD] = useState(false);
   const [fdResult, setFdResult] = useState<Record<string, unknown> | null>(null);
   const [saving, setSaving] = useState(false);
@@ -544,29 +542,6 @@ export default function TorneoAdminPage() {
     }
   };
 
-  const handleSync = async () => {
-    setSyncing(true);
-    setSyncResult(null);
-    try {
-      const res = await api.post<ApiResponse<Record<string, unknown>>>(
-        `/admin/tournaments/${slug}/sync-results`,
-        {}
-      );
-      setSyncResult(res.data);
-      toast.success(res.message ?? 'Sincronización completada.');
-      if (expandedRoundId) {
-        const mRes = await api.get<ApiResponse<CustomMatch[]>>(
-          `/tournaments/${slug}/rounds/${expandedRoundId}/matches`
-        );
-        setMatchesByRound((prev) => ({ ...prev, [expandedRoundId]: mRes.data }));
-      }
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Error al sincronizar resultados');
-    } finally {
-      setSyncing(false);
-    }
-  };
-
   const handleTestFootballData = async () => {
     setTestingFD(true);
     setFdResult(null);
@@ -823,96 +798,6 @@ export default function TorneoAdminPage() {
 
         {/* ════════════════════ CALENDARIO ════════════════════ */}
         <TabsContent value="calendar" className="mt-4 space-y-4">
-
-          {/* Sync button */}
-          {!tournament.is_custom && user?.is_admin && (
-            <div className="space-y-3">
-              <div className="flex justify-end">
-                <Button size="sm" variant="outline" onClick={handleSync} disabled={syncing}
-                  className="border-slate-600 text-slate-300 hover:text-white text-xs h-8 gap-1.5">
-                  {syncing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
-                  Sincronizar API
-                </Button>
-              </div>
-
-              {/* Sync result panel */}
-              {syncResult && (
-                <div className="rounded-xl border border-slate-700 bg-slate-900 p-3 space-y-3 text-xs">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-slate-300 uppercase tracking-wider">Resultado sincronización</span>
-                    <button onClick={() => setSyncResult(null)} className="text-slate-600 hover:text-white transition-colors">
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-
-                  {/* Pending matches */}
-                  {Array.isArray(syncResult.pending_matches) && (
-                    <div className="space-y-1">
-                      <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest">
-                        Partidos pendientes ({(syncResult.pending_matches as unknown[]).length})
-                      </p>
-                      {(syncResult.pending_matches as unknown[]).length === 0 ? (
-                        <p className="text-slate-600 italic">Ninguno</p>
-                      ) : (
-                        <div className="space-y-1">
-                          {(syncResult.pending_matches as Record<string, unknown>[]).map((m, i) => (
-                            <div key={i} className="flex items-center gap-2 bg-slate-800/60 rounded-lg px-2.5 py-1.5">
-                              <span className="text-slate-500 font-mono">#{String(m.external_id)}</span>
-                              <span className={cn('font-semibold',
-                                m.status === 'in_progress' ? 'text-red-400' :
-                                m.status === 'finished'    ? 'text-slate-500' : 'text-emerald-400'
-                              )}>{String(m.status)}</span>
-                              <span className="text-slate-600 ml-auto">{String(m.scheduled_at ?? '').slice(0, 10)}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Fixtures from API */}
-                  {Array.isArray(syncResult.fixtures) && (
-                    <div className="space-y-1">
-                      <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest">
-                        Fixtures de la API ({(syncResult.fixtures as unknown[]).length})
-                      </p>
-                      {(syncResult.fixtures as unknown[]).length === 0 ? (
-                        <p className="text-slate-600 italic">La API no devolvió fixtures</p>
-                      ) : (
-                        <div className="space-y-1.5">
-                          {(syncResult.fixtures as Record<string, unknown>[]).map((f, i) => (
-                            <div key={i} className="bg-slate-800/60 rounded-lg px-2.5 py-2 space-y-1">
-                              <div className="flex items-center justify-between gap-2">
-                                <span className="font-semibold text-white truncate">
-                                  {String(f.home_team ?? '?')} – {String(f.away_team ?? '?')}
-                                </span>
-                                <span className={cn('shrink-0 font-bold',
-                                  f.mapped_status === 'finished'    ? 'text-slate-400' :
-                                  f.mapped_status === 'in_progress' ? 'text-red-400'   : 'text-emerald-400'
-                                )}>{String(f.api_status ?? '')}</span>
-                              </div>
-                              <div className="flex items-center gap-3 text-[11px]">
-                                <span className="text-slate-500">
-                                  Marcador: <span className="text-white font-mono">
-                                    {f.home_score !== null ? String(f.home_score) : '?'} – {f.away_score !== null ? String(f.away_score) : '?'}
-                                  </span>
-                                </span>
-                                <span className={cn('ml-auto font-semibold',
-                                  f.would_sync ? 'text-emerald-400' : 'text-slate-600'
-                                )}>
-                                  {f.would_sync ? '✓ Se sincronizaría' : '— Sin sincronizar'}
-                                </span>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
 
           {/* Football-data.org test button */}
           {user?.is_admin && (
