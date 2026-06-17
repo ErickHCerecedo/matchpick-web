@@ -121,6 +121,8 @@ export default function TorneoAdminPage() {
   const [savingResult, setSavingResult] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<Record<string, unknown> | null>(null);
+  const [testingFD, setTestingFD] = useState(false);
+  const [fdResult, setFdResult] = useState<Record<string, unknown> | null>(null);
   const [saving, setSaving] = useState(false);
   const [updatingStatusId, setUpdatingStatusId] = useState<number | null>(null);
 
@@ -565,6 +567,20 @@ export default function TorneoAdminPage() {
     }
   };
 
+  const handleTestFootballData = async () => {
+    setTestingFD(true);
+    setFdResult(null);
+    try {
+      const res = await api.get<ApiResponse<Record<string, unknown>>>('/admin/football-data/test');
+      setFdResult(res.data);
+      toast.success(res.message ?? 'Conexión exitosa');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Error al conectar');
+    } finally {
+      setTestingFD(false);
+    }
+  };
+
   // ── Config ────────────────────────────────────────────────────────────
 
   const handleSaveConfig = async () => {
@@ -890,6 +906,79 @@ export default function TorneoAdminPage() {
                             </div>
                           ))}
                         </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Football-data.org test button */}
+          {user?.is_admin && (
+            <div className="space-y-3">
+              <div className="flex justify-end">
+                <Button size="sm" variant="outline" onClick={handleTestFootballData} disabled={testingFD}
+                  className="border-blue-700/50 text-blue-400 hover:text-blue-300 hover:border-blue-500 text-xs h-8 gap-1.5">
+                  {testingFD ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                  Probar football-data.org
+                </Button>
+              </div>
+
+              {fdResult && (
+                <div className="rounded-xl border border-blue-800/40 bg-slate-900 p-3 space-y-3 text-xs">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className={cn('w-2 h-2 rounded-full', fdResult.ok ? 'bg-emerald-400' : 'bg-red-400')} />
+                      <span className="font-bold text-slate-300">{String(fdResult.competition ?? 'football-data.org')}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {fdResult.rate_limit != null && (
+                        <span className="text-slate-600 text-[10px]">
+                          Llamadas restantes: {String((fdResult.rate_limit as Record<string,unknown>).available_minute ?? '?')}
+                        </span>
+                      )}
+                      <button onClick={() => setFdResult(null)} className="text-slate-600 hover:text-white transition-colors">
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <p className="text-slate-500 text-[10px]">
+                    Total partidos: <span className="text-white font-semibold">{String(fdResult.total ?? 0)}</span>
+                    {fdResult.season != null && <> · Temporada: <span className="text-white">{String(fdResult.season)}</span></>}
+                  </p>
+
+                  {Array.isArray(fdResult.matches) && (
+                    <div className="space-y-1.5 max-h-80 overflow-y-auto pr-1">
+                      {(fdResult.matches as Record<string, unknown>[]).slice(0, 10).map((m, i) => (
+                        <div key={i} className="bg-slate-800/60 rounded-lg px-2.5 py-2 space-y-0.5">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-semibold text-white text-[11px] truncate">
+                              {String(m.home)} vs {String(m.away)}
+                            </span>
+                            <span className={cn('shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded',
+                              m.status === 'IN_PLAY' || m.status === 'PAUSED' ? 'bg-red-500/20 text-red-400' :
+                              m.status === 'FINISHED' ? 'bg-slate-700/50 text-slate-400' :
+                              'bg-emerald-500/10 text-emerald-400'
+                            )}>
+                              {String(m.status)}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-3 text-[10px] text-slate-500">
+                            <span>{String(m.date)} {String(m.time)}</span>
+                            {m.score_home != null && (
+                              <span className="text-white font-mono font-bold ml-auto">
+                                {String(m.score_home)} – {String(m.score_away ?? 0)}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                      {Array.isArray(fdResult.matches) && (fdResult.matches as unknown[]).length > 10 && (
+                        <p className="text-center text-slate-600 text-[10px] pt-1">
+                          + {(fdResult.matches as unknown[]).length - 10} partidos más
+                        </p>
                       )}
                     </div>
                   )}
