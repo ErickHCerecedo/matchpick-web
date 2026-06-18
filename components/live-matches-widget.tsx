@@ -96,16 +96,15 @@ export function LiveMatchesWidget() {
                   </div>
 
                   {/* Score */}
-                  <div className="shrink-0 flex flex-col items-center gap-0.5">
-                    <span className={cn(
-                      'text-sm font-bold font-mono tabular-nums leading-none',
+                  <div className="shrink-0 flex flex-col items-center gap-0.5 px-2">
+                    <div className={cn(
+                      'flex items-center gap-1.5 text-sm font-bold font-mono tabular-nums leading-none',
                       match.result ? 'text-white' : 'text-red-400'
                     )}>
-                      {match.result
-                        ? `${match.result.home_score}–${match.result.away_score}`
-                        : '0–0'
-                      }
-                    </span>
+                      <span>{match.result ? match.result.home_score : '0'}</span>
+                      <span className="text-[10px] font-semibold text-slate-500">vs</span>
+                      <span>{match.result ? match.result.away_score : '0'}</span>
+                    </div>
                     <span className="text-[8px] font-bold text-red-500/80 uppercase tracking-widest leading-none">
                       vivo
                     </span>
