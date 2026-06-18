@@ -14,6 +14,16 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { api } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import type { ApiResponse, Tournament, Round, CustomTeam, CustomMatch, MatchResult } from '@/types';
+
+interface AdminQuiniela {
+  id: number;
+  name: string;
+  slug: string;
+  type: string;
+  participants_count: number;
+  creator: { id: number; name: string; email: string } | null;
+  participants: { id: number; name: string; email: string; role: string }[];
+}
 import {
   ArrowLeft, Plus, Trash2, Loader2, Users, CalendarDays, Trophy,
   Pencil, Check, X, Shield, ChevronRight, RefreshCw, Settings2, ImageIcon,
@@ -96,6 +106,11 @@ export default function TorneoAdminPage() {
   const [teams, setTeams] = useState<CustomTeam[]>([]);
   const [rounds, setRounds] = useState<(Round & { matches_count: number })[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Quinielas tab
+  const [adminQuinielas, setAdminQuinielas] = useState<AdminQuiniela[]>([]);
+  const [loadingQuinielas, setLoadingQuinielas] = useState(false);
+  const [expandedQuiniela, setExpandedQuiniela] = useState<number | null>(null);
 
   // Team state
   const [teamForm, setTeamForm] = useState({ name: '', short_name: '', logo_url: '' });
@@ -656,8 +671,17 @@ export default function TorneoAdminPage() {
       </div>
 
       {/* ── Tabs ── */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className={cn('!grid w-full !h-auto bg-slate-900 border border-slate-700/60 p-1 gap-1 rounded-xl mb-1', tournament.is_custom ? 'grid-cols-3' : 'grid-cols-2')}>
+      <Tabs value={activeTab} onValueChange={(tab) => {
+        setActiveTab(tab);
+        if (tab === 'quinielas' && adminQuinielas.length === 0 && tournament) {
+          setLoadingQuinielas(true);
+          api.get<ApiResponse<AdminQuiniela[]>>(`/admin/tournaments/${tournament.id}/quinielas`)
+            .then((res) => setAdminQuinielas(res.data))
+            .catch(console.error)
+            .finally(() => setLoadingQuinielas(false));
+        }
+      }}>
+        <TabsList className={cn('!grid w-full !h-auto bg-slate-900 border border-slate-700/60 p-1 gap-1 rounded-xl mb-1', tournament.is_custom ? 'grid-cols-4' : 'grid-cols-3')}>
           <TabsTrigger
             value="teams"
             className="flex items-center gap-1.5 py-2.5 h-auto rounded-lg text-slate-400 data-active:bg-emerald-500/20 data-active:text-emerald-400 hover:text-white transition-colors"
@@ -671,6 +695,13 @@ export default function TorneoAdminPage() {
           >
             <CalendarDays className="h-4 w-4 shrink-0" />
             <span className="text-xs font-medium">Calendario</span>
+          </TabsTrigger>
+          <TabsTrigger
+            value="quinielas"
+            className="flex items-center gap-1.5 py-2.5 h-auto rounded-lg text-slate-400 data-active:bg-emerald-500/20 data-active:text-emerald-400 hover:text-white transition-colors"
+          >
+            <Shield className="h-4 w-4 shrink-0" />
+            <span className="text-xs font-medium">Quinielas</span>
           </TabsTrigger>
           {tournament.is_custom && (
             <TabsTrigger
@@ -1323,6 +1354,66 @@ export default function TorneoAdminPage() {
             </div>
           )}
         </TabsContent>
+        {/* ════════════════════ QUINIELAS ════════════════════ */}
+        <TabsContent value="quinielas" className="mt-4 space-y-3">
+          {loadingQuinielas ? (
+            <div className="flex items-center justify-center py-10 text-slate-500 text-sm gap-2">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Cargando quinielas…
+            </div>
+          ) : adminQuinielas.length === 0 ? (
+            <p className="text-center text-slate-500 text-sm py-10">No hay quinielas para este torneo.</p>
+          ) : (
+            adminQuinielas.map((q) => (
+              <div key={q.id} className="rounded-xl border border-slate-800 bg-slate-900 overflow-hidden">
+                {/* Header */}
+                <button
+                  onClick={() => setExpandedQuiniela(expandedQuiniela === q.id ? null : q.id)}
+                  className="w-full flex items-center justify-between gap-3 px-4 py-3 hover:bg-slate-800/50 transition-colors text-left"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <Shield className="h-4 w-4 text-emerald-400 shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-white truncate">{q.name}</p>
+                      <p className="text-[11px] text-slate-500 truncate">
+                        Creada por {q.creator?.name ?? '–'} · {q.type}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-xs font-medium text-slate-400 bg-slate-800 px-2 py-0.5 rounded-full">
+                      {q.participants_count} {q.participants_count === 1 ? 'participante' : 'participantes'}
+                    </span>
+                    <ChevronRight className={cn('h-4 w-4 text-slate-600 transition-transform', expandedQuiniela === q.id && 'rotate-90')} />
+                  </div>
+                </button>
+
+                {/* Participants list */}
+                {expandedQuiniela === q.id && (
+                  <div className="border-t border-slate-800 divide-y divide-slate-800/60">
+                    {q.participants.map((p) => (
+                      <div key={p.id} className="flex items-center gap-3 px-4 py-2.5">
+                        <div className="w-7 h-7 rounded-full bg-slate-700 flex items-center justify-center shrink-0">
+                          <span className="text-xs font-bold text-white">{p.name.charAt(0).toUpperCase()}</span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-white font-medium truncate">{p.name}</p>
+                          <p className="text-[11px] text-slate-500 truncate">{p.email}</p>
+                        </div>
+                        {p.role === 'admin' && (
+                          <span className="text-[10px] font-semibold text-amber-400 bg-amber-400/10 border border-amber-400/20 px-1.5 py-0.5 rounded shrink-0">
+                            Admin
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))
+          )}
+        </TabsContent>
+
         {/* ════════════════════ CONFIGURACIÓN ════════════════════ */}
         {tournament.is_custom && (
           <TabsContent value="config" className="mt-4 space-y-5">
