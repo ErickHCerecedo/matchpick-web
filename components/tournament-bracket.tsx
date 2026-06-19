@@ -1162,6 +1162,23 @@ export function TournamentBracket({ rounds }: { rounds: RoundWithMatches[] }) {
             <ChampionPanel name={champion.name} flag={champion.flag} />
           ) : (
             <>
+              {/* Swipe hint — top, shown while hint is still active */}
+              <AnimatePresence>
+                {!swipeHintDone && allBracketRounds.length > 1 && (
+                  <motion.p
+                    initial={{ opacity: 0, y: -4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.35 }}
+                    className="flex items-center justify-center gap-1.5 text-[10px] text-slate-700 select-none"
+                  >
+                    <ChevronLeft className="h-3 w-3" />
+                    Desliza para navegar las rondas
+                    <ChevronRight className="h-3 w-3" />
+                  </motion.p>
+                )}
+              </AnimatePresence>
+
               <MobileBracket
                 bracketRounds={allBracketRounds}
                 activeColIdx={activeBracketColIdx}
