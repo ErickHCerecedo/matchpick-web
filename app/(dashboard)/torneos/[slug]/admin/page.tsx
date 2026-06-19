@@ -22,7 +22,7 @@ interface AdminQuiniela {
   type: string;
   participants_count: number;
   creator: { id: number; name: string; email: string } | null;
-  participants: { id: number; name: string; email: string; role: string }[];
+  participants: { id: number; name: string; email: string; role: string; total_points: number; rank: number | null }[];
 }
 import {
   ArrowLeft, Plus, Trash2, Loader2, Users, CalendarDays, Trophy,
@@ -1391,15 +1391,28 @@ export default function TorneoAdminPage() {
                 {/* Participants list */}
                 {expandedQuiniela === q.id && (
                   <div className="border-t border-slate-800 divide-y divide-slate-800/60">
-                    {q.participants.map((p) => (
+                    {q.participants.map((p, i) => (
                       <div key={p.id} className="flex items-center gap-3 px-4 py-2.5">
+                        {/* Position */}
+                        <span className={cn(
+                          'w-6 text-center text-xs font-bold tabular-nums shrink-0',
+                          i === 0 ? 'text-yellow-400' : i === 1 ? 'text-slate-300' : i === 2 ? 'text-amber-600' : 'text-slate-600'
+                        )}>
+                          {p.rank ?? i + 1}
+                        </span>
+                        {/* Avatar */}
                         <div className="w-7 h-7 rounded-full bg-slate-700 flex items-center justify-center shrink-0">
                           <span className="text-xs font-bold text-white">{p.name.charAt(0).toUpperCase()}</span>
                         </div>
+                        {/* Name + email */}
                         <div className="flex-1 min-w-0">
                           <p className="text-sm text-white font-medium truncate">{p.name}</p>
                           <p className="text-[11px] text-slate-500 truncate">{p.email}</p>
                         </div>
+                        {/* Points */}
+                        <span className="text-sm font-bold text-emerald-400 tabular-nums shrink-0">
+                          {p.total_points} pts
+                        </span>
                         {p.role === 'admin' && (
                           <span className="text-[10px] font-semibold text-amber-400 bg-amber-400/10 border border-amber-400/20 px-1.5 py-0.5 rounded shrink-0">
                             Admin
