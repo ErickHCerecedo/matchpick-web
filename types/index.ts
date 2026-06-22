@@ -115,7 +115,7 @@ export interface Match {
   away_placeholder: string | null;
   scheduled_at: string;
   venue: string | null;
-  status: 'scheduled' | 'in_progress' | 'finished' | 'cancelled';
+  status: 'scheduled' | 'in_progress' | 'finished' | 'cancelled' | 'postponed';
   prediction_closes_at: string;
   is_prediction_open: boolean;
   bracket_slot: number | null;
@@ -183,7 +183,7 @@ export interface BreakdownScore {
 export interface BreakdownMatch {
   id: number;
   scheduled_at: string;
-  status: 'scheduled' | 'in_progress' | 'finished' | 'cancelled';
+  status: 'scheduled' | 'in_progress' | 'finished' | 'cancelled' | 'postponed';
   home_team: Pick<Team, 'id' | 'name' | 'short_name' | 'flag_url'> | null;
   away_team: Pick<Team, 'id' | 'name' | 'short_name' | 'flag_url'> | null;
   result: MatchResult | null;

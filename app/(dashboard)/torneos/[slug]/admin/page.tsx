@@ -85,7 +85,7 @@ const CARD_BG =
   'https://res.cloudinary.com/dr0klvutj/image/upload/v1781001150/MatchPick/file_00000000042c71fb8d0d570a11881d55.png';
 
 const ADMIN_STATUS_LABELS: Record<string, string> = {
-  scheduled: 'Programado', in_progress: 'Jugando', finished: 'Finalizado', cancelled: 'Cancelado',
+  scheduled: 'Programado', in_progress: 'Jugando', finished: 'Finalizado', cancelled: 'Cancelado', postponed: 'Aplazado',
 };
 
 const ADMIN_STATUS_COLORS: Record<string, { dot: string; icon: string; badge: string; line: string }> = {
@@ -93,6 +93,7 @@ const ADMIN_STATUS_COLORS: Record<string, { dot: string; icon: string; badge: st
   in_progress: { dot: 'bg-red-400',     icon: 'text-red-400',     badge: 'border-red-500/60 text-red-400',         line: 'bg-red-400/60'     },
   finished:    { dot: 'bg-slate-500',   icon: 'text-slate-500',   badge: 'border-slate-600 text-slate-500',         line: 'bg-slate-600/60'   },
   cancelled:   { dot: 'bg-slate-500',   icon: 'text-slate-500',   badge: 'border-slate-600 text-slate-500',         line: 'bg-slate-600/60'   },
+  postponed:   { dot: 'bg-orange-400',  icon: 'text-orange-400',  badge: 'border-orange-500/50 text-orange-400',    line: 'bg-orange-400/60'  },
 };
 
 // ── Page ───────────────────────────────────────────────────────────────────
@@ -542,7 +543,7 @@ export default function TorneoAdminPage() {
     }
   };
 
-  const handleUpdateStatus = async (match: CustomMatch, status: 'scheduled' | 'in_progress' | 'finished' | 'cancelled', roundId: number) => {
+  const handleUpdateStatus = async (match: CustomMatch, status: 'scheduled' | 'in_progress' | 'finished' | 'cancelled' | 'postponed', roundId: number) => {
     setUpdatingStatusId(match.id);
     try {
       const endpoint = tournament!.is_custom
@@ -1228,6 +1229,19 @@ export default function TorneoAdminPage() {
                                           className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold text-slate-300 border border-slate-600/50 hover:bg-slate-700/30 disabled:opacity-50 transition-colors">
                                           {updatingStatusId === match.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Square className="h-3 w-3 fill-current" />}
                                           Finalizar
+                                        </button>
+                                      )}
+                                      {user?.is_admin && ['scheduled', 'in_progress', 'postponed'].includes(match.status) && (
+                                        <button onClick={() => handleUpdateStatus(match, match.status === 'postponed' ? 'scheduled' : 'postponed', match.roundId)}
+                                          disabled={updatingStatusId === match.id}
+                                          className={cn(
+                                            'flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold border disabled:opacity-50 transition-colors',
+                                            match.status === 'postponed'
+                                              ? 'text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10'
+                                              : 'text-orange-400 border-orange-500/30 hover:bg-orange-500/10'
+                                          )}>
+                                          {updatingStatusId === match.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Calendar className="h-3 w-3" />}
+                                          {match.status === 'postponed' ? 'Reprogramar' : 'Aplazar'}
                                         </button>
                                       )}
                                     </div>
