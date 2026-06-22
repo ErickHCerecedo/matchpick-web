@@ -85,7 +85,8 @@ const CARD_BG =
   'https://res.cloudinary.com/dr0klvutj/image/upload/v1781001150/MatchPick/file_00000000042c71fb8d0d570a11881d55.png';
 
 const ADMIN_STATUS_LABELS: Record<string, string> = {
-  scheduled: 'Programado', in_progress: 'Jugando', finished: 'Finalizado', cancelled: 'Cancelado', postponed: 'Aplazado',
+  scheduled: 'Programado', in_progress: 'Jugando', finished: 'Finalizado', cancelled: 'Cancelado',
+  postponed: 'Aplazado', suspended: 'Suspendido', paused: 'Pausado', rescheduled: 'Reagendado',
 };
 
 const ADMIN_STATUS_COLORS: Record<string, { dot: string; icon: string; badge: string; line: string }> = {
@@ -94,6 +95,9 @@ const ADMIN_STATUS_COLORS: Record<string, { dot: string; icon: string; badge: st
   finished:    { dot: 'bg-slate-500',   icon: 'text-slate-500',   badge: 'border-slate-600 text-slate-500',         line: 'bg-slate-600/60'   },
   cancelled:   { dot: 'bg-slate-500',   icon: 'text-slate-500',   badge: 'border-slate-600 text-slate-500',         line: 'bg-slate-600/60'   },
   postponed:   { dot: 'bg-orange-400',  icon: 'text-orange-400',  badge: 'border-orange-500/50 text-orange-400',    line: 'bg-orange-400/60'  },
+  suspended:   { dot: 'bg-red-500',     icon: 'text-red-500',     badge: 'border-red-600/50 text-red-500',          line: 'bg-red-500/60'     },
+  paused:      { dot: 'bg-yellow-400',  icon: 'text-yellow-400',  badge: 'border-yellow-500/50 text-yellow-400',    line: 'bg-yellow-400/60'  },
+  rescheduled: { dot: 'bg-sky-400',     icon: 'text-sky-400',     badge: 'border-sky-500/50 text-sky-400',          line: 'bg-sky-400/60'     },
 };
 
 // ── Page ───────────────────────────────────────────────────────────────────
@@ -543,7 +547,7 @@ export default function TorneoAdminPage() {
     }
   };
 
-  const handleUpdateStatus = async (match: CustomMatch, status: 'scheduled' | 'in_progress' | 'finished' | 'cancelled' | 'postponed', roundId: number) => {
+  const handleUpdateStatus = async (match: CustomMatch, status: 'scheduled' | 'in_progress' | 'finished' | 'cancelled' | 'postponed' | 'suspended' | 'paused' | 'rescheduled', roundId: number) => {
     setUpdatingStatusId(match.id);
     try {
       const endpoint = tournament!.is_custom
@@ -556,7 +560,7 @@ export default function TorneoAdminPage() {
           m.id === match.id ? { ...m, status } : m
         ),
       }));
-      const msg: Record<string, string> = { in_progress: 'Partido iniciado.', finished: 'Partido finalizado.', postponed: 'Partido aplazado.', scheduled: 'Partido reprogramado.' };
+      const msg: Record<string, string> = { in_progress: 'Partido iniciado.', finished: 'Partido finalizado.', postponed: 'Partido aplazado.', scheduled: 'Partido reprogramado.', suspended: 'Partido suspendido.', paused: 'Partido pausado.', rescheduled: 'Partido reagendado.' };
       toast.success(msg[status] ?? 'Estado actualizado.');
     } catch (err) {
       const httpStatus = (err as { status?: number }).status;
@@ -1218,7 +1222,8 @@ export default function TorneoAdminPage() {
                                 ) : (
                                   <>
                                     {/* Left: status controls */}
-                                    <div className="flex items-center gap-1 flex-1">
+                                    <div className="flex items-center gap-1 flex-wrap flex-1">
+                                      {/* Iniciar — scheduled + hora pasada */}
                                       {(user?.is_admin || tournament.is_custom) && match.status === 'scheduled' && hasStarted && (
                                         <button onClick={() => handleUpdateStatus(match, 'in_progress', match.roundId)}
                                           disabled={updatingStatusId === match.id}
@@ -1227,6 +1232,16 @@ export default function TorneoAdminPage() {
                                           Iniciar
                                         </button>
                                       )}
+                                      {/* Reanudar — si estaba suspendido/pausado */}
+                                      {(user?.is_admin || tournament.is_custom) && ['suspended', 'paused'].includes(match.status) && (
+                                        <button onClick={() => handleUpdateStatus(match, 'in_progress', match.roundId)}
+                                          disabled={updatingStatusId === match.id}
+                                          className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/10 disabled:opacity-50 transition-colors">
+                                          {updatingStatusId === match.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Play className="h-3 w-3 fill-current" />}
+                                          Reanudar
+                                        </button>
+                                      )}
+                                      {/* Finalizar — en progreso */}
                                       {(user?.is_admin || tournament.is_custom) && match.status === 'in_progress' && (
                                         <button onClick={() => handleUpdateStatus(match, 'finished', match.roundId)}
                                           disabled={updatingStatusId === match.id}
@@ -1235,18 +1250,20 @@ export default function TorneoAdminPage() {
                                           Finalizar
                                         </button>
                                       )}
-                                      {user?.is_admin && ['scheduled', 'in_progress', 'postponed'].includes(match.status) && (
-                                        <button onClick={() => handleUpdateStatus(match, match.status === 'postponed' ? 'scheduled' : 'postponed', match.roundId)}
+                                      {/* Menú de estados especiales — solo super admin */}
+                                      {user?.is_admin && !['finished', 'cancelled'].includes(match.status) && (
+                                        <select
                                           disabled={updatingStatusId === match.id}
-                                          className={cn(
-                                            'flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold border disabled:opacity-50 transition-colors',
-                                            match.status === 'postponed'
-                                              ? 'text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10'
-                                              : 'text-orange-400 border-orange-500/30 hover:bg-orange-500/10'
-                                          )}>
-                                          {updatingStatusId === match.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Calendar className="h-3 w-3" />}
-                                          {match.status === 'postponed' ? 'Reprogramar' : 'Aplazar'}
-                                        </button>
+                                          value=""
+                                          onChange={(e) => { if (e.target.value) handleUpdateStatus(match, e.target.value as never, match.roundId); }}
+                                          className="px-2 py-1 rounded-md text-[11px] font-semibold bg-slate-800 text-slate-300 border border-slate-600/50 hover:border-slate-500 disabled:opacity-50 transition-colors cursor-pointer">
+                                          <option value="" disabled>Cambiar estado…</option>
+                                          {match.status !== 'postponed'   && <option value="postponed">Aplazar</option>}
+                                          {match.status !== 'suspended'   && <option value="suspended">Suspender</option>}
+                                          {match.status !== 'paused'      && <option value="paused">Pausar</option>}
+                                          {match.status !== 'rescheduled' && <option value="rescheduled">Reagendar</option>}
+                                          {match.status !== 'scheduled'   && <option value="scheduled">Reprogramar (volver a Programado)</option>}
+                                        </select>
                                       )}
                                     </div>
                                     {/* Right: edit actions */}

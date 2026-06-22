@@ -21,11 +21,14 @@ interface Props {
 }
 
 const STATUS_LABELS: Record<Match['status'], string> = {
-  scheduled:  'Programado',
+  scheduled:   'Programado',
   in_progress: 'Jugando',
-  finished:   'Finalizado',
-  cancelled:  'Cancelado',
-  postponed:  'Aplazado',
+  finished:    'Finalizado',
+  cancelled:   'Cancelado',
+  postponed:   'Aplazado',
+  suspended:   'Suspendido',
+  paused:      'Pausado',
+  rescheduled: 'Reagendado',
 };
 
 const STATUS_COLORS: Record<Match['status'], { dot: string; icon: string; badge: string; line: string }> = {
@@ -34,6 +37,9 @@ const STATUS_COLORS: Record<Match['status'], { dot: string; icon: string; badge:
   finished:    { dot: 'bg-slate-500',    icon: 'text-slate-500',    badge: 'border-slate-600 text-slate-500',          line: 'bg-slate-600/60'    },
   cancelled:   { dot: 'bg-slate-500',    icon: 'text-slate-500',    badge: 'border-slate-600 text-slate-500',          line: 'bg-slate-600/60'    },
   postponed:   { dot: 'bg-orange-400',   icon: 'text-orange-400',   badge: 'border-orange-500/50 text-orange-400',     line: 'bg-orange-400/60'   },
+  suspended:   { dot: 'bg-red-500',      icon: 'text-red-500',      badge: 'border-red-600/50 text-red-500',           line: 'bg-red-500/60'      },
+  paused:      { dot: 'bg-yellow-400',   icon: 'text-yellow-400',   badge: 'border-yellow-500/50 text-yellow-400',     line: 'bg-yellow-400/60'   },
+  rescheduled: { dot: 'bg-sky-400',      icon: 'text-sky-400',      badge: 'border-sky-500/50 text-sky-400',           line: 'bg-sky-400/60'      },
 };
 
 function ScoreStepper({

@@ -138,6 +138,9 @@ const TREE_STATUS_LABELS: Record<Match['status'], string> = {
   finished:    'Finalizado',
   cancelled:   'Cancelado',
   postponed:   'Aplazado',
+  suspended:   'Suspendido',
+  paused:      'Pausado',
+  rescheduled: 'Reagendado',
 };
 
 function TreeCard({
