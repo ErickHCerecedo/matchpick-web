@@ -556,7 +556,8 @@ export default function TorneoAdminPage() {
           m.id === match.id ? { ...m, status } : m
         ),
       }));
-      toast.success(status === 'in_progress' ? 'Partido iniciado.' : 'Partido finalizado.');
+      const msg: Record<string, string> = { in_progress: 'Partido iniciado.', finished: 'Partido finalizado.', postponed: 'Partido aplazado.', scheduled: 'Partido reprogramado.' };
+      toast.success(msg[status] ?? 'Estado actualizado.');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Error al actualizar estado');
     } finally {
