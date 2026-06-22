@@ -559,7 +559,10 @@ export default function TorneoAdminPage() {
       const msg: Record<string, string> = { in_progress: 'Partido iniciado.', finished: 'Partido finalizado.', postponed: 'Partido aplazado.', scheduled: 'Partido reprogramado.' };
       toast.success(msg[status] ?? 'Estado actualizado.');
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Error al actualizar estado');
+      const httpStatus = (err as { status?: number }).status;
+      const message = err instanceof Error ? err.message : 'Error desconocido';
+      console.error('[handleUpdateStatus] error', { httpStatus, message, newStatus: status, raw: err });
+      toast.error(`Error ${httpStatus ?? ''}: ${message}`);
     } finally {
       setUpdatingStatusId(null);
     }
