@@ -143,6 +143,7 @@ export default function TorneoAdminPage() {
   const [savingResult, setSavingResult] = useState(false);
   const [testingFD, setTestingFD] = useState(false);
   const [fdResult, setFdResult] = useState<Record<string, unknown> | null>(null);
+  const [showApiTools, setShowApiTools] = useState(false);
   const [saving, setSaving] = useState(false);
   const [updatingStatusId, setUpdatingStatusId] = useState<number | null>(null);
 
@@ -449,7 +450,7 @@ export default function TorneoAdminPage() {
       const payload = (isCustom || isAdmin) && editMatchForm.home_team_id
         ? {
             home_team_id: Number(editMatchForm.home_team_id),
-            away_team_id: Number(editMatchForm.away_team_id),
+            away_team_id: editMatchForm.away_team_id ? Number(editMatchForm.away_team_id) : null,
             scheduled_at: scheduledAtUTC,
             venue: editMatchForm.venue || null,
             ...externalIdField,
@@ -880,19 +881,28 @@ export default function TorneoAdminPage() {
           {/* Football-data.org buttons */}
           {user?.is_admin && (
             <div className="space-y-3">
-              <div className="flex justify-end gap-2 flex-wrap">
-                <Button size="sm" variant="outline" onClick={handleExportExcel} disabled={exportingExcel}
-                  className="border-emerald-700/50 text-emerald-400 hover:text-emerald-300 hover:border-emerald-500 text-xs h-8 gap-1.5">
-                  {exportingExcel ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trophy className="h-3.5 w-3.5" />}
-                  Exportar Excel
-                </Button>
-                <Button size="sm" variant="outline" onClick={handleTestFootballData} disabled={testingFD}
-                  className="border-blue-700/50 text-blue-400 hover:text-blue-300 hover:border-blue-500 text-xs h-8 gap-1.5">
-                  {testingFD ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
-                  Probar football-data.org
-                </Button>
-                <ApiMonitorModal />
-              </div>
+              <button
+                onClick={() => setShowApiTools((v) => !v)}
+                className="flex items-center gap-2 text-[11px] font-semibold text-slate-500 hover:text-slate-300 transition-colors"
+              >
+                <ChevronRight className={cn('h-3.5 w-3.5 transition-transform', showApiTools && 'rotate-90')} />
+                Herramientas API
+              </button>
+              {showApiTools && (
+                <div className="flex justify-end gap-2 flex-wrap">
+                  <Button size="sm" variant="outline" onClick={handleExportExcel} disabled={exportingExcel}
+                    className="border-emerald-700/50 text-emerald-400 hover:text-emerald-300 hover:border-emerald-500 text-xs h-8 gap-1.5">
+                    {exportingExcel ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trophy className="h-3.5 w-3.5" />}
+                    Exportar Excel
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={handleTestFootballData} disabled={testingFD}
+                    className="border-blue-700/50 text-blue-400 hover:text-blue-300 hover:border-blue-500 text-xs h-8 gap-1.5">
+                    {testingFD ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                    Probar football-data.org
+                  </Button>
+                  <ApiMonitorModal />
+                </div>
+              )}
 
               {fdResult && (
                 <div className="rounded-xl border border-blue-800/40 bg-slate-900 p-3 space-y-3 text-xs">
@@ -1254,10 +1264,10 @@ export default function TorneoAdminPage() {
                                       {user?.is_admin && !['finished', 'cancelled'].includes(match.status) && (
                                         <select
                                           disabled={updatingStatusId === match.id}
-                                          value=""
-                                          onChange={(e) => { if (e.target.value) handleUpdateStatus(match, e.target.value as never, match.roundId); }}
+                                          value={match.status}
+                                          onChange={(e) => { if (e.target.value !== match.status) handleUpdateStatus(match, e.target.value as never, match.roundId); }}
                                           className="px-2 py-1 rounded-md text-[11px] font-semibold bg-slate-800 text-slate-300 border border-slate-600/50 hover:border-slate-500 disabled:opacity-50 transition-colors cursor-pointer">
-                                          <option value="" disabled>Cambiar estado…</option>
+                                          <option value={match.status} disabled>{ADMIN_STATUS_LABELS[match.status] ?? match.status}</option>
                                           {match.status !== 'postponed'   && <option value="postponed">Aplazar</option>}
                                           {match.status !== 'suspended'   && <option value="suspended">Suspender</option>}
                                           {match.status !== 'paused'      && <option value="paused">Pausar</option>}
