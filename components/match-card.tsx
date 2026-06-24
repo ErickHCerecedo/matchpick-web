@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
 import { cn, formatMatchDateParts } from '@/lib/utils';
 import type { Match, Prediction } from '@/types';
-import { Lock, CheckCircle2, ChevronUp, ChevronDown, Calendar, MapPin } from 'lucide-react';
+import { Lock, CheckCircle2, Loader2, ChevronUp, ChevronDown, Calendar, MapPin } from 'lucide-react';
 import { FlagPlaceholder } from '@/components/ui/flag-placeholder';
 
 const CARD_BG =
@@ -17,6 +17,7 @@ interface Props {
   onChange?: (matchId: number, home: number, away: number) => void;
   readOnly?: boolean;
   isSaved?: boolean;
+  isAutoSaving?: boolean;
   showActualResult?: boolean;
 }
 
@@ -78,7 +79,7 @@ function ScoreStepper({
   );
 }
 
-export function MatchCard({ match, prediction, onChange, readOnly, isSaved, showActualResult }: Props) {
+export function MatchCard({ match, prediction, onChange, readOnly, isSaved, isAutoSaving, showActualResult }: Props) {
   const [home, setHome] = useState<number | null>(prediction?.home_score ?? null);
   const [away, setAway] = useState<number | null>(prediction?.away_score ?? null);
 
@@ -266,12 +267,19 @@ export function MatchCard({ match, prediction, onChange, readOnly, isSaved, show
           </div>
         )}
 
-        {/* Saved indicator */}
-        {isOpen && isSaved && (
-          <div className="flex items-center justify-center gap-1 text-[10px] font-medium text-emerald-400">
-            <CheckCircle2 className="h-3 w-3" />
-            Pronóstico guardado
-          </div>
+        {/* Saved / auto-saving indicator */}
+        {isOpen && (
+          isAutoSaving ? (
+            <div className="flex items-center justify-center gap-1 text-[10px] font-medium text-slate-500">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              Guardando…
+            </div>
+          ) : isSaved ? (
+            <div className="flex items-center justify-center gap-1 text-[10px] font-medium text-emerald-400">
+              <CheckCircle2 className="h-3 w-3" />
+              Pronóstico guardado
+            </div>
+          ) : null
         )}
 
         {/* Points earned */}

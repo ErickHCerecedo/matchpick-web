@@ -47,6 +47,14 @@ export function PredictionForm({ quinielaSlug, rounds, initialPredictions, onSav
   const [savedPredictions, setSavedPredictions] =
     useState<Record<number, Prediction>>(initialPredictions);
   const [saving, setSaving] = useState(false);
+  const [autoSavingIds, setAutoSavingIds] = useState<Set<number>>(new Set());
+  const debounceTimers = useRef<Record<number, ReturnType<typeof setTimeout>>>({});
+
+  // Cleanup timers on unmount
+  useEffect(() => {
+    const timers = debounceTimers.current;
+    return () => { Object.values(timers).forEach(clearTimeout); };
+  }, []);
 
   const matchesByDate = useMemo(() => groupByDate(rounds), [rounds]);
   const sortedDateKeys = useMemo(() => {
@@ -100,17 +108,45 @@ export function PredictionForm({ quinielaSlug, rounds, initialPredictions, onSav
     return stats;
   }, [matchesByDate, predictions]);
 
+  const autoSave = useCallback(async (matchId: number, home: number, away: number) => {
+    setAutoSavingIds((prev) => { const s = new Set(prev); s.add(matchId); return s; });
+    try {
+      await api.post<{ data: { saved: number; errors: unknown[] } }>(
+        `/quinielas/${quinielaSlug}/predictions`,
+        { predictions: [{ match_id: matchId, home_score: home, away_score: away }] }
+      );
+      setSavedPredictions((prev) => ({
+        ...prev,
+        [matchId]: { ...prev[matchId], match_id: matchId, home_score: home, away_score: away },
+      }));
+    } catch {
+      // Silent — manual save button is still available
+    } finally {
+      setAutoSavingIds((prev) => { const s = new Set(prev); s.delete(matchId); return s; });
+    }
+  }, [quinielaSlug]);
+
   const handleChange = useCallback(
     (matchId: number, home: number, away: number) => {
       setPredictions((prev) => ({
         ...prev,
         [matchId]: { ...prev[matchId], match_id: matchId, home_score: home, away_score: away },
       }));
+      // Debounce: reset the timer on each change; fire after 700 ms of inactivity
+      clearTimeout(debounceTimers.current[matchId]);
+      debounceTimers.current[matchId] = setTimeout(() => {
+        delete debounceTimers.current[matchId];
+        autoSave(matchId, home, away);
+      }, 700);
     },
-    []
+    [autoSave]
   );
 
   const handleSave = async () => {
+    // Cancel all pending debounce timers — manual save covers everything
+    Object.values(debounceTimers.current).forEach(clearTimeout);
+    debounceTimers.current = {};
+
     const toSave = Object.values(predictions).filter(
       (p) => p.home_score !== undefined && p.away_score !== undefined
     );
@@ -165,15 +201,15 @@ export function PredictionForm({ quinielaSlug, rounds, initialPredictions, onSav
     return s;
   }, [savedPredictions, predictions]);
 
-  // Count only predictions that are new or changed vs what came from the server
+  // Count predictions that differ from what the server has (accounts for auto-saves)
   const pendingCount = useMemo(() => {
     return Object.entries(predictions).filter(([matchId, p]) => {
       if (p.home_score === undefined || p.away_score === undefined) return false;
-      const orig = initialPredictions[Number(matchId)];
-      if (!orig || orig.home_score === undefined) return true;
-      return orig.home_score !== p.home_score || orig.away_score !== p.away_score;
+      const saved = savedPredictions[Number(matchId)];
+      if (!saved || saved.home_score === undefined) return true;
+      return saved.home_score !== p.home_score || saved.away_score !== p.away_score;
     }).length;
-  }, [predictions, initialPredictions]);
+  }, [predictions, savedPredictions]);
 
   // Missing predictions on the active date
   const missingOnActiveDate = useMemo(() => {
@@ -320,6 +356,7 @@ export function PredictionForm({ quinielaSlug, rounds, initialPredictions, onSav
                     prediction={predictions[match.id] ?? null}
                     onChange={handleChange}
                     isSaved={savedMatchIds.has(match.id)}
+                    isAutoSaving={autoSavingIds.has(match.id)}
                   />
                 ))}
               </div>
