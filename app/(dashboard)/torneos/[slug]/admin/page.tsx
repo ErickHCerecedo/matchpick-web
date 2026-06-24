@@ -31,6 +31,8 @@ import {
 } from 'lucide-react';
 import { FlagPlaceholder } from '@/components/ui/flag-placeholder';
 import { ApiMonitorModal } from '@/components/api-monitor-modal';
+import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
+import { BreakdownDetail } from '@/components/participant-breakdown';
 import { cn, formatMatchDateParts } from '@/lib/utils';
 import { toLocalDateKey, formatDateLabel, todayKey } from '@/lib/date-utils';
 
@@ -116,6 +118,7 @@ export default function TorneoAdminPage() {
   const [adminQuinielas, setAdminQuinielas] = useState<AdminQuiniela[]>([]);
   const [loadingQuinielas, setLoadingQuinielas] = useState(false);
   const [expandedQuiniela, setExpandedQuiniela] = useState<number | null>(null);
+  const [breakdownSheet, setBreakdownSheet] = useState<{ quinielaSlug: string; userId: number; userName: string } | null>(null);
 
   // Team state
   const [teamForm, setTeamForm] = useState({ name: '', short_name: '', logo_url: '' });
@@ -1437,7 +1440,11 @@ export default function TorneoAdminPage() {
                 {expandedQuiniela === q.id && (
                   <div className="border-t border-slate-800 divide-y divide-slate-800/60">
                     {q.participants.map((p, i) => (
-                      <div key={p.id} className="flex items-center gap-3 px-4 py-2.5">
+                      <button
+                        key={p.id}
+                        onClick={() => setBreakdownSheet({ quinielaSlug: q.slug, userId: p.id, userName: p.name })}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-slate-800/40 transition-colors text-left"
+                      >
                         {/* Position */}
                         <span className={cn(
                           'w-6 text-center text-xs font-bold tabular-nums shrink-0',
@@ -1463,7 +1470,8 @@ export default function TorneoAdminPage() {
                             Admin
                           </span>
                         )}
-                      </div>
+                        <ChevronRight className="h-3.5 w-3.5 text-slate-600 shrink-0" />
+                      </button>
                     ))}
                   </div>
                 )}
@@ -1532,6 +1540,20 @@ export default function TorneoAdminPage() {
           </TabsContent>
         )}
       </Tabs>
+
+      {/* ── Participant breakdown sheet ── */}
+      <Sheet open={!!breakdownSheet} onOpenChange={(open) => { if (!open) setBreakdownSheet(null); }}>
+        <SheetContent side="right" className="w-full sm:max-w-lg bg-slate-950 border-slate-800 overflow-y-auto p-5">
+          <SheetTitle className="sr-only">{breakdownSheet?.userName}</SheetTitle>
+          {breakdownSheet && (
+            <BreakdownDetail
+              quinielaSlug={breakdownSheet.quinielaSlug}
+              userId={breakdownSheet.userId}
+              onBack={() => setBreakdownSheet(null)}
+            />
+          )}
+        </SheetContent>
+      </Sheet>
     </motion.div>
   );
 }

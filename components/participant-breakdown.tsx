@@ -131,7 +131,7 @@ function MatchRow({ match }: { match: BreakdownMatch }) {
 
 // ── Detail view ───────────────────────────────────────────────────────────────
 
-function BreakdownDetail({
+export function BreakdownDetail({
   quinielaSlug,
   userId,
   onBack,
