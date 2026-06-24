@@ -6,6 +6,14 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import type { TeamStandingsData, TeamStandingRow } from '@/types';
 
+// Groups where 3 teams advance instead of the default
+const THREE_SPOT_GROUPS = new Set(['B', 'C', 'D', 'F', 'G', 'H', 'J', 'L']);
+
+function spotsForGroup(groupName: string, defaultSpots: number): number {
+  const letter = groupName.trim().slice(-1).toUpperCase();
+  return THREE_SPOT_GROUPS.has(letter) ? 3 : defaultSpots;
+}
+
 interface Props {
   data: TeamStandingsData | null;
   loading: boolean;
@@ -138,7 +146,7 @@ export function TeamStandings({ data, loading }: Props) {
                 {group.name}
               </h4>
             </div>
-            <StandingsTable teams={group.teams} qualificationSpots={data.qualification_spots} />
+            <StandingsTable teams={group.teams} qualificationSpots={spotsForGroup(group.name, data.qualification_spots)} />
           </div>
         ))}
       </div>
