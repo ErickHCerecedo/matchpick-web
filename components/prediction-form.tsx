@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { MatchCard } from './match-card';
 import { PendingMatchesAlert } from './quiniela-dashboard';
+import { WildcardPicker } from './wildcard-picker';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -18,6 +19,7 @@ interface Props {
   initialPredictions: Record<number, Prediction>;
   onSaved?: (predictions: Record<number, Prediction>) => void;
   isCustomTournament?: boolean;
+  isSuperAdmin?: boolean;
 }
 
 // ── helpers ────────────────────────────────────────────────────────────────
@@ -41,7 +43,7 @@ function firstOpenDate(rounds: RoundWithMatches[], predictions: Record<number, P
 
 // ── component ──────────────────────────────────────────────────────────────
 
-export function PredictionForm({ quinielaSlug, rounds, initialPredictions, onSaved, isCustomTournament }: Props) {
+export function PredictionForm({ quinielaSlug, rounds, initialPredictions, onSaved, isCustomTournament, isSuperAdmin }: Props) {
   const [predictions, setPredictions] =
     useState<Record<number, Prediction>>(initialPredictions);
   const [savedPredictions, setSavedPredictions] =
@@ -235,6 +237,11 @@ export function PredictionForm({ quinielaSlug, rounds, initialPredictions, onSav
 
   return (
     <div className="space-y-4 pb-4">
+      {/* ── Wildcard (super admin preview) ─────────────────────────────── */}
+      {isSuperAdmin && (
+        <WildcardPicker quinielaSlug={quinielaSlug} />
+      )}
+
       {/* ── Pending alert ──────────────────────────────────────────────── */}
       <PendingMatchesAlert
         rounds={rounds}

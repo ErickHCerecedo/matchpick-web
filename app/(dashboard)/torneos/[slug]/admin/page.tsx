@@ -27,7 +27,7 @@ interface AdminQuiniela {
 import {
   ArrowLeft, Plus, Trash2, Loader2, Users, CalendarDays, Trophy,
   Pencil, Check, X, Shield, ChevronRight, RefreshCw, Settings2, ImageIcon,
-  Calendar, MapPin, ChevronUp, ChevronDown, Play, Square,
+  Calendar, MapPin, ChevronUp, ChevronDown, Play, Square, Zap, Save,
 } from 'lucide-react';
 import { FlagPlaceholder } from '@/components/ui/flag-placeholder';
 import { ApiMonitorModal } from '@/components/api-monitor-modal';
@@ -119,6 +119,14 @@ export default function TorneoAdminPage() {
   const [loadingQuinielas, setLoadingQuinielas] = useState(false);
   const [expandedQuiniela, setExpandedQuiniela] = useState<number | null>(null);
   const [breakdownSheet, setBreakdownSheet] = useState<{ quinielaSlug: string; userId: number; userName: string } | null>(null);
+
+  // Wildcard config
+  interface WildcardTeamOption { id: number; name: string; short_name: string; flag_url: string | null }
+  const [wildcardAllTeams, setWildcardAllTeams] = useState<WildcardTeamOption[]>([]);
+  const [wildcardEligible, setWildcardEligible] = useState<number[]>([]);
+  const [loadingWildcard, setLoadingWildcard] = useState(false);
+  const [savingWildcard, setSavingWildcard] = useState(false);
+  const [wildcardLoaded, setWildcardLoaded] = useState(false);
 
   // Team state
   const [teamForm, setTeamForm] = useState({ name: '', short_name: '', logo_url: '' });
@@ -637,6 +645,35 @@ export default function TorneoAdminPage() {
     }
   };
 
+  // ── Wildcard ──────────────────────────────────────────────────────────
+
+  const loadWildcardTeams = async () => {
+    if (wildcardLoaded || !tournament) return;
+    setLoadingWildcard(true);
+    try {
+      const res = await api.get<{ data: { eligible_teams: { id: number; name: string; short_name: string; flag_url: string | null }[]; all_teams: { id: number; name: string; short_name: string; flag_url: string | null }[] } }>(
+        `/admin/tournaments/${tournament.id}/wildcard-teams`
+      );
+      setWildcardAllTeams(res.data.all_teams);
+      setWildcardEligible(res.data.eligible_teams.map((t) => t.id));
+      setWildcardLoaded(true);
+    } catch { /* non-blocking */ }
+    finally { setLoadingWildcard(false); }
+  };
+
+  const handleSaveWildcardTeams = async () => {
+    if (!tournament) return;
+    setSavingWildcard(true);
+    try {
+      await api.put(`/admin/tournaments/${tournament.id}/wildcard-teams`, { team_ids: wildcardEligible });
+      toast.success('Equipos del comodín actualizados.');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Error al guardar');
+    } finally {
+      setSavingWildcard(false);
+    }
+  };
+
   // ── Render ─────────────────────────────────────────────────────────────
 
   if (loading) {
@@ -693,6 +730,7 @@ export default function TorneoAdminPage() {
             .catch(console.error)
             .finally(() => setLoadingQuinielas(false));
         }
+        if (tab === 'quinielas') loadWildcardTeams();
       }}>
         <TabsList className={cn('!grid w-full !h-auto bg-slate-900 border border-slate-700/60 p-1 gap-1 rounded-xl mb-1', tournament.is_custom ? 'grid-cols-4' : 'grid-cols-3')}>
           <TabsTrigger
@@ -1404,6 +1442,113 @@ export default function TorneoAdminPage() {
         </TabsContent>
         {/* ════════════════════ QUINIELAS ════════════════════ */}
         <TabsContent value="quinielas" className="mt-4 space-y-3">
+          {/* ── Wildcard config panel ── */}
+          <div className="rounded-xl border border-slate-700/60 bg-slate-950 overflow-hidden">
+            <div className="px-4 py-3 bg-gradient-to-r from-amber-500/10 to-emerald-500/10 border-b border-slate-800 flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-amber-500/15 border border-amber-500/20 shrink-0">
+                <Zap className="h-4 w-4 text-amber-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-white">Comodín — Equipos elegibles</p>
+                <p className="text-[11px] text-slate-400 leading-tight">
+                  Selecciona los equipos que los participantes podrán elegir como comodín
+                </p>
+              </div>
+              <Button
+                size="sm"
+                onClick={handleSaveWildcardTeams}
+                disabled={savingWildcard || loadingWildcard}
+                className="shrink-0 h-7 text-xs bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/30 hover:border-emerald-500/50"
+              >
+                {savingWildcard
+                  ? <Loader2 className="h-3 w-3 animate-spin mr-1.5" />
+                  : <Save className="h-3 w-3 mr-1.5" />
+                }
+                Guardar
+              </Button>
+            </div>
+
+            <div className="p-4">
+              {loadingWildcard ? (
+                <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+                  {Array.from({ length: 8 }).map((_, i) => (
+                    <Skeleton key={i} className="h-20 rounded-xl bg-slate-800" />
+                  ))}
+                </div>
+              ) : wildcardAllTeams.length === 0 ? (
+                <p className="text-center text-slate-500 text-sm py-6">
+                  No hay equipos disponibles para este torneo.
+                </p>
+              ) : (
+                <>
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-xs text-slate-500">
+                      {wildcardEligible.length} equipo{wildcardEligible.length !== 1 ? 's' : ''} seleccionado{wildcardEligible.length !== 1 ? 's' : ''}
+                    </span>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setWildcardEligible(wildcardAllTeams.map((t) => t.id))}
+                        className="text-[11px] text-slate-400 hover:text-white transition-colors"
+                      >
+                        Todos
+                      </button>
+                      <span className="text-slate-700 text-[11px]">·</span>
+                      <button
+                        type="button"
+                        onClick={() => setWildcardEligible([])}
+                        className="text-[11px] text-slate-400 hover:text-white transition-colors"
+                      >
+                        Ninguno
+                      </button>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+                    {wildcardAllTeams.map((team) => {
+                      const selected = wildcardEligible.includes(team.id);
+                      return (
+                        <button
+                          key={team.id}
+                          type="button"
+                          onClick={() => setWildcardEligible((prev) =>
+                            prev.includes(team.id) ? prev.filter((id) => id !== team.id) : [...prev, team.id]
+                          )}
+                          className={cn(
+                            'relative flex flex-col items-center gap-1.5 p-2.5 rounded-xl border transition-all duration-150 text-center',
+                            selected
+                              ? 'border-emerald-500/70 bg-emerald-500/10 shadow-[0_0_10px_rgba(16,185,129,0.12)]'
+                              : 'border-slate-800 bg-slate-900 hover:border-slate-600 hover:bg-slate-800/60'
+                          )}
+                        >
+                          {selected && (
+                            <div className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-emerald-500 flex items-center justify-center">
+                              <Check className="h-2.5 w-2.5 text-white" />
+                            </div>
+                          )}
+                          {team.flag_url ? (
+                            <img
+                              src={team.flag_url}
+                              alt={team.short_name}
+                              className="w-10 h-7 object-cover rounded shadow-sm shrink-0"
+                            />
+                          ) : (
+                            <FlagPlaceholder size="md" />
+                          )}
+                          <span className={cn(
+                            'text-[10px] font-semibold leading-tight truncate w-full px-0.5',
+                            selected ? 'text-emerald-300' : 'text-slate-400'
+                          )}>
+                            {team.short_name}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+
           {loadingQuinielas ? (
             <div className="flex items-center justify-center py-10 text-slate-500 text-sm gap-2">
               <Loader2 className="h-4 w-4 animate-spin" />

@@ -282,6 +282,7 @@ export default function QuinielaPage() {
               initialPredictions={initialPredictions}
               onSaved={handlePredictionsSaved}
               isCustomTournament={quiniela.tournament.is_custom}
+              isSuperAdmin={!!user?.is_admin}
             />
           ) : (
             <div className="text-center py-10 space-y-2">

@@ -231,3 +231,18 @@ export interface GroupStandings {
 export type TeamStandingsData =
   | { format: 'groups'; qualification_spots: number; groups: GroupStandings[] }
   | { format: 'table'; qualification_spots: number; teams: TeamStandingRow[] };
+
+export interface WildcardTeam {
+  id: number;
+  name: string;
+  short_name: string;
+  flag_url: string | null;
+}
+
+export interface WildcardData {
+  is_open: boolean;
+  deadline: string;
+  eligible_teams: WildcardTeam[];
+  picks: WildcardTeam[];
+  points_earned: number | null;
+}
