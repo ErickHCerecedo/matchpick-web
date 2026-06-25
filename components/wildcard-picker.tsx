@@ -405,10 +405,11 @@ export function WildcardPicker({ quinielaSlug }: Props) {
               <button
                 type="button"
                 onClick={() => setShowInfo(true)}
-                className="w-4 h-4 rounded-full flex items-center justify-center text-slate-600 hover:text-amber-400 transition-colors shrink-0"
+                className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-slate-600 text-slate-400 hover:text-amber-400 transition-all shrink-0"
                 aria-label="Cómo funciona"
               >
-                <Info className="h-3.5 w-3.5" />
+                <Info className="h-3 w-3" />
+                <span className="text-[10px] font-medium leading-none">¿Cómo funciona?</span>
               </button>
             </div>
             <p className="text-[11px] text-slate-400 leading-tight">
