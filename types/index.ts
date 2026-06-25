@@ -239,10 +239,16 @@ export interface WildcardTeam {
   flag_url: string | null;
 }
 
+/** WildcardTeam enriched with per-pick podium result once positions are confirmed. */
+export interface WildcardPickResult extends WildcardTeam {
+  points: number | null; // null=undetermined, 0=no pts, 3/6/9=earned
+  place: 1 | 2 | 3 | null;
+}
+
 export interface ParticipantWildcard {
   user_id: number;
   user_name: string;
-  picks: WildcardTeam[];
+  picks: WildcardPickResult[];
   points_earned: number | null;
 }
 
@@ -250,6 +256,12 @@ export interface WildcardData {
   is_open: boolean;
   deadline: string;
   eligible_teams: WildcardTeam[];
-  picks: WildcardTeam[];
+  picks: WildcardPickResult[];
   points_earned: number | null;
+}
+
+export interface WildcardPodium {
+  first:  WildcardTeam | null;
+  second: WildcardTeam | null;
+  third:  WildcardTeam | null;
 }

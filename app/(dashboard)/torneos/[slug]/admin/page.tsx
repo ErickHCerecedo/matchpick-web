@@ -129,6 +129,13 @@ export default function TorneoAdminPage() {
   const [wildcardLoaded, setWildcardLoaded] = useState(false);
   const [wildcardExpanded, setWildcardExpanded] = useState(false);
 
+  // Wildcard podium
+  interface PodiumState { first: number | null; second: number | null; third: number | null }
+  const [podium, setPodium] = useState<PodiumState>({ first: null, second: null, third: null });
+  const [podiumExpanded, setPodiumExpanded] = useState(false);
+  const [podiumLoaded, setPodiumLoaded] = useState(false);
+  const [savingPodium, setSavingPodium] = useState(false);
+
   // Team state
   const [teamForm, setTeamForm] = useState({ name: '', short_name: '', logo_url: '' });
   const [showTeamForm, setShowTeamForm] = useState(false);
@@ -689,6 +696,49 @@ export default function TorneoAdminPage() {
       toast.error(err instanceof Error ? err.message : 'Error al guardar');
     } finally {
       setSavingWildcard(false);
+    }
+  };
+
+  // ── Wildcard podium ───────────────────────────────────────────────────
+
+  const loadPodium = async () => {
+    if (podiumLoaded || !tournament) return;
+    try {
+      const [teamsRes, podiumRes] = await Promise.all([
+        wildcardLoaded ? Promise.resolve(null) : api.get<{ data: { eligible_teams: WildcardTeamOption[]; all_teams: WildcardTeamOption[] } }>(
+          `/admin/tournaments/${tournament.id}/wildcard-teams`
+        ),
+        api.get<{ data: { first: WildcardTeamOption | null; second: WildcardTeamOption | null; third: WildcardTeamOption | null } }>(
+          `/admin/tournaments/${tournament.id}/wildcard-podium`
+        ),
+      ]);
+      if (teamsRes) {
+        setWildcardAllTeams(teamsRes.data.all_teams);
+        setWildcardEligible(teamsRes.data.eligible_teams.map((t) => t.id));
+        setWildcardLoaded(true);
+      }
+      setPodium({
+        first:  podiumRes.data.first?.id  ?? null,
+        second: podiumRes.data.second?.id ?? null,
+        third:  podiumRes.data.third?.id  ?? null,
+      });
+      setPodiumLoaded(true);
+    } catch { /* non-blocking */ }
+  };
+
+  const savePodiumPlace = async (place: keyof PodiumState, teamId: number | null) => {
+    if (!tournament) return;
+    const next = { ...podium, [place]: teamId };
+    setPodium(next);
+    setSavingPodium(true);
+    try {
+      await api.put(`/admin/tournaments/${tournament.id}/wildcard-podium`, next);
+      toast.success('Podio actualizado');
+    } catch (err) {
+      setPodium(podium); // revert
+      toast.error(err instanceof Error ? err.message : 'Error al guardar');
+    } finally {
+      setSavingPodium(false);
     }
   };
 
@@ -1577,6 +1627,84 @@ export default function TorneoAdminPage() {
                         </>
                       )}
                     </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* ── Wildcard podium panel ── */}
+          <div className="rounded-xl border border-slate-700/60 bg-slate-950 overflow-hidden">
+            <button
+              type="button"
+              onClick={() => {
+                setPodiumExpanded((v) => !v);
+                if (!podiumExpanded) loadPodium();
+              }}
+              className="w-full px-4 py-3 bg-gradient-to-r from-yellow-500/8 to-amber-500/8 flex items-center gap-3 text-left hover:from-yellow-500/12 hover:to-amber-500/12 transition-all"
+            >
+              <div className="p-2 rounded-lg bg-yellow-500/15 border border-yellow-500/20 shrink-0">
+                <Trophy className="h-4 w-4 text-yellow-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-white">Comodín — Podio final</p>
+                <p className="text-[11px] text-slate-400 leading-tight">
+                  {podiumLoaded && (podium.first || podium.second || podium.third)
+                    ? [podium.first && '1.°', podium.second && '2.°', podium.third && '3.°'].filter(Boolean).join(' · ') + ' confirmado'
+                    : 'Define 1.°, 2.° y 3.° lugar para calcular puntos (9 / 6 / 3 pts)'}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                {savingPodium && <Loader2 className="h-3.5 w-3.5 animate-spin text-amber-500" />}
+                <ChevronDown className={cn('h-4 w-4 text-slate-500 shrink-0 transition-transform duration-200', podiumExpanded && 'rotate-180')} />
+              </div>
+            </button>
+
+            <AnimatePresence initial={false}>
+              {podiumExpanded && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2, ease: 'easeInOut' }}
+                  className="overflow-hidden"
+                >
+                  <div className="border-t border-slate-800 p-4 space-y-3">
+                    {[
+                      { place: 'first'  as const, label: '🥇 1.° lugar', pts: '+9 pts' },
+                      { place: 'second' as const, label: '🥈 2.° lugar', pts: '+6 pts' },
+                      { place: 'third'  as const, label: '🥉 3.° lugar', pts: '+3 pts' },
+                    ].map(({ place, label, pts }) => (
+                      <div key={place} className="flex items-center gap-3">
+                        <div className="w-28 shrink-0">
+                          <p className="text-xs font-semibold text-slate-300">{label}</p>
+                          <p className="text-[10px] text-amber-500/70 font-bold">{pts} por pick</p>
+                        </div>
+                        <div className="flex-1 relative">
+                          <select
+                            disabled={savingPodium || wildcardAllTeams.length === 0}
+                            value={podium[place] ?? ''}
+                            onChange={(e) => savePodiumPlace(place, e.target.value ? Number(e.target.value) : null)}
+                            className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-amber-500/60 disabled:opacity-50 appearance-none cursor-pointer"
+                          >
+                            <option value="">— Sin definir —</option>
+                            {wildcardAllTeams.map((t) => (
+                              <option key={t.id} value={t.id}>{t.name}</option>
+                            ))}
+                          </select>
+                          <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-500 pointer-events-none" />
+                        </div>
+                        {podium[place] && (() => {
+                          const team = wildcardAllTeams.find((t) => t.id === podium[place]);
+                          return team?.flag_url
+                            ? <img src={team.flag_url} alt={team.short_name} className="w-8 h-5.5 object-cover rounded shadow-sm shrink-0" />
+                            : null;
+                        })()}
+                      </div>
+                    ))}
+                    <p className="text-[10px] text-slate-600 pt-1">
+                      Al confirmar cada posición, los puntos de comodín se recalculan y se agregan al marcador de la quiniela automáticamente.
+                    </p>
                   </div>
                 </motion.div>
               )}

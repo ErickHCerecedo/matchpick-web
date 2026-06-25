@@ -6,7 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { api } from '@/lib/api';
-import type { Standing, ApiResponse, ParticipantBreakdownData, BreakdownMatch, ParticipantWildcard, WildcardTeam } from '@/types';
+import type { Standing, ApiResponse, ParticipantBreakdownData, BreakdownMatch, ParticipantWildcard, WildcardPickResult } from '@/types';
 import { FlagPlaceholder } from '@/components/ui/flag-placeholder';
 import {
   ArrowLeft,
@@ -140,7 +140,7 @@ export function BreakdownDetail({
   quinielaSlug: string;
   userId: number;
   onBack: () => void;
-  wildcardPicks?: WildcardTeam[];
+  wildcardPicks?: WildcardPickResult[];
 }) {
   const [data, setData] = useState<ParticipantBreakdownData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -269,7 +269,12 @@ export function BreakdownDetail({
                               : <FlagPlaceholder size="sm" />
                             }
                             <span className="text-[11px] font-semibold text-slate-300">{t.name}</span>
-                            <span className="text-[10px] text-amber-500 font-bold">+5pts</span>
+                            {t.points !== null && t.points > 0 && (
+                              <span className="text-[10px] text-amber-400 font-bold">+{t.points}pts</span>
+                            )}
+                            {t.points === 0 && (
+                              <span className="text-[10px] text-slate-600">—</span>
+                            )}
                           </div>
                         ))}
                       </div>
