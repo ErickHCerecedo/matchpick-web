@@ -662,12 +662,29 @@ export default function TorneoAdminPage() {
     finally { setLoadingWildcard(false); }
   };
 
-  const handleSaveWildcardTeams = async () => {
+  const toggleWildcardTeam = async (teamId: number) => {
     if (!tournament) return;
+    const next = wildcardEligible.includes(teamId)
+      ? wildcardEligible.filter((id) => id !== teamId)
+      : [...wildcardEligible, teamId];
+    setWildcardEligible(next);
     setSavingWildcard(true);
     try {
-      await api.put(`/admin/tournaments/${tournament.id}/wildcard-teams`, { team_ids: wildcardEligible });
-      toast.success('Equipos del comodín actualizados.');
+      await api.put(`/admin/tournaments/${tournament.id}/wildcard-teams`, { team_ids: next });
+    } catch (err) {
+      setWildcardEligible(wildcardEligible); // revert on error
+      toast.error(err instanceof Error ? err.message : 'Error al guardar');
+    } finally {
+      setSavingWildcard(false);
+    }
+  };
+
+  const setAllWildcardTeams = async (ids: number[]) => {
+    if (!tournament) return;
+    setWildcardEligible(ids);
+    setSavingWildcard(true);
+    try {
+      await api.put(`/admin/tournaments/${tournament.id}/wildcard-teams`, { team_ids: ids });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Error al guardar');
     } finally {
@@ -1493,22 +1510,25 @@ export default function TorneoAdminPage() {
                       ) : (
                         <>
                           <div className="flex items-center justify-between mb-3">
-                            <span className="text-xs text-slate-500">
+                            <span className="text-xs text-slate-500 flex items-center gap-1.5">
+                              {savingWildcard && <Loader2 className="h-3 w-3 animate-spin text-emerald-500" />}
                               {wildcardEligible.length} / {wildcardAllTeams.length} seleccionados
                             </span>
                             <div className="flex items-center gap-3">
                               <button
                                 type="button"
-                                onClick={() => setWildcardEligible(wildcardAllTeams.map((t) => t.id))}
-                                className="text-[11px] text-slate-400 hover:text-white transition-colors"
+                                disabled={savingWildcard}
+                                onClick={() => setAllWildcardTeams(wildcardAllTeams.map((t) => t.id))}
+                                className="text-[11px] text-slate-400 hover:text-white disabled:opacity-40 transition-colors"
                               >
                                 Todos
                               </button>
                               <span className="text-slate-700 text-[11px]">·</span>
                               <button
                                 type="button"
-                                onClick={() => setWildcardEligible([])}
-                                className="text-[11px] text-slate-400 hover:text-white transition-colors"
+                                disabled={savingWildcard}
+                                onClick={() => setAllWildcardTeams([])}
+                                className="text-[11px] text-slate-400 hover:text-white disabled:opacity-40 transition-colors"
                               >
                                 Ninguno
                               </button>
@@ -1521,11 +1541,10 @@ export default function TorneoAdminPage() {
                                 <button
                                   key={team.id}
                                   type="button"
-                                  onClick={() => setWildcardEligible((prev) =>
-                                    prev.includes(team.id) ? prev.filter((id) => id !== team.id) : [...prev, team.id]
-                                  )}
+                                  disabled={savingWildcard}
+                                  onClick={() => toggleWildcardTeam(team.id)}
                                   className={cn(
-                                    'relative flex flex-col items-center gap-1.5 p-2.5 rounded-xl border transition-all duration-150 text-center',
+                                    'relative flex flex-col items-center gap-1.5 p-2.5 rounded-xl border transition-all duration-150 text-center disabled:opacity-60',
                                     selected
                                       ? 'border-emerald-500/70 bg-emerald-500/10 shadow-[0_0_10px_rgba(16,185,129,0.12)]'
                                       : 'border-slate-800 bg-slate-900 hover:border-slate-600 hover:bg-slate-800/60'
@@ -1554,20 +1573,6 @@ export default function TorneoAdminPage() {
                                 </button>
                               );
                             })}
-                          </div>
-                          <div className="mt-4 flex justify-end">
-                            <Button
-                              size="sm"
-                              onClick={handleSaveWildcardTeams}
-                              disabled={savingWildcard}
-                              className="h-8 text-xs bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/30 hover:border-emerald-500/50"
-                            >
-                              {savingWildcard
-                                ? <Loader2 className="h-3 w-3 animate-spin mr-1.5" />
-                                : <Save className="h-3 w-3 mr-1.5" />
-                              }
-                              Guardar equipos
-                            </Button>
                           </div>
                         </>
                       )}
