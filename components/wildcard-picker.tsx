@@ -8,7 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { FlagPlaceholder } from '@/components/ui/flag-placeholder';
 import { toast } from 'sonner';
 import type { ApiResponse, WildcardData, WildcardTeam } from '@/types';
-import { Zap, CheckCircle2, Trophy, Clock, Loader2, Save, Lock, ChevronDown, Plus } from 'lucide-react';
+import { Zap, CheckCircle2, Trophy, Clock, Loader2, Lock, ChevronDown, Plus } from 'lucide-react';
 
 const MAX_PICKS = 3;
 const POINTS_PER_TEAM = 5;
@@ -199,52 +199,49 @@ export function WildcardPicker({ quinielaSlug }: Props) {
         const ids = res.data.picks.map((t) => t.id);
         setPicks(ids);
         setSavedPicks(ids);
-        // Auto-open grid when there are no picks yet and wildcard is open
-        if (ids.length === 0 && res.data.is_open) setGridOpen(true);
       })
       .catch(() => {/* non-blocking */})
       .finally(() => setLoading(false));
   }, [quinielaSlug]);
 
-  const toggleTeam = useCallback((teamId: number) => {
-    setPicks((prev) => {
-      if (prev.includes(teamId)) return prev.filter((id) => id !== teamId);
-      if (prev.length >= MAX_PICKS) return prev;
-      const next = [...prev, teamId];
-      if (next.length === MAX_PICKS) setGridOpen(false);
-      return next;
-    });
-  }, []);
-
-  const removeTeam = useCallback((teamId: number) => {
-    setPicks((prev) => prev.filter((id) => id !== teamId));
-    setGridOpen(true);
-  }, []);
-
-  const isDirty = picks.length > 0 && (
-    picks.length !== savedPicks.length ||
-    picks.some((id, i) => savedPicks[i] !== id)
-  );
-
-  const handleSave = async () => {
-    if (picks.length === 0) {
-      toast.error('Selecciona al menos un equipo.');
-      return;
-    }
+  const savepicks = useCallback(async (next: number[]) => {
     setSaving(true);
     try {
       await api.post<ApiResponse<{ picks: WildcardTeam[] }>>(
         `/quinielas/${quinielaSlug}/wildcard`,
-        { team_ids: picks }
+        { team_ids: next }
       );
-      setSavedPicks([...picks]);
-      toast.success('¡Comodín guardado!');
+      setSavedPicks([...next]);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Error al guardar');
     } finally {
       setSaving(false);
     }
-  };
+  }, [quinielaSlug]);
+
+  const toggleTeam = useCallback((teamId: number) => {
+    setPicks((prev) => {
+      if (prev.includes(teamId)) {
+        const next = prev.filter((id) => id !== teamId);
+        savepicks(next);
+        return next;
+      }
+      if (prev.length >= MAX_PICKS) return prev;
+      const next = [...prev, teamId];
+      if (next.length === MAX_PICKS) setGridOpen(false);
+      savepicks(next);
+      return next;
+    });
+  }, [savepicks]);
+
+  const removeTeam = useCallback((teamId: number) => {
+    setPicks((prev) => {
+      const next = prev.filter((id) => id !== teamId);
+      savepicks(next);
+      return next;
+    });
+    setGridOpen(true);
+  }, [savepicks]);
 
   if (loading) {
     return (
@@ -381,31 +378,15 @@ export function WildcardPicker({ quinielaSlug }: Props) {
         </div>
       )}
 
-      {/* ── Save button ── */}
-      {isOpen && (
-        <div className="px-4 pb-4 pt-3">
-          <AnimatePresence>
-            {(isDirty || savedPicks.length === 0) && picks.length > 0 && (
-              <motion.button
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 8 }}
-                type="button"
-                onClick={handleSave}
-                disabled={saving}
-                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white text-sm font-semibold transition-colors shadow-lg shadow-emerald-500/20"
-              >
-                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                {saving ? 'Guardando…' : 'Guardar comodín'}
-              </motion.button>
-            )}
-          </AnimatePresence>
-          {savedPicks.length > 0 && !isDirty && (
-            <div className="flex items-center justify-center gap-1.5 text-xs text-emerald-400 py-1">
-              <CheckCircle2 className="h-3.5 w-3.5" />
-              Comodín guardado · puedes cambiar hasta el cierre
-            </div>
-          )}
+      {/* ── Status bar ── */}
+      {isOpen && savedPicks.length > 0 && (
+        <div className="px-4 pb-3 pt-1">
+          <div className="flex items-center justify-center gap-1.5 text-xs py-1">
+            {saving
+              ? <><Loader2 className="h-3.5 w-3.5 animate-spin text-slate-500" /><span className="text-slate-500">Guardando…</span></>
+              : <><CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" /><span className="text-emerald-400">Guardado · puedes cambiar hasta el cierre</span></>
+            }
+          </div>
         </div>
       )}
     </div>
