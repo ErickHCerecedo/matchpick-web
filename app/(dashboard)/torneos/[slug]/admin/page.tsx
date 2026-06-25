@@ -20,6 +20,7 @@ interface AdminQuiniela {
   name: string;
   slug: string;
   type: string;
+  wildcard_enabled: boolean;
   participants_count: number;
   creator: { id: number; name: string; email: string } | null;
   participants: { id: number; name: string; email: string; role: string; total_points: number; rank: number | null }[];
@@ -119,6 +120,7 @@ export default function TorneoAdminPage() {
   const [loadingQuinielas, setLoadingQuinielas] = useState(false);
   const [expandedQuiniela, setExpandedQuiniela] = useState<number | null>(null);
   const [breakdownSheet, setBreakdownSheet] = useState<{ quinielaSlug: string; userId: number; userName: string } | null>(null);
+  const [togglingWildcard, setTogglingWildcard] = useState<number | null>(null); // quiniela id being toggled
 
   // Wildcard config
   interface WildcardTeamOption { id: number; name: string; short_name: string; flag_url: string | null }
@@ -696,6 +698,23 @@ export default function TorneoAdminPage() {
       toast.error(err instanceof Error ? err.message : 'Error al guardar');
     } finally {
       setSavingWildcard(false);
+    }
+  };
+
+  // ── Quiniela wildcard toggle ──────────────────────────────────────────
+
+  const toggleQuinielaWildcard = async (quinielaId: number, enabled: boolean) => {
+    setTogglingWildcard(quinielaId);
+    try {
+      await api.patch(`/admin/quinielas/${quinielaId}/wildcard-enabled`, { enabled });
+      setAdminQuinielas((prev) =>
+        prev.map((q) => q.id === quinielaId ? { ...q, wildcard_enabled: enabled } : q)
+      );
+      toast.success(enabled ? 'Comodín activado' : 'Comodín desactivado');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Error al actualizar');
+    } finally {
+      setTogglingWildcard(null);
     }
   };
 
@@ -1736,7 +1755,28 @@ export default function TorneoAdminPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <span className="text-xs font-medium text-slate-400 bg-slate-800 px-2 py-0.5 rounded-full">
+                    {/* Wildcard toggle */}
+                    <button
+                      type="button"
+                      disabled={togglingWildcard === q.id}
+                      onClick={(e) => { e.stopPropagation(); toggleQuinielaWildcard(q.id, !q.wildcard_enabled); }}
+                      className={cn(
+                        'flex items-center gap-1.5 px-2 py-1 rounded-lg border text-[11px] font-semibold transition-all disabled:opacity-50',
+                        q.wildcard_enabled
+                          ? 'border-amber-500/40 bg-amber-500/10 text-amber-400 hover:bg-amber-500/18'
+                          : 'border-slate-700 bg-slate-800/60 text-slate-500 hover:text-slate-300 hover:border-slate-600'
+                      )}
+                      title={q.wildcard_enabled ? 'Desactivar comodín' : 'Activar comodín'}
+                    >
+                      {togglingWildcard === q.id
+                        ? <Loader2 className="h-3 w-3 animate-spin" />
+                        : <Zap className="h-3 w-3" />
+                      }
+                      <span className="hidden sm:inline">
+                        {q.wildcard_enabled ? 'Comodín ON' : 'Comodín'}
+                      </span>
+                    </button>
+                    <span className="text-xs font-medium text-slate-400 bg-slate-800 px-2 py-0.5 rounded-full hidden sm:inline">
                       {q.participants_count} {q.participants_count === 1 ? 'participante' : 'participantes'}
                     </span>
                     <ChevronRight className={cn('h-4 w-4 text-slate-600 transition-transform', expandedQuiniela === q.id && 'rotate-90')} />

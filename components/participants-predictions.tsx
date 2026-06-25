@@ -45,6 +45,7 @@ interface Props {
   currentUserId?: number;
   isAdmin?: boolean;
   isSuperAdmin?: boolean;
+  wildcardEnabled?: boolean;
   isTournamentCustom?: boolean;
   onResultUpdated?: () => void;
 }
@@ -357,6 +358,7 @@ export function ParticipantsPredictions({
   currentUserId,
   isAdmin,
   isSuperAdmin,
+  wildcardEnabled,
   isTournamentCustom,
   onResultUpdated,
 }: Props) {
@@ -380,11 +382,11 @@ export function ParticipantsPredictions({
   const [myWildcard, setMyWildcard] = useState<WildcardData | null>(null);
   const [wildcardExpanded, setWildcardExpanded] = useState(false);
   useEffect(() => {
-    if (!currentUserId) return;
+    if (!currentUserId || !wildcardEnabled) return;
     api.get<ApiResponse<WildcardData>>(`/quinielas/${quinielaSlug}/wildcard`)
       .then((res) => { if (res.data.picks.length > 0) setMyWildcard(res.data); })
       .catch(() => {/* non-participant or not set */});
-  }, [currentUserId, quinielaSlug]);
+  }, [currentUserId, quinielaSlug, wildcardEnabled]);
 
   const [syncing, setSyncing] = useState(false);
 

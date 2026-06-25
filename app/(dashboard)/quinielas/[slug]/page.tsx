@@ -283,6 +283,7 @@ export default function QuinielaPage() {
               onSaved={handlePredictionsSaved}
               isCustomTournament={quiniela.tournament.is_custom}
               isSuperAdmin={!!user?.is_admin}
+              wildcardEnabled={!!quiniela.wildcard_enabled}
             />
           ) : (
             <div className="text-center py-10 space-y-2">
@@ -299,6 +300,7 @@ export default function QuinielaPage() {
             currentUserId={user?.id}
             isAdmin={quiniela.my_role === 'admin'}
             isSuperAdmin={!!user?.is_admin}
+            wildcardEnabled={!!quiniela.wildcard_enabled}
             isTournamentCustom={quiniela.tournament.is_custom}
             onResultUpdated={refreshRoundsAndStandings}
           />
@@ -309,7 +311,7 @@ export default function QuinielaPage() {
             quinielaSlug={slug}
             standings={standings}
             currentUserId={user?.id}
-            isSuperAdmin={!!user?.is_admin}
+            isSuperAdmin={!!user?.is_admin && !!quiniela.wildcard_enabled}
             invitePanel={
               quiniela.my_role === 'admin' ? (
                 <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-slate-800 bg-slate-950">

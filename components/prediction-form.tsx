@@ -20,6 +20,7 @@ interface Props {
   onSaved?: (predictions: Record<number, Prediction>) => void;
   isCustomTournament?: boolean;
   isSuperAdmin?: boolean;
+  wildcardEnabled?: boolean;
 }
 
 // ── helpers ────────────────────────────────────────────────────────────────
@@ -43,7 +44,7 @@ function firstOpenDate(rounds: RoundWithMatches[], predictions: Record<number, P
 
 // ── component ──────────────────────────────────────────────────────────────
 
-export function PredictionForm({ quinielaSlug, rounds, initialPredictions, onSaved, isCustomTournament, isSuperAdmin }: Props) {
+export function PredictionForm({ quinielaSlug, rounds, initialPredictions, onSaved, isCustomTournament, isSuperAdmin, wildcardEnabled }: Props) {
   const [predictions, setPredictions] =
     useState<Record<number, Prediction>>(initialPredictions);
   const [savedPredictions, setSavedPredictions] =
@@ -237,8 +238,8 @@ export function PredictionForm({ quinielaSlug, rounds, initialPredictions, onSav
 
   return (
     <div className="space-y-4 pb-4">
-      {/* ── Wildcard (super admin preview) ─────────────────────────────── */}
-      {isSuperAdmin && (
+      {/* ── Wildcard ───────────────────────────────────────────────────── */}
+      {wildcardEnabled && (
         <WildcardPicker quinielaSlug={quinielaSlug} />
       )}
 
