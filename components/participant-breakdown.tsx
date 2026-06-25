@@ -6,7 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { api } from '@/lib/api';
-import type { Standing, ApiResponse, ParticipantBreakdownData, BreakdownMatch } from '@/types';
+import type { Standing, ApiResponse, ParticipantBreakdownData, BreakdownMatch, ParticipantWildcard, WildcardTeam } from '@/types';
 import { FlagPlaceholder } from '@/components/ui/flag-placeholder';
 import {
   ArrowLeft,
@@ -135,10 +135,12 @@ export function BreakdownDetail({
   quinielaSlug,
   userId,
   onBack,
+  wildcardPicks,
 }: {
   quinielaSlug: string;
   userId: number;
   onBack: () => void;
+  wildcardPicks?: WildcardTeam[];
 }) {
   const [data, setData] = useState<ParticipantBreakdownData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -248,6 +250,32 @@ export function BreakdownDetail({
                     <span className="text-xs text-slate-500 font-medium">pts</span>
                   </div>
                 </div>
+
+                {/* Wildcard picks — visible only when data is passed (super admin) */}
+                {wildcardPicks !== undefined && (
+                  <div className="border border-amber-500/20 bg-amber-500/5 rounded-lg px-4 py-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Zap className="h-3.5 w-3.5 text-amber-400 shrink-0" />
+                      <p className="text-xs font-bold text-amber-300">Comodín</p>
+                    </div>
+                    {wildcardPicks.length === 0 ? (
+                      <p className="text-[11px] text-slate-600">No ha seleccionado equipos.</p>
+                    ) : (
+                      <div className="flex flex-wrap gap-2">
+                        {wildcardPicks.map((t) => (
+                          <div key={t.id} className="flex items-center gap-1.5 bg-slate-900 border border-slate-800 rounded-lg px-2 py-1.5">
+                            {t.flag_url
+                              ? <img src={t.flag_url} alt={t.short_name} className="w-6 h-4 object-cover rounded-xs shadow-sm shrink-0" />
+                              : <FlagPlaceholder size="sm" />
+                            }
+                            <span className="text-[11px] font-semibold text-slate-300">{t.name}</span>
+                            <span className="text-[10px] text-amber-500 font-bold">+5pts</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             ) : (
               <p className="text-slate-500 text-xs text-center">Sin estadísticas aún.</p>
@@ -582,11 +610,20 @@ interface Props {
   standings: Standing[];
   currentUserId?: number;
   invitePanel?: React.ReactNode;
+  isSuperAdmin?: boolean;
 }
 
-export function ParticipantBreakdown({ quinielaSlug, standings, currentUserId, invitePanel }: Props) {
+export function ParticipantBreakdown({ quinielaSlug, standings, currentUserId, invitePanel, isSuperAdmin }: Props) {
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [showRules, setShowRules] = useState(false);
+  const [wildcards, setWildcards] = useState<ParticipantWildcard[]>([]);
+
+  useEffect(() => {
+    if (!isSuperAdmin) return;
+    api.get<ApiResponse<ParticipantWildcard[]>>(`/quinielas/${quinielaSlug}/wildcards`)
+      .then((res) => setWildcards(res.data))
+      .catch(() => {/* non-blocking */});
+  }, [isSuperAdmin, quinielaSlug]);
 
   return (
     <div>
@@ -699,6 +736,28 @@ export function ParticipantBreakdown({ quinielaSlug, standings, currentUserId, i
                               </span>
                             )}
                           </div>
+                          {isSuperAdmin && (() => {
+                            const wc = wildcards.find((w) => w.user_id === s.user.id);
+                            if (!wc || wc.picks.length === 0) return (
+                              <div className="flex items-center gap-1 mt-1">
+                                <Zap className="h-2.5 w-2.5 text-slate-700 shrink-0" />
+                                <span className="text-[10px] text-slate-700">Sin comodín</span>
+                              </div>
+                            );
+                            return (
+                              <div className="flex items-center gap-1 mt-1">
+                                <Zap className="h-2.5 w-2.5 text-amber-500/70 shrink-0" />
+                                {wc.picks.map((t) => (
+                                  t.flag_url
+                                    ? <img key={t.id} src={t.flag_url} alt={t.short_name} title={t.name} className="w-5 h-3.5 object-cover rounded-xs shadow-sm" />
+                                    : <span key={t.id} className="text-[9px] text-slate-500">{t.short_name}</span>
+                                ))}
+                                {wc.points_earned !== null && (
+                                  <span className="text-[9px] font-bold text-amber-400 ml-0.5">+{wc.points_earned}pts</span>
+                                )}
+                              </div>
+                            );
+                          })()}
                         </div>
                       </div>
 
@@ -736,6 +795,10 @@ export function ParticipantBreakdown({ quinielaSlug, standings, currentUserId, i
               quinielaSlug={quinielaSlug}
               userId={selectedUserId}
               onBack={() => setSelectedUserId(null)}
+              wildcardPicks={isSuperAdmin
+                ? (wildcards.find((w) => w.user_id === selectedUserId)?.picks ?? [])
+                : undefined
+              }
             />
           </motion.div>
         )}

@@ -298,6 +298,7 @@ export default function QuinielaPage() {
             rounds={rounds}
             currentUserId={user?.id}
             isAdmin={quiniela.my_role === 'admin'}
+            isSuperAdmin={!!user?.is_admin}
             isTournamentCustom={quiniela.tournament.is_custom}
             onResultUpdated={refreshRoundsAndStandings}
           />
@@ -308,6 +309,7 @@ export default function QuinielaPage() {
             quinielaSlug={slug}
             standings={standings}
             currentUserId={user?.id}
+            isSuperAdmin={!!user?.is_admin}
             invitePanel={
               quiniela.my_role === 'admin' ? (
                 <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-slate-800 bg-slate-950">

@@ -239,6 +239,13 @@ export interface WildcardTeam {
   flag_url: string | null;
 }
 
+export interface ParticipantWildcard {
+  user_id: number;
+  user_name: string;
+  picks: WildcardTeam[];
+  points_earned: number | null;
+}
+
 export interface WildcardData {
   is_open: boolean;
   deadline: string;

@@ -10,8 +10,8 @@ import { cn, formatMatchDateParts } from '@/lib/utils';
 import { groupByDate, formatDateLabel, toLocalDateKey, todayKey } from '@/lib/date-utils';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
-import type { RoundWithMatches, Prediction, ApiResponse, Match } from '@/types';
-import { Lock, Eye, ChevronDown, RefreshCw, Calendar, MapPin } from 'lucide-react';
+import type { RoundWithMatches, Prediction, ApiResponse, Match, ParticipantWildcard } from '@/types';
+import { Lock, Eye, ChevronDown, RefreshCw, Calendar, MapPin, Zap, Trophy } from 'lucide-react';
 import { FlagPlaceholder } from '@/components/ui/flag-placeholder';
 
 const CARD_BG =
@@ -44,6 +44,7 @@ interface Props {
   rounds: RoundWithMatches[];
   currentUserId?: number;
   isAdmin?: boolean;
+  isSuperAdmin?: boolean;
   isTournamentCustom?: boolean;
   onResultUpdated?: () => void;
 }
@@ -323,6 +324,7 @@ export function ParticipantsPredictions({
   rounds,
   currentUserId,
   isAdmin,
+  isSuperAdmin,
   isTournamentCustom,
   onResultUpdated,
 }: Props) {
@@ -332,7 +334,6 @@ export function ParticipantsPredictions({
   const [activeDateKey, setActiveDateKey] = useState<string | null>(() => {
     if (sortedDateKeys.length === 0) return null;
     const today = todayKey();
-    // Start on today if it has matches, otherwise last past date, otherwise first date
     if (sortedDateKeys.includes(today)) return today;
     const pastDates = sortedDateKeys.filter((k) => k <= today);
     return pastDates[pastDates.length - 1] ?? sortedDateKeys[0];
@@ -342,6 +343,16 @@ export function ParticipantsPredictions({
   useEffect(() => {
     activeDateRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
   }, [activeDateKey]);
+
+  // Wildcard panel (super admin only)
+  const [wildcards, setWildcards] = useState<ParticipantWildcard[]>([]);
+  const [wildcardExpanded, setWildcardExpanded] = useState(false);
+  useEffect(() => {
+    if (!isSuperAdmin) return;
+    api.get<ApiResponse<ParticipantWildcard[]>>(`/quinielas/${quinielaSlug}/wildcards`)
+      .then((res) => setWildcards(res.data))
+      .catch(() => {/* non-blocking */});
+  }, [isSuperAdmin, quinielaSlug]);
 
   const [syncing, setSyncing] = useState(false);
 
@@ -397,6 +408,71 @@ export function ParticipantsPredictions({
 
   return (
     <div className="space-y-4">
+
+      {/* ── Wildcard panel — super admin only ── */}
+      {isSuperAdmin && wildcards.length > 0 && (
+        <div className="rounded-xl border border-amber-500/25 bg-slate-950 overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setWildcardExpanded((v) => !v)}
+            className="w-full flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-amber-500/8 to-transparent hover:from-amber-500/12 transition-all text-left"
+          >
+            <div className="p-1.5 rounded-lg bg-amber-500/15 border border-amber-500/20 shrink-0">
+              <Zap className="h-3.5 w-3.5 text-amber-400" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-bold text-amber-300">Comodines de participantes</p>
+              <p className="text-[11px] text-slate-500">{wildcards.length} participante{wildcards.length !== 1 ? 's' : ''} con selección</p>
+            </div>
+            <ChevronDown className={cn('h-4 w-4 text-slate-500 shrink-0 transition-transform duration-200', wildcardExpanded && 'rotate-180')} />
+          </button>
+
+          <AnimatePresence initial={false}>
+            {wildcardExpanded && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2, ease: 'easeInOut' }}
+                className="overflow-hidden"
+              >
+                <div className="border-t border-slate-800 divide-y divide-slate-800/60">
+                  {wildcards.map((wc) => (
+                    <div key={wc.user_id} className="flex items-center gap-3 px-4 py-2.5">
+                      <div className="w-6 h-6 rounded-full bg-slate-800 flex items-center justify-center shrink-0">
+                        <span className="text-[10px] font-bold text-slate-400">{wc.user_name.charAt(0).toUpperCase()}</span>
+                      </div>
+                      <span className="text-xs font-medium text-slate-300 truncate flex-1 min-w-0">{wc.user_name}</span>
+                      {wc.picks.length === 0 ? (
+                        <span className="text-[10px] text-slate-600">Sin picks</span>
+                      ) : (
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {wc.picks.map((t) => (
+                            <div key={t.id} className="flex items-center gap-1 bg-slate-900 border border-slate-800 rounded px-1.5 py-1" title={t.name}>
+                              {t.flag_url
+                                ? <img src={t.flag_url} alt={t.short_name} className="w-5 h-3.5 object-cover rounded-xs" />
+                                : <span className="text-[9px] text-slate-500">{t.short_name}</span>
+                              }
+                            </div>
+                          ))}
+                          {wc.points_earned !== null ? (
+                            <span className="flex items-center gap-1 text-[10px] font-bold text-amber-400 ml-1">
+                              <Trophy className="h-3 w-3" />{wc.points_earned}pts
+                            </span>
+                          ) : (
+                            <span className="text-[10px] text-slate-600 ml-1">max +{wc.picks.length * 5}pts</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      )}
+
       {/* Admin toolbar — only for custom tournaments; non-custom sync from tournament page */}
       {isAdmin && isTournamentCustom !== false && (
         <div className="flex items-center justify-between gap-3 p-3.5 rounded-xl bg-slate-950 border border-slate-800">
