@@ -9,7 +9,7 @@ import type { Standing, RoundWithMatches, Match } from '@/types';
 import {
   Trophy, Target, CheckCircle2, Clock, TrendingUp,
   Star, ArrowRight, CalendarCheck, Share2, Pencil,
-  Zap, Percent,
+  Bell, Percent,
 } from 'lucide-react';
 import { FlagPlaceholder } from '@/components/ui/flag-placeholder';
 
@@ -127,7 +127,7 @@ export function PendingMatchesAlert({
       {/* Icon + text row */}
       <div className="flex items-center gap-3 flex-1 min-w-0">
         <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-amber-500 shrink-0">
-          <Zap className="h-5 w-5 text-black fill-black" />
+          <Bell className="h-5 w-5 text-black" />
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-bold text-white leading-snug">Te toca jugar</p>
