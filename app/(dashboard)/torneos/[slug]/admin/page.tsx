@@ -1750,7 +1750,7 @@ export default function TorneoAdminPage() {
                     <div className="min-w-0">
                       <p className="text-sm font-semibold text-white truncate">{q.name}</p>
                       <p className="text-[11px] text-slate-500 truncate">
-                        Creada por {q.creator?.name ?? '–'} · {q.type}
+                        {q.creator?.name ?? '–'} · {q.participants_count} participante{q.participants_count !== 1 ? 's' : ''}
                       </p>
                     </div>
                   </div>
@@ -1761,24 +1761,26 @@ export default function TorneoAdminPage() {
                       disabled={togglingWildcard === q.id}
                       onClick={(e) => { e.stopPropagation(); toggleQuinielaWildcard(q.id, !q.wildcard_enabled); }}
                       className={cn(
-                        'flex items-center gap-1.5 px-2 py-1 rounded-lg border text-[11px] font-semibold transition-all disabled:opacity-50',
+                        'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[11px] font-bold transition-all disabled:opacity-50',
                         q.wildcard_enabled
-                          ? 'border-amber-500/40 bg-amber-500/10 text-amber-400 hover:bg-amber-500/18'
-                          : 'border-slate-700 bg-slate-800/60 text-slate-500 hover:text-slate-300 hover:border-slate-600'
+                          ? 'border-amber-500/50 bg-amber-500/15 text-amber-300 hover:bg-amber-500/25'
+                          : 'border-slate-700 bg-slate-900 text-slate-600 hover:text-slate-400 hover:border-slate-600'
                       )}
-                      title={q.wildcard_enabled ? 'Desactivar comodín' : 'Activar comodín'}
                     >
                       {togglingWildcard === q.id
-                        ? <Loader2 className="h-3 w-3 animate-spin" />
-                        : <Zap className="h-3 w-3" />
+                        ? <Loader2 className="h-3 w-3 animate-spin shrink-0" />
+                        : <Zap className={cn('h-3 w-3 shrink-0', q.wildcard_enabled && 'fill-amber-400/30')} />
                       }
-                      <span className="hidden sm:inline">
-                        {q.wildcard_enabled ? 'Comodín ON' : 'Comodín'}
+                      <span>Comodín</span>
+                      <span className={cn(
+                        'text-[10px] font-bold px-1 py-0.5 rounded',
+                        q.wildcard_enabled
+                          ? 'bg-amber-500/20 text-amber-300'
+                          : 'bg-slate-800 text-slate-600'
+                      )}>
+                        {q.wildcard_enabled ? 'ON' : 'OFF'}
                       </span>
                     </button>
-                    <span className="text-xs font-medium text-slate-400 bg-slate-800 px-2 py-0.5 rounded-full hidden sm:inline">
-                      {q.participants_count} {q.participants_count === 1 ? 'participante' : 'participantes'}
-                    </span>
                     <ChevronRight className={cn('h-4 w-4 text-slate-600 transition-transform', expandedQuiniela === q.id && 'rotate-90')} />
                   </div>
                 </button>
