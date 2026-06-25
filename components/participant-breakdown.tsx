@@ -741,28 +741,6 @@ export function ParticipantBreakdown({ quinielaSlug, standings, currentUserId, i
                               </span>
                             )}
                           </div>
-                          {isSuperAdmin && (() => {
-                            const wc = wildcards.find((w) => w.user_id === s.user.id);
-                            if (!wc || wc.picks.length === 0) return (
-                              <div className="flex items-center gap-1 mt-1">
-                                <Zap className="h-2.5 w-2.5 text-slate-700 shrink-0" />
-                                <span className="text-[10px] text-slate-700">Sin comodín</span>
-                              </div>
-                            );
-                            return (
-                              <div className="flex items-center gap-1 mt-1">
-                                <Zap className="h-2.5 w-2.5 text-amber-500/70 shrink-0" />
-                                {wc.picks.map((t) => (
-                                  t.flag_url
-                                    ? <img key={t.id} src={t.flag_url} alt={t.short_name} title={t.name} className="w-5 h-3.5 object-cover rounded-xs shadow-sm" />
-                                    : <span key={t.id} className="text-[9px] text-slate-500">{t.short_name}</span>
-                                ))}
-                                {wc.points_earned !== null && (
-                                  <span className="text-[9px] font-bold text-amber-400 ml-0.5">+{wc.points_earned}pts</span>
-                                )}
-                              </div>
-                            );
-                          })()}
                         </div>
                       </div>
 
