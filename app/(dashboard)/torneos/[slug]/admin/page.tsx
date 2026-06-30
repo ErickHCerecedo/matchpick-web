@@ -163,7 +163,7 @@ export default function TorneoAdminPage() {
 
   // Result state
   const [resultMatchId, setResultMatchId] = useState<number | null>(null);
-  const [resultForm, setResultForm] = useState({ home_score: '', away_score: '' });
+  const [resultForm, setResultForm] = useState({ home_score: '', away_score: '', home_score_pen: '', away_score_pen: '' });
   const [savingResult, setSavingResult] = useState(false);
   const [testingFD, setTestingFD] = useState(false);
   const [fdResult, setFdResult] = useState<Record<string, unknown> | null>(null);
@@ -540,8 +540,10 @@ export default function TorneoAdminPage() {
   const startSetResult = (match: CustomMatch) => {
     setResultMatchId(match.id);
     setResultForm({
-      home_score: match.result != null ? String(match.result.home_score) : '',
-      away_score: match.result != null ? String(match.result.away_score) : '',
+      home_score:     match.result != null ? String(match.result.home_score) : '',
+      away_score:     match.result != null ? String(match.result.away_score) : '',
+      home_score_pen: match.result?.home_score_penalties != null ? String(match.result.home_score_penalties) : '',
+      away_score_pen: match.result?.away_score_penalties != null ? String(match.result.away_score_penalties) : '',
     });
     setEditingMatchId(null);
     setShowMatchForm(false);
@@ -553,9 +555,13 @@ export default function TorneoAdminPage() {
       const endpoint = tournament!.is_custom
         ? `/tournaments/${slug}/rounds/${match.roundId}/matches/${match.id}/result`
         : `/admin/matches/${match.id}/results`;
+      const isDraw = resultForm.home_score !== '' && resultForm.away_score !== ''
+        && Number(resultForm.home_score) === Number(resultForm.away_score);
       const res = await api.post<ApiResponse<MatchResult>>(endpoint, {
-        home_score: Number(resultForm.home_score),
-        away_score: Number(resultForm.away_score),
+        home_score:            Number(resultForm.home_score),
+        away_score:            Number(resultForm.away_score),
+        home_score_penalties:  isDraw && resultForm.home_score_pen !== '' ? Number(resultForm.home_score_pen) : null,
+        away_score_penalties:  isDraw && resultForm.away_score_pen !== '' ? Number(resultForm.away_score_pen) : null,
       });
       setMatchesByRound((prev) => ({
         ...prev,
@@ -1243,49 +1249,101 @@ export default function TorneoAdminPage() {
                                   </div>
 
                                   {/* Score / Steppers */}
-                                  <div className="shrink-0 flex items-center justify-center">
+                                  <div className="shrink-0 flex flex-col items-center gap-1.5">
                                     {isEditingResult ? (
-                                      <div className="flex items-center gap-1.5">
-                                        {/* Home stepper */}
-                                        <div className="flex flex-col items-center select-none">
-                                          <button type="button"
-                                            onClick={() => setResultForm((p) => ({ ...p, home_score: String(Math.min(99, Number(p.home_score || 0) + 1)) }))}
-                                            className="w-8 h-6 flex items-center justify-center bg-black/40 hover:bg-slate-700/80 border border-b-0 border-slate-700 rounded-t text-slate-400 hover:text-emerald-400 transition-colors">
-                                            <ChevronUp className="h-3 w-3" />
-                                          </button>
-                                          <div className="w-8 h-8 flex items-center justify-center border border-slate-700 bg-black/50 text-base font-bold text-white tabular-nums font-mono">
-                                            {resultForm.home_score !== '' ? resultForm.home_score : '—'}
+                                      <>
+                                        {/* Main score steppers */}
+                                        <div className="flex items-center gap-1.5">
+                                          <div className="flex flex-col items-center select-none">
+                                            <button type="button"
+                                              onClick={() => setResultForm((p) => ({ ...p, home_score: String(Math.min(99, Number(p.home_score || 0) + 1)) }))}
+                                              className="w-8 h-6 flex items-center justify-center bg-black/40 hover:bg-slate-700/80 border border-b-0 border-slate-700 rounded-t text-slate-400 hover:text-emerald-400 transition-colors">
+                                              <ChevronUp className="h-3 w-3" />
+                                            </button>
+                                            <div className="w-8 h-8 flex items-center justify-center border border-slate-700 bg-black/50 text-base font-bold text-white tabular-nums font-mono">
+                                              {resultForm.home_score !== '' ? resultForm.home_score : '—'}
+                                            </div>
+                                            <button type="button"
+                                              onClick={() => setResultForm((p) => ({ ...p, home_score: String(Math.max(0, Number(p.home_score || 0) - 1)) }))}
+                                              disabled={resultForm.home_score === '0' || resultForm.home_score === ''}
+                                              className="w-8 h-6 flex items-center justify-center bg-black/40 hover:bg-slate-700/80 border border-t-0 border-slate-700 rounded-b text-slate-400 hover:text-red-400 disabled:opacity-25 transition-colors">
+                                              <ChevronDown className="h-3 w-3" />
+                                            </button>
                                           </div>
-                                          <button type="button"
-                                            onClick={() => setResultForm((p) => ({ ...p, home_score: String(Math.max(0, Number(p.home_score || 0) - 1)) }))}
-                                            disabled={resultForm.home_score === '0' || resultForm.home_score === ''}
-                                            className="w-8 h-6 flex items-center justify-center bg-black/40 hover:bg-slate-700/80 border border-t-0 border-slate-700 rounded-b text-slate-400 hover:text-red-400 disabled:opacity-25 transition-colors">
-                                            <ChevronDown className="h-3 w-3" />
-                                          </button>
-                                        </div>
-                                        <span className="text-slate-500 font-bold">–</span>
-                                        {/* Away stepper */}
-                                        <div className="flex flex-col items-center select-none">
-                                          <button type="button"
-                                            onClick={() => setResultForm((p) => ({ ...p, away_score: String(Math.min(99, Number(p.away_score || 0) + 1)) }))}
-                                            className="w-8 h-6 flex items-center justify-center bg-black/40 hover:bg-slate-700/80 border border-b-0 border-slate-700 rounded-t text-slate-400 hover:text-emerald-400 transition-colors">
-                                            <ChevronUp className="h-3 w-3" />
-                                          </button>
-                                          <div className="w-8 h-8 flex items-center justify-center border border-slate-700 bg-black/50 text-base font-bold text-white tabular-nums font-mono">
-                                            {resultForm.away_score !== '' ? resultForm.away_score : '—'}
+                                          <span className="text-slate-500 font-bold">–</span>
+                                          <div className="flex flex-col items-center select-none">
+                                            <button type="button"
+                                              onClick={() => setResultForm((p) => ({ ...p, away_score: String(Math.min(99, Number(p.away_score || 0) + 1)) }))}
+                                              className="w-8 h-6 flex items-center justify-center bg-black/40 hover:bg-slate-700/80 border border-b-0 border-slate-700 rounded-t text-slate-400 hover:text-emerald-400 transition-colors">
+                                              <ChevronUp className="h-3 w-3" />
+                                            </button>
+                                            <div className="w-8 h-8 flex items-center justify-center border border-slate-700 bg-black/50 text-base font-bold text-white tabular-nums font-mono">
+                                              {resultForm.away_score !== '' ? resultForm.away_score : '—'}
+                                            </div>
+                                            <button type="button"
+                                              onClick={() => setResultForm((p) => ({ ...p, away_score: String(Math.max(0, Number(p.away_score || 0) - 1)) }))}
+                                              disabled={resultForm.away_score === '0' || resultForm.away_score === ''}
+                                              className="w-8 h-6 flex items-center justify-center bg-black/40 hover:bg-slate-700/80 border border-t-0 border-slate-700 rounded-b text-slate-400 hover:text-red-400 disabled:opacity-25 transition-colors">
+                                              <ChevronDown className="h-3 w-3" />
+                                            </button>
                                           </div>
-                                          <button type="button"
-                                            onClick={() => setResultForm((p) => ({ ...p, away_score: String(Math.max(0, Number(p.away_score || 0) - 1)) }))}
-                                            disabled={resultForm.away_score === '0' || resultForm.away_score === ''}
-                                            className="w-8 h-6 flex items-center justify-center bg-black/40 hover:bg-slate-700/80 border border-t-0 border-slate-700 rounded-b text-slate-400 hover:text-red-400 disabled:opacity-25 transition-colors">
-                                            <ChevronDown className="h-3 w-3" />
-                                          </button>
                                         </div>
-                                      </div>
+                                        {/* Penalty steppers — visible only when draw */}
+                                        {resultForm.home_score !== '' && resultForm.away_score !== ''
+                                          && Number(resultForm.home_score) === Number(resultForm.away_score) && (
+                                          <div className="flex flex-col items-center gap-1 pt-0.5">
+                                            <span className="text-[9px] font-bold text-sky-500 uppercase tracking-widest">⚽ penales</span>
+                                            <div className="flex items-center gap-1">
+                                              <div className="flex flex-col items-center select-none">
+                                                <button type="button"
+                                                  onClick={() => setResultForm((p) => ({ ...p, home_score_pen: String(Math.min(30, Number(p.home_score_pen || 0) + 1)) }))}
+                                                  className="w-7 h-5 flex items-center justify-center bg-sky-950/60 hover:bg-sky-900/60 border border-b-0 border-sky-500/30 rounded-t text-sky-500 hover:text-sky-300 transition-colors">
+                                                  <ChevronUp className="h-2.5 w-2.5" />
+                                                </button>
+                                                <div className="w-7 h-7 flex items-center justify-center border border-sky-500/30 bg-sky-950/60 text-sm font-bold text-sky-300 tabular-nums font-mono">
+                                                  {resultForm.home_score_pen !== '' ? resultForm.home_score_pen : '—'}
+                                                </div>
+                                                <button type="button"
+                                                  onClick={() => setResultForm((p) => ({ ...p, home_score_pen: p.home_score_pen === '' || p.home_score_pen === '0' ? '' : String(Number(p.home_score_pen) - 1) }))}
+                                                  disabled={resultForm.home_score_pen === '0' || resultForm.home_score_pen === ''}
+                                                  className="w-7 h-5 flex items-center justify-center bg-sky-950/60 hover:bg-sky-900/60 border border-t-0 border-sky-500/30 rounded-b text-sky-500 hover:text-sky-300 disabled:opacity-25 transition-colors">
+                                                  <ChevronDown className="h-2.5 w-2.5" />
+                                                </button>
+                                              </div>
+                                              <span className="text-sky-600 font-bold text-xs">–</span>
+                                              <div className="flex flex-col items-center select-none">
+                                                <button type="button"
+                                                  onClick={() => setResultForm((p) => ({ ...p, away_score_pen: String(Math.min(30, Number(p.away_score_pen || 0) + 1)) }))}
+                                                  className="w-7 h-5 flex items-center justify-center bg-sky-950/60 hover:bg-sky-900/60 border border-b-0 border-sky-500/30 rounded-t text-sky-500 hover:text-sky-300 transition-colors">
+                                                  <ChevronUp className="h-2.5 w-2.5" />
+                                                </button>
+                                                <div className="w-7 h-7 flex items-center justify-center border border-sky-500/30 bg-sky-950/60 text-sm font-bold text-sky-300 tabular-nums font-mono">
+                                                  {resultForm.away_score_pen !== '' ? resultForm.away_score_pen : '—'}
+                                                </div>
+                                                <button type="button"
+                                                  onClick={() => setResultForm((p) => ({ ...p, away_score_pen: p.away_score_pen === '' || p.away_score_pen === '0' ? '' : String(Number(p.away_score_pen) - 1) }))}
+                                                  disabled={resultForm.away_score_pen === '0' || resultForm.away_score_pen === ''}
+                                                  className="w-7 h-5 flex items-center justify-center bg-sky-950/60 hover:bg-sky-900/60 border border-t-0 border-sky-500/30 rounded-b text-sky-500 hover:text-sky-300 disabled:opacity-25 transition-colors">
+                                                  <ChevronDown className="h-2.5 w-2.5" />
+                                                </button>
+                                              </div>
+                                            </div>
+                                          </div>
+                                        )}
+                                      </>
                                     ) : match.result ? (
-                                      <span className="text-xl font-bold text-white font-mono tabular-nums px-2">
-                                        {match.result.home_score} – {match.result.away_score}
-                                      </span>
+                                      <div className="flex flex-col items-center gap-1">
+                                        <span className="text-xl font-bold text-white font-mono tabular-nums px-2">
+                                          {match.result.home_score} – {match.result.away_score}
+                                        </span>
+                                        {match.result.home_score_penalties != null && (
+                                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-sky-950/80 border border-sky-500/30 text-[10px] font-bold text-sky-400 tabular-nums leading-none">
+                                            <span>⚽</span>
+                                            <span>{match.result.home_score_penalties}–{match.result.away_score_penalties}</span>
+                                            <span className="text-sky-600 font-medium">p.</span>
+                                          </span>
+                                        )}
+                                      </div>
                                     ) : (
                                       <span className="text-xs font-black tracking-widest text-white/80 bg-white/10 border border-white/20 rounded px-2 py-0.5 backdrop-blur-sm">
                                         VS

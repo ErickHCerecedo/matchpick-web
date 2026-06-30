@@ -50,6 +50,16 @@ const STATUS_COLORS: Record<Match['status'], { dot: string; icon: string; badge:
   rescheduled: { dot: 'bg-sky-400',      icon: 'text-sky-400',      badge: 'border-sky-500/50 text-sky-400',           line: 'bg-sky-400/60'      },
 };
 
+function PenaltyBadge({ home, away }: { home: number; away: number }) {
+  return (
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-sky-950/80 border border-sky-500/30 text-[10px] font-bold text-sky-400 tabular-nums leading-none">
+      <span>⚽</span>
+      <span>{home}–{away}</span>
+      <span className="text-sky-600 font-medium">p.</span>
+    </span>
+  );
+}
+
 function ScoreStepper({
   value,
   onAdjust,
@@ -257,16 +267,22 @@ export function MatchCard({ match, prediction, onChange, readOnly, isSaved, isAu
               </div>
             ) : hasResult ? (
               prediction ? (
-                <div className="flex items-center gap-1.5 font-bold text-white">
-                  <span className="w-8 text-center text-xl tabular-nums font-mono">{prediction.home_score}</span>
-                  <span className="text-slate-500 text-sm font-normal">–</span>
-                  <span className="w-8 text-center text-xl tabular-nums font-mono">{prediction.away_score}</span>
+                <div className="flex flex-col items-center gap-1">
+                  <div className="flex items-center gap-1.5 font-bold text-white">
+                    <span className="w-8 text-center text-xl tabular-nums font-mono">{prediction.home_score}</span>
+                    <span className="text-slate-500 text-sm font-normal">–</span>
+                    <span className="w-8 text-center text-xl tabular-nums font-mono">{prediction.away_score}</span>
+                  </div>
+                  {penaltyResult && <PenaltyBadge home={penaltyResult.homeScore} away={penaltyResult.awayScore} />}
                 </div>
               ) : showActualResult ? (
-                <div className="flex items-center gap-1.5 font-bold text-white">
-                  <span className="w-8 text-center text-xl tabular-nums font-mono">{match.result!.home_score}</span>
-                  <span className="text-slate-500 text-sm font-normal">–</span>
-                  <span className="w-8 text-center text-xl tabular-nums font-mono">{match.result!.away_score}</span>
+                <div className="flex flex-col items-center gap-1">
+                  <div className="flex items-center gap-1.5 font-bold text-white">
+                    <span className="w-8 text-center text-xl tabular-nums font-mono">{match.result!.home_score}</span>
+                    <span className="text-slate-500 text-sm font-normal">–</span>
+                    <span className="w-8 text-center text-xl tabular-nums font-mono">{match.result!.away_score}</span>
+                  </div>
+                  {penaltyResult && <PenaltyBadge home={penaltyResult.homeScore} away={penaltyResult.awayScore} />}
                 </div>
               ) : (
                 <div className="flex flex-col items-center gap-1">
@@ -365,18 +381,6 @@ export function MatchCard({ match, prediction, onChange, readOnly, isSaved, isAu
                 <span className="text-[10px] text-slate-500 ml-1">marcador en penales</span>
               </div>
             )}
-          </div>
-        )}
-
-        {/* ── Penalty result for finished knockout matches ── */}
-        {hasResult && penaltyResult && prediction && (
-          <div className="rounded-lg border border-slate-700/60 bg-black/20 px-3 py-2 text-[11px] text-slate-400">
-            <span className="font-semibold text-slate-300">Penales: </span>
-            {penaltyResult.homeScore}–{penaltyResult.awayScore}
-            {' '}·{' '}
-            {penaltyResult.winner === 'home'
-              ? (match.home_team?.short_name ?? 'Local')
-              : (match.away_team?.short_name ?? 'Visitante')} avanza
           </div>
         )}
 
