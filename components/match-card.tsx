@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
 import { cn, formatMatchDateParts } from '@/lib/utils';
@@ -11,14 +11,20 @@ import { FlagPlaceholder } from '@/components/ui/flag-placeholder';
 const CARD_BG =
   'https://res.cloudinary.com/dr0klvutj/image/upload/v1781001150/MatchPick/file_00000000042c71fb8d0d570a11881d55.png';
 
+const KNOCKOUT_TYPES = new Set([
+  'round_of_32', 'round_of_16', 'quarter', 'semi', 'third_place', 'final',
+]);
+
 interface Props {
   match: Match;
   prediction: Prediction | null;
-  onChange?: (matchId: number, home: number, away: number) => void;
+  onChange?: (matchId: number, home: number, away: number, penaltiesWinner?: 'home' | 'away' | null, penaltiesHome?: number | null, penaltiesAway?: number | null) => void;
   readOnly?: boolean;
   isSaved?: boolean;
   isAutoSaving?: boolean;
   showActualResult?: boolean;
+  penaltiesEnabled?: boolean;
+  penaltiesMode?: 'winner' | 'exact' | null;
 }
 
 const STATUS_LABELS: Record<Match['status'], string> = {
@@ -79,34 +85,93 @@ function ScoreStepper({
   );
 }
 
-export function MatchCard({ match, prediction, onChange, readOnly, isSaved, isAutoSaving, showActualResult }: Props) {
+export function MatchCard({ match, prediction, onChange, readOnly, isSaved, isAutoSaving, showActualResult, penaltiesEnabled, penaltiesMode }: Props) {
   const [home, setHome] = useState<number | null>(prediction?.home_score ?? null);
   const [away, setAway] = useState<number | null>(prediction?.away_score ?? null);
+  const [penWinner, setPenWinner] = useState<'home' | 'away' | null>(prediction?.penalties_winner ?? null);
+  const [penHome, setPenHome] = useState<number | null>(prediction?.penalties_home ?? null);
+  const [penAway, setPenAway] = useState<number | null>(prediction?.penalties_away ?? null);
 
   const isOpen = match.is_prediction_open && !readOnly;
   const hasResult = match.result !== null;
   const isClosed = !isOpen && !readOnly && !hasResult && match.status === 'scheduled';
+  const isKnockout = KNOCKOUT_TYPES.has(match.round.type);
+
+  // Show penalty input when: quiniela has penalties enabled with a mode, it's a knockout match,
+  // and the user is predicting a draw
+  const isDraw = home !== null && away !== null && home === away;
+  const showPenaltyInput = isOpen && penaltiesEnabled && penaltiesMode && isKnockout && isDraw;
+
+  // When draw condition changes, emit current penalty state
+  useEffect(() => {
+    if (!showPenaltyInput) {
+      // Clear penalty state when no longer in draw
+      if (penWinner !== null || penHome !== null || penAway !== null) {
+        setPenWinner(null);
+        setPenHome(null);
+        setPenAway(null);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showPenaltyInput]);
 
   const { date, time } = formatMatchDateParts(match.scheduled_at);
   const sc = STATUS_COLORS[match.status];
+
+  const fireChange = (h: number, a: number, pw: typeof penWinner, ph: typeof penHome, pa: typeof penAway) => {
+    onChange?.(match.id, h, a, pw, ph, pa);
+  };
 
   const handleAdjust = (side: 'home' | 'away', delta: number) => {
     const h = home !== null ? home : -1;
     const a = away !== null ? away : -1;
     if (side === 'home') {
       const next = Math.max(0, Math.min(99, h + delta));
-      setHome(next);
       const effectiveAway = away !== null ? away : 0;
+      setHome(next);
       if (away === null) setAway(0);
-      onChange?.(match.id, next, effectiveAway);
+      fireChange(next, effectiveAway, penWinner, penHome, penAway);
     } else {
       const next = Math.max(0, Math.min(99, a + delta));
-      setAway(next);
       const effectiveHome = home !== null ? home : 0;
+      setAway(next);
       if (home === null) setHome(0);
-      onChange?.(match.id, effectiveHome, next);
+      fireChange(effectiveHome, next, penWinner, penHome, penAway);
     }
   };
+
+  const handlePenWinner = (winner: 'home' | 'away') => {
+    const next = penWinner === winner ? null : winner;
+    setPenWinner(next);
+    fireChange(home!, away!, next, penHome, penAway);
+  };
+
+  const handlePenAdjust = (side: 'home' | 'away', delta: number) => {
+    if (side === 'home') {
+      const next = Math.max(0, Math.min(30, (penHome ?? -1) + delta));
+      const effectivePenAway = penAway ?? 0;
+      setPenHome(next);
+      if (penAway === null) setPenAway(0);
+      fireChange(home!, away!, penWinner, next, effectivePenAway);
+    } else {
+      const next = Math.max(0, Math.min(30, (penAway ?? -1) + delta));
+      const effectivePenHome = penHome ?? 0;
+      setPenAway(next);
+      if (penHome === null) setPenHome(0);
+      fireChange(home!, away!, penWinner, effectivePenHome, next);
+    }
+  };
+
+  // Penalty result info (for finished matches)
+  const penaltyResult = hasResult && match.result?.home_score_penalties != null
+    ? {
+        homeScore: match.result.home_score_penalties,
+        awayScore: match.result.away_score_penalties!,
+        winner: match.result.home_score_penalties > match.result.away_score_penalties!
+          ? 'home' as const
+          : 'away' as const,
+      }
+    : null;
 
   return (
     <motion.div
@@ -121,7 +186,7 @@ export function MatchCard({ match, prediction, onChange, readOnly, isSaved, isAu
           : 'border-slate-700/60',
       )}
     >
-      {/* Background image — fixed height so it doesn't shift when card expands */}
+      {/* Background image */}
       <img
         src={CARD_BG}
         alt=""
@@ -177,7 +242,6 @@ export function MatchCard({ match, prediction, onChange, readOnly, isSaved, isAu
           {/* Score / VS area */}
           <div className="flex items-center gap-2 shrink-0">
             {match.status === 'in_progress' && hasResult ? (
-              /* ── Live match: always show actual score; prediction below ── */
               <div className="flex flex-col items-center gap-1">
                 <div className="flex items-center gap-1.5 font-bold">
                   <span className="w-8 text-center text-xl tabular-nums font-mono text-red-300">{match.result!.home_score}</span>
@@ -259,7 +323,63 @@ export function MatchCard({ match, prediction, onChange, readOnly, isSaved, isAu
 
         </div>
 
-        {/* Venue — centered */}
+        {/* ── Penalty prediction input (open, knockout, draw predicted) ── */}
+        {showPenaltyInput && (
+          <div className="rounded-lg border border-sky-500/30 bg-sky-500/5 px-3 py-2.5 space-y-2">
+            <p className="text-[10px] font-bold text-sky-400 uppercase tracking-widest">
+              ⚽ Penales — empate en 90 min
+            </p>
+            {penaltiesMode === 'winner' ? (
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => handlePenWinner('home')}
+                  className={cn(
+                    'flex-1 py-2 rounded-lg text-xs font-bold border transition-all',
+                    penWinner === 'home'
+                      ? 'bg-sky-500/30 border-sky-400/60 text-sky-200'
+                      : 'bg-slate-900/60 border-slate-700 text-slate-500 hover:border-slate-500 hover:text-slate-300'
+                  )}
+                >
+                  {match.home_team?.short_name ?? 'Local'} gana
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handlePenWinner('away')}
+                  className={cn(
+                    'flex-1 py-2 rounded-lg text-xs font-bold border transition-all',
+                    penWinner === 'away'
+                      ? 'bg-sky-500/30 border-sky-400/60 text-sky-200'
+                      : 'bg-slate-900/60 border-slate-700 text-slate-500 hover:border-slate-500 hover:text-slate-300'
+                  )}
+                >
+                  {match.away_team?.short_name ?? 'Visitante'} gana
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <ScoreStepper value={penHome} onAdjust={(d) => handlePenAdjust('home', d)} />
+                <span className="text-slate-500 font-mono text-sm">–</span>
+                <ScoreStepper value={penAway} onAdjust={(d) => handlePenAdjust('away', d)} />
+                <span className="text-[10px] text-slate-500 ml-1">marcador en penales</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── Penalty result for finished knockout matches ── */}
+        {hasResult && penaltyResult && prediction && (
+          <div className="rounded-lg border border-slate-700/60 bg-black/20 px-3 py-2 text-[11px] text-slate-400">
+            <span className="font-semibold text-slate-300">Penales: </span>
+            {penaltyResult.homeScore}–{penaltyResult.awayScore}
+            {' '}·{' '}
+            {penaltyResult.winner === 'home'
+              ? (match.home_team?.short_name ?? 'Local')
+              : (match.away_team?.short_name ?? 'Visitante')} avanza
+          </div>
+        )}
+
+        {/* Venue */}
         {match.venue && (
           <div className="flex items-center justify-center gap-1.5 text-[11px] text-slate-400">
             <MapPin className={cn('h-3 w-3 shrink-0', sc.icon)} />

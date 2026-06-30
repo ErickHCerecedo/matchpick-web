@@ -22,6 +22,7 @@ interface AdminQuiniela {
   type: string;
   wildcard_enabled: boolean;
   penalties_enabled: boolean;
+  penalties_mode: 'winner' | 'exact' | null;
   participants_count: number;
   creator: { id: number; name: string; email: string } | null;
   participants: { id: number; name: string; email: string; role: string; total_points: number; rank: number | null }[];
@@ -723,15 +724,30 @@ export default function TorneoAdminPage() {
   const toggleQuinielaPenalties = async (quinielaId: number, enabled: boolean) => {
     setTogglingPenalties(quinielaId);
     try {
-      await api.patch(`/admin/quinielas/${quinielaId}/penalties-enabled`, { enabled });
+      const res = await api.patch<{ data: { penalties_enabled: boolean; penalties_mode: 'winner' | 'exact' | null } }>(
+        `/admin/quinielas/${quinielaId}/penalties-enabled`, { enabled }
+      );
       setAdminQuinielas((prev) =>
-        prev.map((q) => q.id === quinielaId ? { ...q, penalties_enabled: enabled } : q)
+        prev.map((q) => q.id === quinielaId
+          ? { ...q, penalties_enabled: res.data.penalties_enabled, penalties_mode: res.data.penalties_mode }
+          : q)
       );
       toast.success(enabled ? 'Penales activados' : 'Penales desactivados');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Error al actualizar');
     } finally {
       setTogglingPenalties(null);
+    }
+  };
+
+  const setPenaltiesMode = async (quinielaId: number, mode: 'winner' | 'exact') => {
+    try {
+      await api.patch(`/admin/quinielas/${quinielaId}/penalties-enabled`, { enabled: true, mode });
+      setAdminQuinielas((prev) =>
+        prev.map((q) => q.id === quinielaId ? { ...q, penalties_mode: mode } : q)
+      );
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Error al actualizar modalidad');
     }
   };
 
@@ -1832,39 +1848,60 @@ export default function TorneoAdminPage() {
                         </button>
 
                         {/* Penalties toggle */}
-                        <button
-                          type="button"
-                          disabled={togglingPenalties === q.id}
-                          onClick={() => toggleQuinielaPenalties(q.id, !q.penalties_enabled)}
-                          className={cn(
-                            'flex items-center gap-2.5 px-3 py-2.5 rounded-xl border text-left transition-all disabled:opacity-50',
-                            q.penalties_enabled
-                              ? 'border-sky-500/40 bg-sky-500/10'
-                              : 'border-slate-700/60 bg-slate-900 hover:border-slate-600'
-                          )}
-                        >
-                          <div className={cn('p-1.5 rounded-lg shrink-0', q.penalties_enabled ? 'bg-sky-500/20 border border-sky-500/30' : 'bg-slate-800 border border-slate-700')}>
-                            {togglingPenalties === q.id
-                              ? <Loader2 className="h-3.5 w-3.5 animate-spin text-slate-400" />
-                              : <span className={cn('text-sm leading-none', q.penalties_enabled ? '' : 'opacity-40')}>⚽</span>
-                            }
-                          </div>
-                          <div className="min-w-0">
-                            <p className={cn('text-xs font-bold leading-none', q.penalties_enabled ? 'text-sky-300' : 'text-slate-500')}>Penales</p>
-                            <p className={cn('text-[10px] mt-0.5', q.penalties_enabled ? 'text-sky-500/70' : 'text-slate-700')}>
-                              {q.penalties_enabled ? 'Activo' : 'Inactivo'}
-                            </p>
-                          </div>
-                          <div className={cn(
-                            'ml-auto w-8 h-[18px] rounded-full transition-colors shrink-0 relative',
-                            q.penalties_enabled ? 'bg-sky-500' : 'bg-slate-700'
-                          )}>
+                        <div className={cn(
+                          'rounded-xl border transition-all',
+                          q.penalties_enabled ? 'border-sky-500/40 bg-sky-500/10' : 'border-slate-700/60 bg-slate-900'
+                        )}>
+                          <button
+                            type="button"
+                            disabled={togglingPenalties === q.id}
+                            onClick={() => toggleQuinielaPenalties(q.id, !q.penalties_enabled)}
+                            className="w-full flex items-center gap-2.5 px-3 py-2.5 text-left disabled:opacity-50"
+                          >
+                            <div className={cn('p-1.5 rounded-lg shrink-0', q.penalties_enabled ? 'bg-sky-500/20 border border-sky-500/30' : 'bg-slate-800 border border-slate-700')}>
+                              {togglingPenalties === q.id
+                                ? <Loader2 className="h-3.5 w-3.5 animate-spin text-slate-400" />
+                                : <span className={cn('text-sm leading-none', q.penalties_enabled ? '' : 'opacity-40')}>⚽</span>
+                              }
+                            </div>
+                            <div className="min-w-0">
+                              <p className={cn('text-xs font-bold leading-none', q.penalties_enabled ? 'text-sky-300' : 'text-slate-500')}>Penales</p>
+                              <p className={cn('text-[10px] mt-0.5', q.penalties_enabled ? 'text-sky-500/70' : 'text-slate-700')}>
+                                {q.penalties_enabled ? 'Activo' : 'Inactivo'}
+                              </p>
+                            </div>
                             <div className={cn(
-                              'absolute top-0.5 w-3.5 h-3.5 rounded-full bg-white shadow transition-all',
-                              q.penalties_enabled ? 'left-[16px]' : 'left-0.5'
-                            )} />
-                          </div>
-                        </button>
+                              'ml-auto w-8 h-[18px] rounded-full transition-colors shrink-0 relative',
+                              q.penalties_enabled ? 'bg-sky-500' : 'bg-slate-700'
+                            )}>
+                              <div className={cn(
+                                'absolute top-0.5 w-3.5 h-3.5 rounded-full bg-white shadow transition-all',
+                                q.penalties_enabled ? 'left-[16px]' : 'left-0.5'
+                              )} />
+                            </div>
+                          </button>
+
+                          {/* Mode selector — only when penalties is ON */}
+                          {q.penalties_enabled && (
+                            <div className="px-3 pb-2.5 flex gap-2">
+                              {(['winner', 'exact'] as const).map((mode) => (
+                                <button
+                                  key={mode}
+                                  type="button"
+                                  onClick={() => setPenaltiesMode(q.id, mode)}
+                                  className={cn(
+                                    'flex-1 py-1.5 px-2 rounded-lg text-[10px] font-bold border transition-all',
+                                    q.penalties_mode === mode
+                                      ? 'bg-sky-500/25 border-sky-500/60 text-sky-200'
+                                      : 'bg-slate-900/60 border-slate-700 text-slate-500 hover:border-slate-600 hover:text-slate-400'
+                                  )}
+                                >
+                                  {mode === 'winner' ? '🏆 Ganador' : '🔢 Marcador exacto'}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
 
                       </div>
                     </div>

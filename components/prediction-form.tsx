@@ -21,6 +21,8 @@ interface Props {
   isCustomTournament?: boolean;
   isSuperAdmin?: boolean;
   wildcardEnabled?: boolean;
+  penaltiesEnabled?: boolean;
+  penaltiesMode?: 'winner' | 'exact' | null;
 }
 
 // ── helpers ────────────────────────────────────────────────────────────────
@@ -44,7 +46,7 @@ function firstOpenDate(rounds: RoundWithMatches[], predictions: Record<number, P
 
 // ── component ──────────────────────────────────────────────────────────────
 
-export function PredictionForm({ quinielaSlug, rounds, initialPredictions, onSaved, isCustomTournament, isSuperAdmin, wildcardEnabled }: Props) {
+export function PredictionForm({ quinielaSlug, rounds, initialPredictions, onSaved, isCustomTournament, isSuperAdmin, wildcardEnabled, penaltiesEnabled, penaltiesMode }: Props) {
   const [predictions, setPredictions] =
     useState<Record<number, Prediction>>(initialPredictions);
   const [savedPredictions, setSavedPredictions] =
@@ -111,16 +113,16 @@ export function PredictionForm({ quinielaSlug, rounds, initialPredictions, onSav
     return stats;
   }, [matchesByDate, predictions]);
 
-  const autoSave = useCallback(async (matchId: number, home: number, away: number) => {
+  const autoSave = useCallback(async (matchId: number, home: number, away: number, penWinner?: 'home' | 'away' | null, penHome?: number | null, penAway?: number | null) => {
     setAutoSavingIds((prev) => { const s = new Set(prev); s.add(matchId); return s; });
     try {
       await api.post<{ data: { saved: number; errors: unknown[] } }>(
         `/quinielas/${quinielaSlug}/predictions`,
-        { predictions: [{ match_id: matchId, home_score: home, away_score: away }] }
+        { predictions: [{ match_id: matchId, home_score: home, away_score: away, penalties_winner: penWinner ?? null, penalties_home: penHome ?? null, penalties_away: penAway ?? null }] }
       );
       setSavedPredictions((prev) => ({
         ...prev,
-        [matchId]: { ...prev[matchId], match_id: matchId, home_score: home, away_score: away },
+        [matchId]: { ...prev[matchId], match_id: matchId, home_score: home, away_score: away, penalties_winner: penWinner ?? null, penalties_home: penHome ?? null, penalties_away: penAway ?? null },
       }));
     } catch {
       // Silent — manual save button is still available
@@ -130,16 +132,15 @@ export function PredictionForm({ quinielaSlug, rounds, initialPredictions, onSav
   }, [quinielaSlug]);
 
   const handleChange = useCallback(
-    (matchId: number, home: number, away: number) => {
+    (matchId: number, home: number, away: number, penWinner?: 'home' | 'away' | null, penHome?: number | null, penAway?: number | null) => {
       setPredictions((prev) => ({
         ...prev,
-        [matchId]: { ...prev[matchId], match_id: matchId, home_score: home, away_score: away },
+        [matchId]: { ...prev[matchId], match_id: matchId, home_score: home, away_score: away, penalties_winner: penWinner ?? null, penalties_home: penHome ?? null, penalties_away: penAway ?? null },
       }));
-      // Debounce: reset the timer on each change; fire after 700 ms of inactivity
       clearTimeout(debounceTimers.current[matchId]);
       debounceTimers.current[matchId] = setTimeout(() => {
         delete debounceTimers.current[matchId];
-        autoSave(matchId, home, away);
+        autoSave(matchId, home, away, penWinner, penHome, penAway);
       }, 700);
     },
     [autoSave]
@@ -166,6 +167,9 @@ export function PredictionForm({ quinielaSlug, rounds, initialPredictions, onSav
             match_id: p.match_id,
             home_score: p.home_score,
             away_score: p.away_score,
+            penalties_winner: p.penalties_winner ?? null,
+            penalties_home: p.penalties_home ?? null,
+            penalties_away: p.penalties_away ?? null,
           })),
         }
       );
@@ -197,7 +201,14 @@ export function PredictionForm({ quinielaSlug, rounds, initialPredictions, onSav
     const s = new Set<number>();
     for (const [id, sv] of Object.entries(savedPredictions)) {
       const cur = predictions[Number(id)];
-      if (sv.home_score !== undefined && cur?.home_score === sv.home_score && cur.away_score === sv.away_score) {
+      if (
+        sv.home_score !== undefined &&
+        cur?.home_score === sv.home_score &&
+        cur.away_score === sv.away_score &&
+        cur.penalties_winner === sv.penalties_winner &&
+        cur.penalties_home === sv.penalties_home &&
+        cur.penalties_away === sv.penalties_away
+      ) {
         s.add(Number(id));
       }
     }
@@ -210,7 +221,13 @@ export function PredictionForm({ quinielaSlug, rounds, initialPredictions, onSav
       if (p.home_score === undefined || p.away_score === undefined) return false;
       const saved = savedPredictions[Number(matchId)];
       if (!saved || saved.home_score === undefined) return true;
-      return saved.home_score !== p.home_score || saved.away_score !== p.away_score;
+      return (
+        saved.home_score !== p.home_score ||
+        saved.away_score !== p.away_score ||
+        saved.penalties_winner !== p.penalties_winner ||
+        saved.penalties_home !== p.penalties_home ||
+        saved.penalties_away !== p.penalties_away
+      );
     }).length;
   }, [predictions, savedPredictions]);
 
@@ -365,6 +382,8 @@ export function PredictionForm({ quinielaSlug, rounds, initialPredictions, onSav
                     onChange={handleChange}
                     isSaved={savedMatchIds.has(match.id)}
                     isAutoSaving={autoSavingIds.has(match.id)}
+                    penaltiesEnabled={penaltiesEnabled}
+                    penaltiesMode={penaltiesMode}
                   />
                 ))}
               </div>

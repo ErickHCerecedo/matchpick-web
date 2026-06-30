@@ -284,6 +284,8 @@ export default function QuinielaPage() {
               isCustomTournament={quiniela.tournament.is_custom}
               isSuperAdmin={!!user?.is_admin}
               wildcardEnabled={!!quiniela.wildcard_enabled}
+              penaltiesEnabled={!!quiniela.penalties_enabled}
+              penaltiesMode={quiniela.penalties_mode}
             />
           ) : (
             <div className="text-center py-10 space-y-2">

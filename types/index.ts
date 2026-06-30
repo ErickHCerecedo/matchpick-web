@@ -95,6 +95,8 @@ export interface MatchResult {
   home_score: number;
   away_score: number;
   winner: 'home' | 'away' | 'draw';
+  home_score_penalties?: number | null;
+  away_score_penalties?: number | null;
 }
 
 export interface Prediction {
@@ -102,6 +104,9 @@ export interface Prediction {
   match_id: number;
   home_score: number;
   away_score: number;
+  penalties_winner?: 'home' | 'away' | null;
+  penalties_home?: number | null;
+  penalties_away?: number | null;
   points?: number | null;
   user?: Pick<User, 'id' | 'name' | 'avatar_url'>;
 }
@@ -137,6 +142,7 @@ export interface Quiniela {
   predictions_open: boolean;
   wildcard_enabled: boolean;
   penalties_enabled: boolean;
+  penalties_mode: 'winner' | 'exact' | null;
   my_standing?: { rank: number; total_points: number } | null;
   pending_predictions_count?: number;
 }
@@ -179,7 +185,7 @@ export interface RoundWithMatches {
 
 export interface BreakdownScore {
   points: number;
-  breakdown: { result: 0 | 1; exact: 0 | 2 };
+  breakdown: { result: 0 | 1; exact: 0 | 2; penalties?: 0 | 2 | 3 };
 }
 
 export interface BreakdownMatch {
@@ -189,7 +195,13 @@ export interface BreakdownMatch {
   home_team: Pick<Team, 'id' | 'name' | 'short_name' | 'flag_url'> | null;
   away_team: Pick<Team, 'id' | 'name' | 'short_name' | 'flag_url'> | null;
   result: MatchResult | null;
-  prediction: { home_score: number; away_score: number } | null;
+  prediction: {
+    home_score: number;
+    away_score: number;
+    penalties_winner?: 'home' | 'away' | null;
+    penalties_home?: number | null;
+    penalties_away?: number | null;
+  } | null;
   score: BreakdownScore | null;
   has_started: boolean;
 }
