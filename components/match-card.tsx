@@ -50,13 +50,6 @@ const STATUS_COLORS: Record<Match['status'], { dot: string; icon: string; badge:
   rescheduled: { dot: 'bg-sky-400',      icon: 'text-sky-400',      badge: 'border-sky-500/50 text-sky-400',           line: 'bg-sky-400/60'      },
 };
 
-function PenaltyScore({ home, away }: { home: number; away: number }) {
-  return (
-    <span className="text-[11px] text-slate-400 tabular-nums font-mono leading-none">
-      ({home}–{away} p.)
-    </span>
-  );
-}
 
 function ScoreStepper({
   value,
@@ -265,22 +258,36 @@ export function MatchCard({ match, prediction, onChange, readOnly, isSaved, isAu
               </div>
             ) : hasResult ? (
               prediction ? (
-                <div className="flex flex-col items-center gap-1">
-                  <div className="flex items-center gap-1.5 font-bold text-white">
-                    <span className="w-8 text-center text-xl tabular-nums font-mono">{prediction.home_score}</span>
-                    <span className="text-slate-500 text-sm font-normal">–</span>
-                    <span className="w-8 text-center text-xl tabular-nums font-mono">{prediction.away_score}</span>
-                  </div>
-                  {penaltyResult && <PenaltyScore home={penaltyResult.homeScore} away={penaltyResult.awayScore} />}
+                <div className="flex items-center gap-1 font-bold text-white">
+                  {penaltyResult && (
+                    <span className={cn('text-[11px] font-mono tabular-nums font-normal', penaltyResult.winner === 'home' ? 'text-slate-500' : 'text-slate-700')}>
+                      ({penaltyResult.homeScore})
+                    </span>
+                  )}
+                  <span className="w-8 text-center text-xl tabular-nums font-mono">{prediction.home_score}</span>
+                  <span className="text-slate-500 text-sm font-normal">–</span>
+                  <span className="w-8 text-center text-xl tabular-nums font-mono">{prediction.away_score}</span>
+                  {penaltyResult && (
+                    <span className={cn('text-[11px] font-mono tabular-nums font-normal', penaltyResult.winner === 'away' ? 'text-slate-500' : 'text-slate-700')}>
+                      ({penaltyResult.awayScore})
+                    </span>
+                  )}
                 </div>
               ) : showActualResult ? (
-                <div className="flex flex-col items-center gap-1">
-                  <div className="flex items-center gap-1.5 font-bold text-white">
-                    <span className="w-8 text-center text-xl tabular-nums font-mono">{match.result!.home_score}</span>
-                    <span className="text-slate-500 text-sm font-normal">–</span>
-                    <span className="w-8 text-center text-xl tabular-nums font-mono">{match.result!.away_score}</span>
-                  </div>
-                  {penaltyResult && <PenaltyScore home={penaltyResult.homeScore} away={penaltyResult.awayScore} />}
+                <div className="flex items-center gap-1 font-bold text-white">
+                  {penaltyResult && (
+                    <span className={cn('text-[11px] font-mono tabular-nums font-normal', penaltyResult.winner === 'home' ? 'text-slate-500' : 'text-slate-700')}>
+                      ({penaltyResult.homeScore})
+                    </span>
+                  )}
+                  <span className="w-8 text-center text-xl tabular-nums font-mono">{match.result!.home_score}</span>
+                  <span className="text-slate-500 text-sm font-normal">–</span>
+                  <span className="w-8 text-center text-xl tabular-nums font-mono">{match.result!.away_score}</span>
+                  {penaltyResult && (
+                    <span className={cn('text-[11px] font-mono tabular-nums font-normal', penaltyResult.winner === 'away' ? 'text-slate-500' : 'text-slate-700')}>
+                      ({penaltyResult.awayScore})
+                    </span>
+                  )}
                 </div>
               ) : (
                 <div className="flex flex-col items-center gap-1">
