@@ -91,7 +91,7 @@ function TeamRow({
   live: boolean;
   hasResult: boolean;
 }) {
-  const name = team?.short_name ?? team?.name ?? placeholder;
+  const name = team?.name ?? team?.short_name ?? placeholder;
   const flag = team?.flag_url;
 
   return (
