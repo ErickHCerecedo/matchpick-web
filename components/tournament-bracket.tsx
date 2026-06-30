@@ -261,10 +261,10 @@ function DesktopTeamRow({
   live: boolean;
   hasResult: boolean;
 }) {
-  const name = team?.short_name ?? team?.name ?? placeholder;
+  const name = team?.name ?? team?.short_name ?? placeholder;
   const flag = team?.flag_url;
   return (
-    <div className={cn('flex items-center gap-1.5 px-2 flex-1 min-h-0', won && 'bg-emerald-950/40')}>
+    <div className={cn('flex items-center gap-1.5 px-2 flex-1 min-h-0 text-left', won && 'bg-emerald-950/40')}>
       <div className={cn('shrink-0 rounded-[2px] overflow-hidden', lost && 'opacity-30')}>
         {flag
           ? <img src={flag} alt="" className="w-5 h-[13px] object-cover" />
