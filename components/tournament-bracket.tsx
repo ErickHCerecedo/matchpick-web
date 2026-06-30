@@ -148,11 +148,12 @@ function TreeCard({
 }: {
   match: Match; active: boolean; colW?: number; isThirdPlace?: boolean; isFinal?: boolean;
 }) {
-  const fin       = match.status === 'finished';
-  const live      = match.status === 'in_progress';
-  const homeWon   = fin && match.result?.winner === 'home';
-  const awayWon   = fin && match.result?.winner === 'away';
-  const hasResult = (fin || live) && !!match.result;
+  const fin            = match.status === 'finished';
+  const live           = match.status === 'in_progress';
+  const penaltyDecided = fin && match.result?.home_score_penalties != null;
+  const homeWon        = fin && (match.result?.winner === 'home' || (penaltyDecided && match.result!.home_score_penalties! > match.result!.away_score_penalties!));
+  const awayWon        = fin && (match.result?.winner === 'away' || (penaltyDecided && match.result!.away_score_penalties! > match.result!.home_score_penalties!));
+  const hasResult      = (fin || live) && !!match.result;
   const { date, time } = formatMatchDateParts(match.scheduled_at);
 
   const statusColor = live ? 'text-red-400' : fin ? 'text-slate-600' : 'text-slate-500';
@@ -220,9 +221,17 @@ function TreeCard({
           live={live} hasResult={hasResult}
         />
 
-        {/* Footer — venue */}
+        {/* Footer — penalty result takes priority over venue */}
         <div className="flex items-center gap-1 px-2 border-t border-slate-800/40 shrink-0" style={{ height: CARD_FOOTER_H }}>
-          {match.venue ? (
+          {penaltyDecided ? (
+            <>
+              <span className="text-[9px] leading-none">⚽</span>
+              <span className="text-[8px] font-bold tabular-nums text-sky-400 leading-none">
+                {match.result!.home_score_penalties}–{match.result!.away_score_penalties}
+              </span>
+              <span className="text-[8px] text-sky-600 font-semibold leading-none">p.</span>
+            </>
+          ) : match.venue ? (
             <>
               <MapPin className="h-2 w-2 shrink-0 text-slate-700" />
               <span className="text-[8px] text-slate-600 truncate">{match.venue}</span>
@@ -286,11 +295,12 @@ function DesktopMatchCard({
   dragging: boolean; onSelect: (id: number) => void; onHover: (m: Match | null) => void; cardW?: number;
 }) {
   const [hovered, setHovered] = useState(false);
-  const fin         = match.status === 'finished';
-  const live        = match.status === 'in_progress';
-  const homeWon     = fin && match.result?.winner === 'home';
-  const awayWon     = fin && match.result?.winner === 'away';
-  const hasResult   = (fin || live) && !!match.result;
+  const fin            = match.status === 'finished';
+  const live           = match.status === 'in_progress';
+  const penaltyDecided = fin && match.result?.home_score_penalties != null;
+  const homeWon        = fin && (match.result?.winner === 'home' || (penaltyDecided && match.result!.home_score_penalties! > match.result!.away_score_penalties!));
+  const awayWon        = fin && (match.result?.winner === 'away' || (penaltyDecided && match.result!.away_score_penalties! > match.result!.home_score_penalties!));
+  const hasResult      = (fin || live) && !!match.result;
   const { date, time } = formatMatchDateParts(match.scheduled_at);
   const statusColor = live ? 'text-red-400'     : fin ? 'text-slate-600'    : 'text-slate-500';
   const dotColor    = live ? 'bg-red-400 animate-pulse' : fin ? 'bg-slate-600' : 'bg-emerald-500';
@@ -328,7 +338,17 @@ function DesktopMatchCard({
       <div className="h-px bg-slate-800/60 mx-2 shrink-0" />
       <DesktopTeamRow team={match.away_team} placeholder={match.away_placeholder} score={match.result?.away_score} won={awayWon} lost={homeWon} live={live} hasResult={hasResult} />
       <div className="flex items-center gap-1 px-2 border-t border-slate-800/40 shrink-0" style={{ height: 12 }}>
-        {match.venue && <><MapPin className="h-[7px] w-[7px] shrink-0 text-slate-700" /><span className="text-[7px] text-slate-600 truncate">{match.venue}</span></>}
+        {penaltyDecided ? (
+          <>
+            <span className="text-[8px] leading-none">⚽</span>
+            <span className="text-[7px] font-bold tabular-nums text-sky-400 leading-none">
+              {match.result!.home_score_penalties}–{match.result!.away_score_penalties}
+            </span>
+            <span className="text-[7px] text-sky-600 font-semibold leading-none">p.</span>
+          </>
+        ) : match.venue ? (
+          <><MapPin className="h-[7px] w-[7px] shrink-0 text-slate-700" /><span className="text-[7px] text-slate-600 truncate">{match.venue}</span></>
+        ) : null}
       </div>
     </button>
   );
@@ -340,11 +360,12 @@ function DesktopFinalCard({
   match: Match; roundId: number; active: boolean;
   dragging: boolean; onSelect: (id: number) => void; onHover: (m: Match | null) => void;
 }) {
-  const fin         = match.status === 'finished';
-  const live        = match.status === 'in_progress';
-  const homeWon     = fin && match.result?.winner === 'home';
-  const awayWon     = fin && match.result?.winner === 'away';
-  const hasResult   = (fin || live) && !!match.result;
+  const fin            = match.status === 'finished';
+  const live           = match.status === 'in_progress';
+  const penaltyDecided = fin && match.result?.home_score_penalties != null;
+  const homeWon        = fin && (match.result?.winner === 'home' || (penaltyDecided && match.result!.home_score_penalties! > match.result!.away_score_penalties!));
+  const awayWon        = fin && (match.result?.winner === 'away' || (penaltyDecided && match.result!.away_score_penalties! > match.result!.home_score_penalties!));
+  const hasResult      = (fin || live) && !!match.result;
   const { date, time } = formatMatchDateParts(match.scheduled_at);
   const statusColor = live ? 'text-red-400'     : fin ? 'text-slate-600'    : 'text-yellow-600/70';
   const dotColor    = live ? 'bg-red-400 animate-pulse' : fin ? 'bg-slate-600' : 'bg-yellow-500';
@@ -378,7 +399,17 @@ function DesktopFinalCard({
       <div className="h-px bg-yellow-800/25 mx-2.5 shrink-0" />
       <DesktopTeamRow team={match.away_team} placeholder={match.away_placeholder} score={match.result?.away_score} won={awayWon} lost={homeWon} live={live} hasResult={hasResult} />
       <div className="flex items-center gap-1 px-2 border-t border-yellow-800/20 shrink-0" style={{ height: 12 }}>
-        {match.venue && <><MapPin className="h-[7px] w-[7px] shrink-0 text-yellow-800/40" /><span className="text-[7px] text-yellow-800/60 truncate">{match.venue}</span></>}
+        {penaltyDecided ? (
+          <>
+            <span className="text-[8px] leading-none">⚽</span>
+            <span className="text-[7px] font-bold tabular-nums text-sky-400 leading-none">
+              {match.result!.home_score_penalties}–{match.result!.away_score_penalties}
+            </span>
+            <span className="text-[7px] text-sky-600 font-semibold leading-none">p.</span>
+          </>
+        ) : match.venue ? (
+          <><MapPin className="h-[7px] w-[7px] shrink-0 text-yellow-800/40" /><span className="text-[7px] text-yellow-800/60 truncate">{match.venue}</span></>
+        ) : null}
       </div>
     </button>
   );
