@@ -1185,15 +1185,6 @@ export function TournamentBracket({ rounds }: { rounds: RoundWithMatches[] }) {
   return (
     <div className="space-y-4">
 
-      {/* Mobile: round strip */}
-      <div className="md:hidden">
-        <DesktopRoundStrip
-          knockoutRounds={knockoutRounds}
-          activeRoundId={activeRoundId}
-          onSelect={setActiveRoundId}
-        />
-      </div>
-
       {/* Desktop: full bracket */}
       {bracketRounds.length > 0 && (
         <div className="hidden md:block rounded-xl border border-slate-800/50 overflow-hidden">
