@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import { cn, formatMatchDateParts } from '@/lib/utils';
 import type { RoundWithMatches, Match } from '@/types';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trophy, GitBranch, CheckCircle2, ChevronRight, ChevronLeft, Calendar, MapPin, Star, Zap, Award, Crown, Layers } from 'lucide-react';
+import { Trophy, GitBranch, CheckCircle2, ChevronRight, ChevronLeft, Calendar, MapPin, Star, Zap, Award, Crown, Layers, Maximize2, Minus, Plus, X } from 'lucide-react';
 import { FlagPlaceholder } from '@/components/ui/flag-placeholder';
 
 // ── Metadata ───────────────────────────────────────────────────────────────────
@@ -1094,6 +1094,23 @@ export function TournamentBracket({ rounds }: { rounds: RoundWithMatches[] }) {
 
   const [activeRoundId, setActiveRoundId] = useState<number | null>(null);
   const [swipeHintDone, setSwipeHintDone] = useState(false);
+  const [isModalOpen, setIsModalOpen]     = useState(false);
+  const [modalZoom, setModalZoom]         = useState(1);
+
+  const zoomIn    = () => setModalZoom(z => Math.min(2,   Math.round((z + 0.1) * 10) / 10));
+  const zoomOut   = () => setModalZoom(z => Math.max(0.4, Math.round((z - 0.1) * 10) / 10));
+  const zoomReset = () => setModalZoom(1);
+
+  useEffect(() => {
+    if (!isModalOpen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setIsModalOpen(false); };
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', onKey);
+    return () => {
+      document.body.style.overflow = '';
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [isModalOpen]);
 
   useEffect(() => {
     if (!knockoutRounds.length) return;
@@ -1179,13 +1196,87 @@ export function TournamentBracket({ rounds }: { rounds: RoundWithMatches[] }) {
 
       {/* Desktop: full bracket */}
       {bracketRounds.length > 0 && (
-        <div className="hidden md:block rounded-xl border border-slate-800/50 bg-transparent p-4">
-          <DesktopBracket
-            bracketRounds={bracketRounds}
-            thirdPlace={thirdPlace}
-            activeRoundId={activeRoundId}
-            onSelectRound={setActiveRoundId}
-          />
+        <div className="hidden md:block rounded-xl border border-slate-800/50 overflow-hidden">
+          {/* Controls bar */}
+          <div className="flex items-center justify-end gap-2 px-4 py-2 border-b border-slate-800/50 bg-slate-950/60">
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-slate-700/60 text-slate-400 hover:text-white hover:border-slate-600 hover:bg-slate-800/60 transition-all text-[11px] font-medium"
+            >
+              <Maximize2 className="h-3 w-3" />
+              Pantalla completa
+            </button>
+          </div>
+          <div className="p-4">
+            <DesktopBracket
+              bracketRounds={bracketRounds}
+              thirdPlace={thirdPlace}
+              activeRoundId={activeRoundId}
+              onSelectRound={setActiveRoundId}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Desktop: full-screen modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-[60] bg-slate-950 flex flex-col">
+          {/* Toolbar */}
+          <div className="flex items-center justify-between px-5 h-12 border-b border-slate-800/60 shrink-0">
+            <div className="flex items-center gap-2">
+              <GitBranch className="h-4 w-4 text-emerald-500/60" />
+              <span className="text-sm font-semibold text-slate-300">Eliminatoria</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={zoomOut}
+                disabled={modalZoom <= 0.4}
+                className="h-7 w-7 flex items-center justify-center rounded-lg border border-slate-700 text-slate-400 hover:text-white hover:bg-slate-800 disabled:opacity-30 disabled:cursor-default transition-colors"
+              >
+                <Minus className="h-3 w-3" />
+              </button>
+              <span className="text-[11px] text-slate-400 w-12 text-center tabular-nums font-mono select-none">
+                {Math.round(modalZoom * 100)}%
+              </span>
+              <button
+                onClick={zoomIn}
+                disabled={modalZoom >= 2}
+                className="h-7 w-7 flex items-center justify-center rounded-lg border border-slate-700 text-slate-400 hover:text-white hover:bg-slate-800 disabled:opacity-30 disabled:cursor-default transition-colors"
+              >
+                <Plus className="h-3 w-3" />
+              </button>
+              <button
+                onClick={zoomReset}
+                className="h-7 px-2.5 text-[10px] font-mono text-slate-500 hover:text-slate-300 border border-transparent hover:border-slate-700 rounded-lg transition-colors"
+              >
+                1:1
+              </button>
+              <div className="w-px h-5 bg-slate-800 mx-1" />
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="h-7 w-7 flex items-center justify-center rounded-lg border border-slate-700 text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          </div>
+          {/* Bracket canvas — scrollable in both axes */}
+          <div className="flex-1 overflow-auto p-4">
+            <div style={{ zoom: modalZoom } as React.CSSProperties}>
+              <DesktopBracket
+                bracketRounds={bracketRounds}
+                thirdPlace={thirdPlace}
+                activeRoundId={activeRoundId}
+                onSelectRound={setActiveRoundId}
+              />
+            </div>
+          </div>
+          {/* Champion inside modal */}
+          {champion?.name && (
+            <div className="border-t border-slate-800/40 shrink-0">
+              <ChampionPanel name={champion.name} flag={champion.flag} />
+            </div>
+          )}
         </div>
       )}
 
