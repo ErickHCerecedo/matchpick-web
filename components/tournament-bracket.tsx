@@ -341,9 +341,8 @@ function DesktopMatchCard({
           {date && <span className="text-[8px] text-slate-500 font-medium whitespace-nowrap">{date}</span>}
           {time && <><span className="text-[8px] text-slate-700">·</span><span className="text-[8px] text-slate-600 whitespace-nowrap">{time}</span></>}
         </div>
-        <div className={cn('flex items-center gap-0.5 shrink-0 rounded border px-0.5 py-px', badgeBorder)}>
-          <span className={cn('w-1 h-1 rounded-full shrink-0', dotColor)} />
-          <span className={cn('text-[7px] font-semibold leading-none', statusColor)}>{TREE_STATUS_LABELS[match.status]}</span>
+        <div className={cn('flex items-center shrink-0 rounded-full border p-0.5', badgeBorder)}>
+          <span className={cn('w-1.5 h-1.5 rounded-full shrink-0', dotColor)} />
         </div>
       </div>
       <DesktopTeamRow team={match.home_team} placeholder={match.home_placeholder} score={match.result?.home_score} penScore={penaltyDecided ? match.result!.home_score_penalties : null} won={homeWon} lost={awayWon} live={live} hasResult={hasResult} />
@@ -392,9 +391,8 @@ function DesktopFinalCard({
           {date && <span className="text-[8px] text-yellow-800/70 font-medium whitespace-nowrap">{date}</span>}
           {time && <><span className="text-[8px] text-yellow-800/40">·</span><span className="text-[8px] text-yellow-800/60 whitespace-nowrap">{time}</span></>}
         </div>
-        <div className={cn('flex items-center gap-0.5 shrink-0 rounded border px-0.5 py-px', badgeBorder)}>
-          <span className={cn('w-1 h-1 rounded-full shrink-0', dotColor)} />
-          <span className={cn('text-[7px] font-semibold leading-none', statusColor)}>{TREE_STATUS_LABELS[match.status]}</span>
+        <div className={cn('flex items-center shrink-0 rounded-full border p-0.5', badgeBorder)}>
+          <span className={cn('w-1.5 h-1.5 rounded-full shrink-0', dotColor)} />
         </div>
       </div>
       <DesktopTeamRow team={match.home_team} placeholder={match.home_placeholder} score={match.result?.home_score} penScore={penaltyDecided ? match.result!.home_score_penalties : null} won={homeWon} lost={awayWon} live={live} hasResult={hasResult} />
