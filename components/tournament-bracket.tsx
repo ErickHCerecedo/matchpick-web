@@ -224,13 +224,9 @@ function TreeCard({
         {/* Footer — penalty result takes priority over venue */}
         <div className="flex items-center gap-1 px-2 border-t border-slate-800/40 shrink-0" style={{ height: CARD_FOOTER_H }}>
           {penaltyDecided ? (
-            <>
-              <span className="text-[9px] leading-none">⚽</span>
-              <span className="text-[8px] font-bold tabular-nums text-sky-400 leading-none">
-                {match.result!.home_score_penalties}–{match.result!.away_score_penalties}
-              </span>
-              <span className="text-[8px] text-sky-600 font-semibold leading-none">p.</span>
-            </>
+            <span className="text-[8px] text-slate-400 tabular-nums font-mono leading-none">
+              ({match.result!.home_score_penalties}–{match.result!.away_score_penalties} p.)
+            </span>
           ) : match.venue ? (
             <>
               <MapPin className="h-2 w-2 shrink-0 text-slate-700" />
@@ -339,13 +335,9 @@ function DesktopMatchCard({
       <DesktopTeamRow team={match.away_team} placeholder={match.away_placeholder} score={match.result?.away_score} won={awayWon} lost={homeWon} live={live} hasResult={hasResult} />
       <div className="flex items-center gap-1 px-2 border-t border-slate-800/40 shrink-0" style={{ height: 12 }}>
         {penaltyDecided ? (
-          <>
-            <span className="text-[8px] leading-none">⚽</span>
-            <span className="text-[7px] font-bold tabular-nums text-sky-400 leading-none">
-              {match.result!.home_score_penalties}–{match.result!.away_score_penalties}
-            </span>
-            <span className="text-[7px] text-sky-600 font-semibold leading-none">p.</span>
-          </>
+          <span className="text-[7px] text-slate-400 tabular-nums font-mono leading-none">
+            ({match.result!.home_score_penalties}–{match.result!.away_score_penalties} p.)
+          </span>
         ) : match.venue ? (
           <><MapPin className="h-[7px] w-[7px] shrink-0 text-slate-700" /><span className="text-[7px] text-slate-600 truncate">{match.venue}</span></>
         ) : null}
@@ -400,13 +392,9 @@ function DesktopFinalCard({
       <DesktopTeamRow team={match.away_team} placeholder={match.away_placeholder} score={match.result?.away_score} won={awayWon} lost={homeWon} live={live} hasResult={hasResult} />
       <div className="flex items-center gap-1 px-2 border-t border-yellow-800/20 shrink-0" style={{ height: 12 }}>
         {penaltyDecided ? (
-          <>
-            <span className="text-[8px] leading-none">⚽</span>
-            <span className="text-[7px] font-bold tabular-nums text-sky-400 leading-none">
-              {match.result!.home_score_penalties}–{match.result!.away_score_penalties}
-            </span>
-            <span className="text-[7px] text-sky-600 font-semibold leading-none">p.</span>
-          </>
+          <span className="text-[7px] text-slate-400 tabular-nums font-mono leading-none">
+            ({match.result!.home_score_penalties}–{match.result!.away_score_penalties} p.)
+          </span>
         ) : match.venue ? (
           <><MapPin className="h-[7px] w-[7px] shrink-0 text-yellow-800/40" /><span className="text-[7px] text-yellow-800/60 truncate">{match.venue}</span></>
         ) : null}

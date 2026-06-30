@@ -50,12 +50,10 @@ const STATUS_COLORS: Record<Match['status'], { dot: string; icon: string; badge:
   rescheduled: { dot: 'bg-sky-400',      icon: 'text-sky-400',      badge: 'border-sky-500/50 text-sky-400',           line: 'bg-sky-400/60'      },
 };
 
-function PenaltyBadge({ home, away }: { home: number; away: number }) {
+function PenaltyScore({ home, away }: { home: number; away: number }) {
   return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-sky-950/80 border border-sky-500/30 text-[10px] font-bold text-sky-400 tabular-nums leading-none">
-      <span>⚽</span>
-      <span>{home}–{away}</span>
-      <span className="text-sky-600 font-medium">p.</span>
+    <span className="text-[11px] text-slate-400 tabular-nums font-mono leading-none">
+      ({home}–{away} p.)
     </span>
   );
 }
@@ -273,7 +271,7 @@ export function MatchCard({ match, prediction, onChange, readOnly, isSaved, isAu
                     <span className="text-slate-500 text-sm font-normal">–</span>
                     <span className="w-8 text-center text-xl tabular-nums font-mono">{prediction.away_score}</span>
                   </div>
-                  {penaltyResult && <PenaltyBadge home={penaltyResult.homeScore} away={penaltyResult.awayScore} />}
+                  {penaltyResult && <PenaltyScore home={penaltyResult.homeScore} away={penaltyResult.awayScore} />}
                 </div>
               ) : showActualResult ? (
                 <div className="flex flex-col items-center gap-1">
@@ -282,7 +280,7 @@ export function MatchCard({ match, prediction, onChange, readOnly, isSaved, isAu
                     <span className="text-slate-500 text-sm font-normal">–</span>
                     <span className="w-8 text-center text-xl tabular-nums font-mono">{match.result!.away_score}</span>
                   </div>
-                  {penaltyResult && <PenaltyBadge home={penaltyResult.homeScore} away={penaltyResult.awayScore} />}
+                  {penaltyResult && <PenaltyScore home={penaltyResult.homeScore} away={penaltyResult.awayScore} />}
                 </div>
               ) : (
                 <div className="flex flex-col items-center gap-1">
