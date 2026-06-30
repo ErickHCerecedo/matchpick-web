@@ -446,8 +446,12 @@ function ConnectorLines({
           const topY = getY(rIdx, ps * 2);
           const botY = getY(rIdx, ps * 2 + 1);
           const midY = (topY + botY) / 2;
+          const topDone = bracketRounds[rIdx]?.matches[ps * 2]?.status === 'finished';
+          const botDone = bracketRounds[rIdx]?.matches[ps * 2 + 1]?.status === 'finished';
+          const bothDone = topDone && botDone;
           return (
             <g key={`c-${rIdx}-${ps}`}>
+              {/* Base path */}
               <path
                 d={`M ${fromX} ${topY} H ${midX} V ${botY} M ${fromX} ${botY} H ${midX} M ${midX} ${midY} H ${toX}`}
                 stroke={visible ? '#1e293b' : '#0f172a'}
@@ -455,7 +459,20 @@ function ConnectorLines({
                 fill="none"
                 strokeLinecap="round"
               />
-              {visible && <circle cx={midX} cy={midY} r={2.5} fill="#1e293b" />}
+              {/* Winner-path highlights */}
+              {visible && topDone && (
+                <path d={`M ${fromX} ${topY} H ${midX}`} stroke="#10b981" strokeWidth={1.5} fill="none" strokeLinecap="round" opacity={0.65} />
+              )}
+              {visible && botDone && (
+                <path d={`M ${fromX} ${botY} H ${midX}`} stroke="#10b981" strokeWidth={1.5} fill="none" strokeLinecap="round" opacity={0.65} />
+              )}
+              {visible && bothDone && (
+                <>
+                  <path d={`M ${midX} ${topY} V ${botY}`} stroke="#10b981" strokeWidth={1.5} fill="none" strokeLinecap="round" opacity={0.65} />
+                  <path d={`M ${midX} ${midY} H ${toX}`} stroke="#10b981" strokeWidth={1.5} fill="none" strokeLinecap="round" opacity={0.65} />
+                </>
+              )}
+              <circle cx={midX} cy={midY} r={2.5} fill={visible && bothDone ? '#10b981' : visible ? '#1e293b' : '#0f172a'} opacity={visible && bothDone ? 0.65 : 1} />
             </g>
           );
         });
@@ -613,12 +630,18 @@ function DesktopBracket({
             const finalRightX = finalCardLeft + D_FINAL_W;
             const midL = leftFromX  + (finalLeftX  - leftFromX)  / 2;
             const midR = rightFromX + (finalRightX - rightFromX) / 2;
+            const leftDone  = leftMatch.status === 'finished';
+            const rightDone = rightMatch.status === 'finished';
             return (
               <svg className="absolute inset-0 pointer-events-none" width={totalW} height={totalH}>
+                {/* Base convergence lines */}
                 <path d={`M ${leftFromX} ${fromY} H ${midL} V ${finalCenterY} H ${finalLeftX}`}  stroke="#1e293b" strokeWidth={1.5} fill="none" strokeLinecap="round" />
                 <path d={`M ${rightFromX} ${fromY} H ${midR} V ${finalCenterY} H ${finalRightX}`} stroke="#1e293b" strokeWidth={1.5} fill="none" strokeLinecap="round" />
-                <circle cx={finalLeftX}  cy={finalCenterY} r={2.5} fill="#1e293b" />
-                <circle cx={finalRightX} cy={finalCenterY} r={2.5} fill="#1e293b" />
+                {/* Winner-path highlights */}
+                {leftDone  && <path d={`M ${leftFromX} ${fromY} H ${midL} V ${finalCenterY} H ${finalLeftX}`}  stroke="#10b981" strokeWidth={1.5} fill="none" strokeLinecap="round" opacity={0.65} />}
+                {rightDone && <path d={`M ${rightFromX} ${fromY} H ${midR} V ${finalCenterY} H ${finalRightX}`} stroke="#10b981" strokeWidth={1.5} fill="none" strokeLinecap="round" opacity={0.65} />}
+                <circle cx={finalLeftX}  cy={finalCenterY} r={2.5} fill={leftDone  ? '#10b981' : '#1e293b'} opacity={leftDone  ? 0.65 : 1} />
+                <circle cx={finalRightX} cy={finalCenterY} r={2.5} fill={rightDone ? '#10b981' : '#1e293b'} opacity={rightDone ? 0.65 : 1} />
               </svg>
             );
           })()}
@@ -1147,8 +1170,8 @@ export function TournamentBracket({ rounds }: { rounds: RoundWithMatches[] }) {
   return (
     <div className="space-y-4">
 
-      {/* Desktop: round strip */}
-      <div className="hidden md:block">
+      {/* Mobile: round strip */}
+      <div className="md:hidden">
         <DesktopRoundStrip
           knockoutRounds={knockoutRounds}
           activeRoundId={activeRoundId}
