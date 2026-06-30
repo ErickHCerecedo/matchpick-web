@@ -78,6 +78,8 @@ function MatchResultCard({
   const matchHasStarted = new Date(match.scheduled_at) <= new Date();
   const sc = RESULT_STATUS_COLORS[match.status] ?? RESULT_STATUS_COLORS.finished;
   const { date, time } = formatMatchDateParts(match.scheduled_at);
+  const penaltyDecided = match.result?.home_score_penalties != null;
+  const homePenWon = penaltyDecided && match.result!.home_score_penalties! > match.result!.away_score_penalties!;
 
   const handleToggle = useCallback(async () => {
     if (!matchHasStarted) return;
@@ -171,9 +173,21 @@ function MatchResultCard({
           <div className="shrink-0 flex flex-col items-center gap-1.5">
             {match.result ? (
               <>
-                <span className="text-xl font-bold text-white font-mono tabular-nums">
-                  {match.result.home_score} – {match.result.away_score}
-                </span>
+                <div className="flex items-center gap-1 font-bold text-white font-mono tabular-nums">
+                  {penaltyDecided && (
+                    <span className={cn('text-sm font-mono tabular-nums font-normal', homePenWon ? 'text-slate-500' : 'text-slate-700')}>
+                      ({match.result.home_score_penalties})
+                    </span>
+                  )}
+                  <span className="text-xl">{match.result.home_score}</span>
+                  <span className="text-xl font-normal text-slate-500">–</span>
+                  <span className="text-xl">{match.result.away_score}</span>
+                  {penaltyDecided && (
+                    <span className={cn('text-sm font-mono tabular-nums font-normal', !homePenWon ? 'text-slate-500' : 'text-slate-700')}>
+                      ({match.result.away_score_penalties})
+                    </span>
+                  )}
+                </div>
                 <div className="flex flex-col items-center gap-0.5">
                   <span className="text-[9px] font-semibold text-slate-600 uppercase tracking-wider">
                     Tu pronóstico
@@ -262,18 +276,30 @@ function MatchResultCard({
               {predictions && predictions.length > 0 && (
                 <div className="divide-y divide-slate-800/60">
                   {match.result && (
-                    <div className="flex items-center gap-3 px-4 py-3 bg-slate-900/40">
+                    <div className="flex items-center gap-2 px-4 py-3 bg-slate-900/40">
                       <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider shrink-0">
                         Resultado oficial
                       </span>
                       <span className="flex-1" />
-                      <span className="text-sm font-bold font-mono text-white">
+                      <span className="text-sm font-bold font-mono text-white shrink-0">
                         {match.home_team?.short_name ?? 'LOC'}
                       </span>
-                      <span className="text-lg font-bold font-mono text-emerald-400 px-1">
-                        {match.result.home_score} – {match.result.away_score}
-                      </span>
-                      <span className="text-sm font-bold font-mono text-white">
+                      <div className="flex items-center gap-1 font-bold font-mono shrink-0">
+                        {penaltyDecided && (
+                          <span className={cn('text-xs font-mono tabular-nums font-normal', homePenWon ? 'text-slate-500' : 'text-slate-700')}>
+                            ({match.result!.home_score_penalties})
+                          </span>
+                        )}
+                        <span className="text-lg text-emerald-400">{match.result!.home_score}</span>
+                        <span className="text-lg text-slate-500 font-normal">–</span>
+                        <span className="text-lg text-emerald-400">{match.result!.away_score}</span>
+                        {penaltyDecided && (
+                          <span className={cn('text-xs font-mono tabular-nums font-normal', !homePenWon ? 'text-slate-500' : 'text-slate-700')}>
+                            ({match.result!.away_score_penalties})
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-sm font-bold font-mono text-white shrink-0">
                         {match.away_team?.short_name ?? 'VIS'}
                       </span>
                     </div>

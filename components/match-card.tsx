@@ -260,7 +260,7 @@ export function MatchCard({ match, prediction, onChange, readOnly, isSaved, isAu
               prediction ? (
                 <div className="flex items-center gap-1 font-bold text-white">
                   {penaltyResult && (
-                    <span className={cn('text-[11px] font-mono tabular-nums font-normal', penaltyResult.winner === 'home' ? 'text-slate-500' : 'text-slate-700')}>
+                    <span className={cn('text-sm font-mono tabular-nums font-normal', penaltyResult.winner === 'home' ? 'text-slate-500' : 'text-slate-700')}>
                       ({penaltyResult.homeScore})
                     </span>
                   )}
@@ -268,7 +268,7 @@ export function MatchCard({ match, prediction, onChange, readOnly, isSaved, isAu
                   <span className="text-slate-500 text-sm font-normal">–</span>
                   <span className="w-8 text-center text-xl tabular-nums font-mono">{prediction.away_score}</span>
                   {penaltyResult && (
-                    <span className={cn('text-[11px] font-mono tabular-nums font-normal', penaltyResult.winner === 'away' ? 'text-slate-500' : 'text-slate-700')}>
+                    <span className={cn('text-sm font-mono tabular-nums font-normal', penaltyResult.winner === 'away' ? 'text-slate-500' : 'text-slate-700')}>
                       ({penaltyResult.awayScore})
                     </span>
                   )}
@@ -276,7 +276,7 @@ export function MatchCard({ match, prediction, onChange, readOnly, isSaved, isAu
               ) : showActualResult ? (
                 <div className="flex items-center gap-1 font-bold text-white">
                   {penaltyResult && (
-                    <span className={cn('text-[11px] font-mono tabular-nums font-normal', penaltyResult.winner === 'home' ? 'text-slate-500' : 'text-slate-700')}>
+                    <span className={cn('text-sm font-mono tabular-nums font-normal', penaltyResult.winner === 'home' ? 'text-slate-500' : 'text-slate-700')}>
                       ({penaltyResult.homeScore})
                     </span>
                   )}
@@ -284,7 +284,7 @@ export function MatchCard({ match, prediction, onChange, readOnly, isSaved, isAu
                   <span className="text-slate-500 text-sm font-normal">–</span>
                   <span className="w-8 text-center text-xl tabular-nums font-mono">{match.result!.away_score}</span>
                   {penaltyResult && (
-                    <span className={cn('text-[11px] font-mono tabular-nums font-normal', penaltyResult.winner === 'away' ? 'text-slate-500' : 'text-slate-700')}>
+                    <span className={cn('text-sm font-mono tabular-nums font-normal', penaltyResult.winner === 'away' ? 'text-slate-500' : 'text-slate-700')}>
                       ({penaltyResult.awayScore})
                     </span>
                   )}
