@@ -21,6 +21,7 @@ interface AdminQuiniela {
   slug: string;
   type: string;
   wildcard_enabled: boolean;
+  penalties_enabled: boolean;
   participants_count: number;
   creator: { id: number; name: string; email: string } | null;
   participants: { id: number; name: string; email: string; role: string; total_points: number; rank: number | null }[];
@@ -120,7 +121,8 @@ export default function TorneoAdminPage() {
   const [loadingQuinielas, setLoadingQuinielas] = useState(false);
   const [expandedQuiniela, setExpandedQuiniela] = useState<number | null>(null);
   const [breakdownSheet, setBreakdownSheet] = useState<{ quinielaSlug: string; userId: number; userName: string } | null>(null);
-  const [togglingWildcard, setTogglingWildcard] = useState<number | null>(null); // quiniela id being toggled
+  const [togglingWildcard, setTogglingWildcard] = useState<number | null>(null);
+  const [togglingPenalties, setTogglingPenalties] = useState<number | null>(null);
 
   // Wildcard config
   interface WildcardTeamOption { id: number; name: string; short_name: string; flag_url: string | null }
@@ -715,6 +717,21 @@ export default function TorneoAdminPage() {
       toast.error(err instanceof Error ? err.message : 'Error al actualizar');
     } finally {
       setTogglingWildcard(null);
+    }
+  };
+
+  const toggleQuinielaPenalties = async (quinielaId: number, enabled: boolean) => {
+    setTogglingPenalties(quinielaId);
+    try {
+      await api.patch(`/admin/quinielas/${quinielaId}/penalties-enabled`, { enabled });
+      setAdminQuinielas((prev) =>
+        prev.map((q) => q.id === quinielaId ? { ...q, penalties_enabled: enabled } : q)
+      );
+      toast.success(enabled ? 'Penales activados' : 'Penales desactivados');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Error al actualizar');
+    } finally {
+      setTogglingPenalties(null);
     }
   };
 
@@ -1740,7 +1757,8 @@ export default function TorneoAdminPage() {
           ) : (
             adminQuinielas.map((q) => (
               <div key={q.id} className="rounded-xl border border-slate-800 bg-slate-900 overflow-hidden">
-                {/* Header */}
+
+                {/* ── Header ── */}
                 <button
                   onClick={() => setExpandedQuiniela(expandedQuiniela === q.id ? null : q.id)}
                   className="w-full flex items-center justify-between gap-3 px-4 py-3 hover:bg-slate-800/50 transition-colors text-left"
@@ -1749,79 +1767,138 @@ export default function TorneoAdminPage() {
                     <Shield className="h-4 w-4 text-emerald-400 shrink-0" />
                     <div className="min-w-0">
                       <p className="text-sm font-semibold text-white truncate">{q.name}</p>
-                      <p className="text-[11px] text-slate-500 truncate">
-                        {q.creator?.name ?? '–'} · {q.participants_count} participante{q.participants_count !== 1 ? 's' : ''}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    {/* Wildcard toggle */}
-                    <button
-                      type="button"
-                      disabled={togglingWildcard === q.id}
-                      onClick={(e) => { e.stopPropagation(); toggleQuinielaWildcard(q.id, !q.wildcard_enabled); }}
-                      className={cn(
-                        'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[11px] font-bold transition-all disabled:opacity-50',
-                        q.wildcard_enabled
-                          ? 'border-amber-500/50 bg-amber-500/15 text-amber-300 hover:bg-amber-500/25'
-                          : 'border-slate-700 bg-slate-900 text-slate-600 hover:text-slate-400 hover:border-slate-600'
-                      )}
-                    >
-                      {togglingWildcard === q.id
-                        ? <Loader2 className="h-3 w-3 animate-spin shrink-0" />
-                        : <Zap className={cn('h-3 w-3 shrink-0', q.wildcard_enabled && 'fill-amber-400/30')} />
-                      }
-                      <span>Comodín</span>
-                      <span className={cn(
-                        'text-[10px] font-bold px-1 py-0.5 rounded',
-                        q.wildcard_enabled
-                          ? 'bg-amber-500/20 text-amber-300'
-                          : 'bg-slate-800 text-slate-600'
-                      )}>
-                        {q.wildcard_enabled ? 'ON' : 'OFF'}
-                      </span>
-                    </button>
-                    <ChevronRight className={cn('h-4 w-4 text-slate-600 transition-transform', expandedQuiniela === q.id && 'rotate-90')} />
-                  </div>
-                </button>
-
-                {/* Participants list */}
-                {expandedQuiniela === q.id && (
-                  <div className="border-t border-slate-800 divide-y divide-slate-800/60">
-                    {q.participants.map((p, i) => (
-                      <button
-                        key={p.id}
-                        onClick={() => setBreakdownSheet({ quinielaSlug: q.slug, userId: p.id, userName: p.name })}
-                        className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-slate-800/40 transition-colors text-left"
-                      >
-                        {/* Position */}
-                        <span className={cn(
-                          'w-6 text-center text-xs font-bold tabular-nums shrink-0',
-                          i === 0 ? 'text-yellow-400' : i === 1 ? 'text-slate-300' : i === 2 ? 'text-amber-600' : 'text-slate-600'
-                        )}>
-                          {p.rank ?? i + 1}
-                        </span>
-                        {/* Avatar */}
-                        <div className="w-7 h-7 rounded-full bg-slate-700 flex items-center justify-center shrink-0">
-                          <span className="text-xs font-bold text-white">{p.name.charAt(0).toUpperCase()}</span>
-                        </div>
-                        {/* Name + email */}
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm text-white font-medium truncate">{p.name}</p>
-                          <p className="text-[11px] text-slate-500 truncate">{p.email}</p>
-                        </div>
-                        {/* Points */}
-                        <span className="text-sm font-bold text-emerald-400 tabular-nums shrink-0">
-                          {p.total_points} pts
-                        </span>
-                        {p.role === 'admin' && (
-                          <span className="text-[10px] font-semibold text-amber-400 bg-amber-400/10 border border-amber-400/20 px-1.5 py-0.5 rounded shrink-0">
-                            Admin
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <p className="text-[11px] text-slate-500 truncate">
+                          {q.creator?.name ?? '–'} · {q.participants_count} participante{q.participants_count !== 1 ? 's' : ''}
+                        </p>
+                        {/* Feature badges — at-a-glance status */}
+                        {q.wildcard_enabled && (
+                          <span className="flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-500/15 border border-amber-500/30 text-amber-400 shrink-0">
+                            <Zap className="h-2.5 w-2.5" />Comodín
                           </span>
                         )}
-                        <ChevronRight className="h-3.5 w-3.5 text-slate-600 shrink-0" />
-                      </button>
-                    ))}
+                        {q.penalties_enabled && (
+                          <span className="flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded bg-sky-500/15 border border-sky-500/30 text-sky-400 shrink-0">
+                            ⚽ Penales
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <ChevronRight className={cn('h-4 w-4 text-slate-600 shrink-0 transition-transform', expandedQuiniela === q.id && 'rotate-90')} />
+                </button>
+
+                {expandedQuiniela === q.id && (
+                  <div className="border-t border-slate-800">
+
+                    {/* ── Settings section ── */}
+                    <div className="px-4 py-3 bg-slate-950/60 border-b border-slate-800/60">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-600 mb-2.5">Configuración</p>
+                      <div className="grid grid-cols-2 gap-2">
+
+                        {/* Wildcard toggle */}
+                        <button
+                          type="button"
+                          disabled={togglingWildcard === q.id}
+                          onClick={() => toggleQuinielaWildcard(q.id, !q.wildcard_enabled)}
+                          className={cn(
+                            'flex items-center gap-2.5 px-3 py-2.5 rounded-xl border text-left transition-all disabled:opacity-50',
+                            q.wildcard_enabled
+                              ? 'border-amber-500/40 bg-amber-500/10'
+                              : 'border-slate-700/60 bg-slate-900 hover:border-slate-600'
+                          )}
+                        >
+                          <div className={cn('p-1.5 rounded-lg shrink-0', q.wildcard_enabled ? 'bg-amber-500/20 border border-amber-500/30' : 'bg-slate-800 border border-slate-700')}>
+                            {togglingWildcard === q.id
+                              ? <Loader2 className="h-3.5 w-3.5 animate-spin text-slate-400" />
+                              : <Zap className={cn('h-3.5 w-3.5', q.wildcard_enabled ? 'text-amber-400' : 'text-slate-600')} />
+                            }
+                          </div>
+                          <div className="min-w-0">
+                            <p className={cn('text-xs font-bold leading-none', q.wildcard_enabled ? 'text-amber-300' : 'text-slate-500')}>Comodín</p>
+                            <p className={cn('text-[10px] mt-0.5', q.wildcard_enabled ? 'text-amber-500/70' : 'text-slate-700')}>
+                              {q.wildcard_enabled ? 'Activo' : 'Inactivo'}
+                            </p>
+                          </div>
+                          <div className={cn(
+                            'ml-auto w-8 h-[18px] rounded-full transition-colors shrink-0 relative',
+                            q.wildcard_enabled ? 'bg-amber-500' : 'bg-slate-700'
+                          )}>
+                            <div className={cn(
+                              'absolute top-0.5 w-3.5 h-3.5 rounded-full bg-white shadow transition-all',
+                              q.wildcard_enabled ? 'left-[16px]' : 'left-0.5'
+                            )} />
+                          </div>
+                        </button>
+
+                        {/* Penalties toggle */}
+                        <button
+                          type="button"
+                          disabled={togglingPenalties === q.id}
+                          onClick={() => toggleQuinielaPenalties(q.id, !q.penalties_enabled)}
+                          className={cn(
+                            'flex items-center gap-2.5 px-3 py-2.5 rounded-xl border text-left transition-all disabled:opacity-50',
+                            q.penalties_enabled
+                              ? 'border-sky-500/40 bg-sky-500/10'
+                              : 'border-slate-700/60 bg-slate-900 hover:border-slate-600'
+                          )}
+                        >
+                          <div className={cn('p-1.5 rounded-lg shrink-0', q.penalties_enabled ? 'bg-sky-500/20 border border-sky-500/30' : 'bg-slate-800 border border-slate-700')}>
+                            {togglingPenalties === q.id
+                              ? <Loader2 className="h-3.5 w-3.5 animate-spin text-slate-400" />
+                              : <span className={cn('text-sm leading-none', q.penalties_enabled ? '' : 'opacity-40')}>⚽</span>
+                            }
+                          </div>
+                          <div className="min-w-0">
+                            <p className={cn('text-xs font-bold leading-none', q.penalties_enabled ? 'text-sky-300' : 'text-slate-500')}>Penales</p>
+                            <p className={cn('text-[10px] mt-0.5', q.penalties_enabled ? 'text-sky-500/70' : 'text-slate-700')}>
+                              {q.penalties_enabled ? 'Activo' : 'Inactivo'}
+                            </p>
+                          </div>
+                          <div className={cn(
+                            'ml-auto w-8 h-[18px] rounded-full transition-colors shrink-0 relative',
+                            q.penalties_enabled ? 'bg-sky-500' : 'bg-slate-700'
+                          )}>
+                            <div className={cn(
+                              'absolute top-0.5 w-3.5 h-3.5 rounded-full bg-white shadow transition-all',
+                              q.penalties_enabled ? 'left-[16px]' : 'left-0.5'
+                            )} />
+                          </div>
+                        </button>
+
+                      </div>
+                    </div>
+
+                    {/* ── Participants list ── */}
+                    <div className="divide-y divide-slate-800/60">
+                      {q.participants.map((p, i) => (
+                        <button
+                          key={p.id}
+                          onClick={() => setBreakdownSheet({ quinielaSlug: q.slug, userId: p.id, userName: p.name })}
+                          className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-slate-800/40 transition-colors text-left"
+                        >
+                          <span className={cn(
+                            'w-6 text-center text-xs font-bold tabular-nums shrink-0',
+                            i === 0 ? 'text-yellow-400' : i === 1 ? 'text-slate-300' : i === 2 ? 'text-amber-600' : 'text-slate-600'
+                          )}>
+                            {p.rank ?? i + 1}
+                          </span>
+                          <div className="w-7 h-7 rounded-full bg-slate-700 flex items-center justify-center shrink-0">
+                            <span className="text-xs font-bold text-white">{p.name.charAt(0).toUpperCase()}</span>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-white font-medium truncate">{p.name}</p>
+                            <p className="text-[11px] text-slate-500 truncate">{p.email}</p>
+                          </div>
+                          <span className="text-sm font-bold text-emerald-400 tabular-nums shrink-0">{p.total_points} pts</span>
+                          {p.role === 'admin' && (
+                            <span className="text-[10px] font-semibold text-amber-400 bg-amber-400/10 border border-amber-400/20 px-1.5 py-0.5 rounded shrink-0">Admin</span>
+                          )}
+                          <ChevronRight className="h-3.5 w-3.5 text-slate-600 shrink-0" />
+                        </button>
+                      ))}
+                    </div>
+
                   </div>
                 )}
               </div>

@@ -136,6 +136,7 @@ export interface Quiniela {
   is_active: boolean;
   predictions_open: boolean;
   wildcard_enabled: boolean;
+  penalties_enabled: boolean;
   my_standing?: { rank: number; total_points: number } | null;
   pending_predictions_count?: number;
 }
