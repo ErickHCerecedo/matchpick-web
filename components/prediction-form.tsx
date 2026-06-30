@@ -10,7 +10,7 @@ import { api } from '@/lib/api';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { groupByDate, parseDateKey, todayKey } from '@/lib/date-utils';
-import type { Match, RoundWithMatches, Prediction } from '@/types';
+import type { Match, Round, RoundWithMatches, Prediction } from '@/types';
 import { Save, Loader2, CheckCircle2, ChevronRight } from 'lucide-react';
 
 interface Props {
@@ -62,6 +62,14 @@ export function PredictionForm({ quinielaSlug, rounds, initialPredictions, onSav
   }, []);
 
   const matchesByDate = useMemo(() => groupByDate(rounds), [rounds]);
+
+  const matchRoundType = useMemo(() => {
+    const map = new Map<number, Round['type']>();
+    for (const r of rounds) {
+      for (const m of r.matches) map.set(m.id, r.round.type);
+    }
+    return map;
+  }, [rounds]);
   const sortedDateKeys = useMemo(() => {
     const now = new Date();
     const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
@@ -384,6 +392,7 @@ export function PredictionForm({ quinielaSlug, rounds, initialPredictions, onSav
                     isAutoSaving={autoSavingIds.has(match.id)}
                     penaltiesEnabled={penaltiesEnabled}
                     penaltiesMode={penaltiesMode}
+                    roundType={matchRoundType.get(match.id)}
                   />
                 ))}
               </div>

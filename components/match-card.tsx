@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
 import { cn, formatMatchDateParts } from '@/lib/utils';
-import type { Match, Prediction } from '@/types';
+import type { Match, Prediction, Round } from '@/types';
 import { Lock, CheckCircle2, Loader2, ChevronUp, ChevronDown, Calendar, MapPin } from 'lucide-react';
 import { FlagPlaceholder } from '@/components/ui/flag-placeholder';
 
@@ -25,6 +25,7 @@ interface Props {
   showActualResult?: boolean;
   penaltiesEnabled?: boolean;
   penaltiesMode?: 'winner' | 'exact' | null;
+  roundType?: Round['type'];
 }
 
 const STATUS_LABELS: Record<Match['status'], string> = {
@@ -85,7 +86,7 @@ function ScoreStepper({
   );
 }
 
-export function MatchCard({ match, prediction, onChange, readOnly, isSaved, isAutoSaving, showActualResult, penaltiesEnabled, penaltiesMode }: Props) {
+export function MatchCard({ match, prediction, onChange, readOnly, isSaved, isAutoSaving, showActualResult, penaltiesEnabled, penaltiesMode, roundType }: Props) {
   const [home, setHome] = useState<number | null>(prediction?.home_score ?? null);
   const [away, setAway] = useState<number | null>(prediction?.away_score ?? null);
   const [penWinner, setPenWinner] = useState<'home' | 'away' | null>(prediction?.penalties_winner ?? null);
@@ -95,7 +96,7 @@ export function MatchCard({ match, prediction, onChange, readOnly, isSaved, isAu
   const isOpen = match.is_prediction_open && !readOnly;
   const hasResult = match.result !== null;
   const isClosed = !isOpen && !readOnly && !hasResult && match.status === 'scheduled';
-  const isKnockout = KNOCKOUT_TYPES.has(match.round.type);
+  const isKnockout = roundType ? KNOCKOUT_TYPES.has(roundType) : false;
 
   // Show penalty input when: quiniela has penalties enabled with a mode, it's a knockout match,
   // and the user is predicting a draw
