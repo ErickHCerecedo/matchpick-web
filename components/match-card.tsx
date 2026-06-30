@@ -258,19 +258,38 @@ export function MatchCard({ match, prediction, onChange, readOnly, isSaved, isAu
               </div>
             ) : hasResult ? (
               prediction ? (
-                <div className="flex items-center gap-1 font-bold text-white">
-                  {penaltyResult && (
-                    <span className={cn('text-sm font-mono tabular-nums font-normal', penaltyResult.winner === 'home' ? 'text-slate-500' : 'text-slate-700')}>
-                      ({penaltyResult.homeScore})
-                    </span>
+                <div className="flex flex-col items-center gap-1">
+                  <div className="flex items-center gap-1 font-bold text-white">
+                    {penaltyResult && (
+                      <span className={cn('text-sm font-mono tabular-nums font-normal', penaltyResult.winner === 'home' ? 'text-slate-500' : 'text-slate-700')}>
+                        ({penaltyResult.homeScore})
+                      </span>
+                    )}
+                    <span className="w-8 text-center text-xl tabular-nums font-mono">{prediction.home_score}</span>
+                    <span className="text-slate-500 text-sm font-normal">–</span>
+                    <span className="w-8 text-center text-xl tabular-nums font-mono">{prediction.away_score}</span>
+                    {penaltyResult && (
+                      <span className={cn('text-sm font-mono tabular-nums font-normal', penaltyResult.winner === 'away' ? 'text-slate-500' : 'text-slate-700')}>
+                        ({penaltyResult.awayScore})
+                      </span>
+                    )}
+                  </div>
+                  {isKnockout && penaltiesEnabled && penaltiesMode === 'winner' && prediction.penalties_winner && (
+                    <div className="flex items-center gap-1.5 text-[10px] text-slate-400">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500/70 shrink-0" />
+                      <span className="font-medium">
+                        {prediction.penalties_winner === 'home'
+                          ? (match.home_team?.short_name ?? match.home_team?.name ?? 'LOC')
+                          : (match.away_team?.short_name ?? match.away_team?.name ?? 'VIS')}
+                      </span>
+                      <span className="text-slate-600">pen.</span>
+                    </div>
                   )}
-                  <span className="w-8 text-center text-xl tabular-nums font-mono">{prediction.home_score}</span>
-                  <span className="text-slate-500 text-sm font-normal">–</span>
-                  <span className="w-8 text-center text-xl tabular-nums font-mono">{prediction.away_score}</span>
-                  {penaltyResult && (
-                    <span className={cn('text-sm font-mono tabular-nums font-normal', penaltyResult.winner === 'away' ? 'text-slate-500' : 'text-slate-700')}>
-                      ({penaltyResult.awayScore})
-                    </span>
+                  {isKnockout && penaltiesEnabled && penaltiesMode === 'exact' && prediction.penalties_home != null && (
+                    <div className="flex items-center gap-0.5 text-[10px] text-slate-400 font-mono tabular-nums">
+                      <span>{prediction.penalties_home}–{prediction.penalties_away}</span>
+                      <span className="text-slate-600">p.</span>
+                    </div>
                   )}
                 </div>
               ) : showActualResult ? (
