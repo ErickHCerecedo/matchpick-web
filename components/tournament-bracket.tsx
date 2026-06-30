@@ -1096,10 +1096,14 @@ export function TournamentBracket({ rounds }: { rounds: RoundWithMatches[] }) {
   const [swipeHintDone, setSwipeHintDone] = useState(false);
   const [isModalOpen, setIsModalOpen]     = useState(false);
   const [modalZoom, setModalZoom]         = useState(1);
+  const [bracketZoom, setBracketZoom]     = useState(1);
 
   const zoomIn    = () => setModalZoom(z => Math.min(2,   Math.round((z + 0.1) * 10) / 10));
   const zoomOut   = () => setModalZoom(z => Math.max(0.4, Math.round((z - 0.1) * 10) / 10));
   const zoomReset = () => setModalZoom(1);
+
+  const bracketZoomIn  = () => setBracketZoom(z => Math.min(2,   Math.round((z + 0.1) * 10) / 10));
+  const bracketZoomOut = () => setBracketZoom(z => Math.max(0.4, Math.round((z - 0.1) * 10) / 10));
 
   useEffect(() => {
     if (!isModalOpen) return;
@@ -1187,24 +1191,46 @@ export function TournamentBracket({ rounds }: { rounds: RoundWithMatches[] }) {
 
       {/* Desktop: full bracket */}
       {bracketRounds.length > 0 && (
-        <div className="hidden md:block rounded-xl border border-slate-800/50 overflow-hidden">
-          {/* Controls bar */}
-          <div className="flex items-center justify-end gap-2 px-4 py-2 border-b border-slate-800/50 bg-slate-950/60">
+        <div className="hidden md:block rounded-xl border border-slate-800/50 overflow-hidden relative">
+          <div className="overflow-auto p-4">
+            <div style={{ zoom: bracketZoom } as React.CSSProperties}>
+              <DesktopBracket
+                bracketRounds={bracketRounds}
+                thirdPlace={thirdPlace}
+                activeRoundId={activeRoundId}
+                onSelectRound={setActiveRoundId}
+              />
+            </div>
+          </div>
+          {/* Floating controls overlay */}
+          <div className="absolute bottom-3 right-3 z-10 flex items-center gap-0.5 bg-slate-900/90 backdrop-blur-sm border border-slate-700/40 rounded-xl px-1 py-1 shadow-xl">
+            <button
+              onClick={bracketZoomOut}
+              disabled={bracketZoom <= 0.4}
+              className="h-6 w-6 flex items-center justify-center rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 disabled:opacity-30 disabled:cursor-default transition-colors"
+              aria-label="Alejar"
+            >
+              <Minus className="h-3 w-3" />
+            </button>
+            <span className="text-[10px] text-slate-500 w-9 text-center tabular-nums font-mono select-none">
+              {Math.round(bracketZoom * 100)}%
+            </span>
+            <button
+              onClick={bracketZoomIn}
+              disabled={bracketZoom >= 2}
+              className="h-6 w-6 flex items-center justify-center rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 disabled:opacity-30 disabled:cursor-default transition-colors"
+              aria-label="Acercar"
+            >
+              <Plus className="h-3 w-3" />
+            </button>
+            <div className="w-px h-4 bg-slate-700/60 mx-0.5" />
             <button
               onClick={() => setIsModalOpen(true)}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-slate-700/60 text-slate-400 hover:text-white hover:border-slate-600 hover:bg-slate-800/60 transition-all text-[11px] font-medium"
+              className="h-6 w-6 flex items-center justify-center rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              aria-label="Pantalla completa"
             >
               <Maximize2 className="h-3 w-3" />
-              Pantalla completa
             </button>
-          </div>
-          <div className="p-4">
-            <DesktopBracket
-              bracketRounds={bracketRounds}
-              thirdPlace={thirdPlace}
-              activeRoundId={activeRoundId}
-              onSelectRound={setActiveRoundId}
-            />
           </div>
         </div>
       )}
@@ -1311,12 +1337,21 @@ export function TournamentBracket({ rounds }: { rounds: RoundWithMatches[] }) {
                 )}
               </AnimatePresence>
 
-              <MobileBracket
-                bracketRounds={allBracketRounds}
-                activeColIdx={activeBracketColIdx}
-                onChangeColIdx={handleMobileColChange}
-                thirdPlaceColIdx={thirdPlaceColIdx}
-              />
+              <div className="relative">
+                <MobileBracket
+                  bracketRounds={allBracketRounds}
+                  activeColIdx={activeBracketColIdx}
+                  onChangeColIdx={handleMobileColChange}
+                  thirdPlaceColIdx={thirdPlaceColIdx}
+                />
+                <button
+                  onClick={() => setIsModalOpen(true)}
+                  className="absolute top-2 right-2 z-10 h-7 w-7 flex items-center justify-center rounded-xl bg-slate-900/90 backdrop-blur-sm border border-slate-700/40 text-slate-400 hover:text-white shadow-lg transition-colors"
+                  aria-label="Pantalla completa"
+                >
+                  <Maximize2 className="h-3.5 w-3.5" />
+                </button>
+              </div>
 
               {/* Dot pagination — swipe affordance */}
               <div className="flex items-center justify-center gap-2 pt-1">
