@@ -1487,6 +1487,7 @@ export default function TorneoAdminPage() {
                                           onChange={(e) => { if (e.target.value !== match.status) handleUpdateStatus(match, e.target.value as never, match.roundId); }}
                                           className="px-2 py-1 rounded-md text-[11px] font-semibold bg-slate-800 text-slate-300 border border-slate-600/50 hover:border-slate-500 disabled:opacity-50 transition-colors cursor-pointer">
                                           <option value={match.status} disabled>{ADMIN_STATUS_LABELS[match.status] ?? match.status}</option>
+                                          {match.status !== 'in_progress'  && <option value="in_progress">Iniciar (Jugando)</option>}
                                           {match.status !== 'postponed'   && <option value="postponed">Retrasar</option>}
                                           {match.status !== 'suspended'   && <option value="suspended">Suspender</option>}
                                           {match.status !== 'paused'      && <option value="paused">Pausar</option>}
