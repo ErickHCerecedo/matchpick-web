@@ -91,7 +91,7 @@ const CARD_BG =
 
 const ADMIN_STATUS_LABELS: Record<string, string> = {
   scheduled: 'Programado', in_progress: 'Jugando', finished: 'Finalizado', cancelled: 'Cancelado',
-  postponed: 'Aplazado', suspended: 'Suspendido', paused: 'Pausado', rescheduled: 'Reagendado',
+  postponed: 'Retrasado', suspended: 'Suspendido', paused: 'Pausado', rescheduled: 'Reagendado',
 };
 
 const ADMIN_STATUS_COLORS: Record<string, { dot: string; icon: string; badge: string; line: string }> = {
@@ -591,7 +591,7 @@ export default function TorneoAdminPage() {
           m.id === match.id ? { ...m, status } : m
         ),
       }));
-      const msg: Record<string, string> = { in_progress: 'Partido iniciado.', finished: 'Partido finalizado.', postponed: 'Partido aplazado.', scheduled: 'Partido reprogramado.', suspended: 'Partido suspendido.', paused: 'Partido pausado.', rescheduled: 'Partido reagendado.' };
+      const msg: Record<string, string> = { in_progress: 'Partido iniciado.', finished: 'Partido finalizado.', postponed: 'Partido retrasado.', scheduled: 'Partido reprogramado.', suspended: 'Partido suspendido.', paused: 'Partido pausado.', rescheduled: 'Partido reagendado.' };
       toast.success(msg[status] ?? 'Estado actualizado.');
     } catch (err) {
       const httpStatus = (err as { status?: number }).status;
@@ -1487,7 +1487,7 @@ export default function TorneoAdminPage() {
                                           onChange={(e) => { if (e.target.value !== match.status) handleUpdateStatus(match, e.target.value as never, match.roundId); }}
                                           className="px-2 py-1 rounded-md text-[11px] font-semibold bg-slate-800 text-slate-300 border border-slate-600/50 hover:border-slate-500 disabled:opacity-50 transition-colors cursor-pointer">
                                           <option value={match.status} disabled>{ADMIN_STATUS_LABELS[match.status] ?? match.status}</option>
-                                          {match.status !== 'postponed'   && <option value="postponed">Aplazar</option>}
+                                          {match.status !== 'postponed'   && <option value="postponed">Retrasar</option>}
                                           {match.status !== 'suspended'   && <option value="suspended">Suspender</option>}
                                           {match.status !== 'paused'      && <option value="paused">Pausar</option>}
                                           {match.status !== 'rescheduled' && <option value="rescheduled">Reagendar</option>}
