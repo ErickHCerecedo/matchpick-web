@@ -174,7 +174,8 @@ export default function TorneoAdminPage() {
   // Calendar date-strip state
   const [activeTab, setActiveTab] = useState('calendar');
   const [adminDateKey, setAdminDateKey] = useState('');
-  const adminDateRef = useRef<HTMLButtonElement | null>(null);
+  const adminDateRef  = useRef<HTMLButtonElement | null>(null);
+  const userNavigated = useRef(false); // true once user manually clicks a date pill
   const [calendarLoaded, setCalendarLoaded] = useState(false);
 
   // Config state (custom tournament settings)
@@ -278,26 +279,19 @@ export default function TorneoAdminPage() {
     return new Map([...byDate.entries()].sort((a, b) => a[0].localeCompare(b[0])));
   }, [rounds, matchesByRound]);
 
-  const adminSortedDateKeys = useMemo(() => [...adminDateGroups.keys()], [adminDateGroups]);
+  const adminSortedDateKeys = useMemo(
+    () => [...adminDateGroups.keys()].filter((k) => k !== 'sin-fecha'),
+    [adminDateGroups],
+  );
 
-  // Auto-position to today or the nearest upcoming day.
-  // Fires each time a new round loads (adminSortedDateKeys changes).
-  // Rule: if a date CLOSER to today becomes available, move to it.
-  // This handles the race where early-loading rounds only have future dates,
-  // and today's matches arrive later in a different round.
-  // Once all data is loaded adminSortedDateKeys stops changing, so manual
-  // navigation (clicking a date pill) is never overridden.
+  // Auto-position to today (or nearest upcoming day) as rounds load progressively.
+  // Stops as soon as the user clicks any date pill (userNavigated ref).
   useEffect(() => {
-    if (adminSortedDateKeys.length === 0) return;
-    setAdminDateKey((prev) => {
-      const today = todayKey();
-      const upcoming = adminSortedDateKeys.find((k) => k >= today);
-      const ideal = upcoming ?? adminSortedDateKeys[adminSortedDateKeys.length - 1];
-      if (!prev || !adminDateGroups.has(prev)) return ideal;
-      // Move to closer date only if a strictly better option just appeared
-      if (upcoming && prev > upcoming) return upcoming;
-      return prev;
-    });
+    if (adminSortedDateKeys.length === 0 || userNavigated.current) return;
+    const today = todayKey();
+    const upcoming = adminSortedDateKeys.find((k) => k >= today);
+    const ideal = upcoming ?? adminSortedDateKeys[adminSortedDateKeys.length - 1];
+    setAdminDateKey(ideal);
   }, [adminSortedDateKeys]);
 
   // Scroll active date pill into view
@@ -1156,7 +1150,7 @@ export default function TorneoAdminPage() {
                     <button
                       key={dateKey}
                       ref={isActiveDate ? adminDateRef : undefined}
-                      onClick={() => setAdminDateKey(dateKey)}
+                      onClick={() => { userNavigated.current = true; setAdminDateKey(dateKey); }}
                       className={cn(
                         'shrink-0 flex flex-col items-center px-3 py-2.5 rounded-xl border text-center min-w-[3.875rem] transition-all',
                         isActiveDate
