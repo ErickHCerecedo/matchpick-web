@@ -22,7 +22,7 @@ const RESULT_STATUS_LABELS: Record<string, string> = {
   in_progress: 'Jugando',
   finished:    'Finalizado',
   cancelled:   'Cancelado',
-  postponed:   'Aplazado',
+  postponed:   'Retrasado',
   suspended:   'Suspendido',
   paused:      'Pausado',
   rescheduled: 'Reagendado',

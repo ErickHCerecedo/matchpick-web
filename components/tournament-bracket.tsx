@@ -146,7 +146,7 @@ const TREE_STATUS_LABELS: Record<Match['status'], string> = {
   in_progress: 'Jugando',
   finished:    'Finalizado',
   cancelled:   'Cancelado',
-  postponed:   'Aplazado',
+  postponed:   'Retrasado',
   suspended:   'Suspendido',
   paused:      'Pausado',
   rescheduled: 'Reagendado',
